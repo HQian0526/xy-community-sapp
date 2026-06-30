@@ -1,0 +1,14 @@
+# logs
+node_modules
+logs
+*.log
+dist/*
+package-lock.json
+
+
+# editor directories and files
+.vscode/*
+.hbuilder/*
+.idea
+.DS_Store
+.history

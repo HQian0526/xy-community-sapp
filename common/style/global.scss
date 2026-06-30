@@ -1,0 +1,57 @@
+@for $i from 1 through 200 {
+    .w-#{$i} { width: #{$i}rpx; }
+    .h-#{$i} {
+		height: #{$i}rpx;
+		line-height: #{$i}rpx;
+	}
+}
+// 按钮
+.btn-success {
+    background-color: #00a896;
+    color: #fff;
+	border-radius: 30rpx;
+	text-align: center;
+}
+.btn-success-plain {
+    border: 1rpx solid #00a896;
+    color: #00a896;
+	border-radius: 30rpx;
+	text-align: center;
+}
+.btn-primary {
+    background-color: #1179ff;
+    color: #fff;
+	border-radius: 30rpx;
+	text-align: center;
+}
+.btn-primary-plain {
+    border: 1rpx solid #1179ff;
+    color: #1179ff;
+	border-radius: 30rpx;
+	text-align: center;
+}
+
+// 居中
+.box-center {
+	margin: 0 auto;
+}
+.p-24 {
+	padding: 0 24rpx;
+}
+.mt-24 {
+	margin-top: 24rpx;
+}
+.ml-24 {
+	margin-left: 24rpx;
+}
+
+// flex 布局
+.flex {
+	display: flex;
+}
+.flex-center {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 8rpx;
+}
