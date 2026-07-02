@@ -105,6 +105,12 @@
 			}
 		},
 		{
+			"path": "pages/personalCenter/blacklist/index",
+			"style": {
+				"navigationBarTitleText": "黑名单"
+			}
+		},
+		{
 			"path": "pages/mall/index",
 			"style": {
 				"navigationBarTitleText": "社区便利店",

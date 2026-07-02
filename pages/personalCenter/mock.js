@@ -23,8 +23,7 @@ export const serviceList = [
 
 export const ownerList = [
 	{ key: 'businessInfo', name: '商家资料', icon: 'order', url: '/pages/personalCenter/businessInfo/index' },
-	{ key: 'kind', name: '商城分类', icon: 'setting' },
-	{ key: 'product', name: '货品修改', icon: 'coupon' },
+	{ key: 'blacklist', name: '黑名单', icon: 'close-circle', url: '/pages/personalCenter/blacklist/index' },
 	{ key: 'agreement', name: '服务协议', icon: 'question-circle', url: '/pages/personalCenter/businessAgreement/index' },
 	{ key: 'help', name: '联系客服', icon: 'kefu-ermai', url: '/pages/personalCenter/contactService/index' },
 ]
