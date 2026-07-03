@@ -8,10 +8,10 @@ export const storeInfo = {
 }
 
 export const accountList = [
-	{ key: 'payment', name: '提现', icon: 'rmb-circle' },
-	{ key: 'finance', name: '流水查询', icon: 'order' },
-	{ key: 'info', name: '待处理', icon: 'info-circle' },
-	{ key: 'agreement', name: '已完成', icon: 'checkbox-mark' },
+	{ key: 'payment', name: '提现', icon: 'rmb-circle', url: '/pages/personalCenter/withdraw/index' },
+	{ key: 'finance', name: '流水查询', icon: 'order', url: '/pages/personalCenter/finance/index' },
+	{ key: 'info', name: '待处理', icon: 'info-circle', url: '/pages/personalCenter/pending/index' },
+	{ key: 'agreement', name: '已完成', icon: 'checkbox-mark', url: '/pages/personalCenter/finished/index' },
 ]
 
 export const serviceList = [
@@ -23,6 +23,7 @@ export const serviceList = [
 
 export const ownerList = [
 	{ key: 'businessInfo', name: '商家资料', icon: 'order', url: '/pages/personalCenter/businessInfo/index' },
+	{ key: 'status', name: '营业状态', icon: 'star', url: '/pages/personalCenter/businessStatus/index' },
 	{ key: 'blacklist', name: '黑名单', icon: 'close-circle', url: '/pages/personalCenter/blacklist/index' },
 	{ key: 'agreement', name: '服务协议', icon: 'question-circle', url: '/pages/personalCenter/businessAgreement/index' },
 	{ key: 'help', name: '联系客服', icon: 'kefu-ermai', url: '/pages/personalCenter/contactService/index' },

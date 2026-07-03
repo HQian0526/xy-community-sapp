@@ -46,6 +46,24 @@
 			}
 		},
 		{
+			"path": "pages/order/publish/index",
+			"style": {
+				"navigationBarTitleText": "发布任务"
+			}
+		},
+		{
+			"path": "pages/order/cancel/index",
+			"style": {
+				"navigationBarTitleText": "取消工单"
+			}
+		},
+		{
+			"path": "pages/step/index",
+			"style": {
+				"navigationBarTitleText": "进度查询"
+			}
+		},
+		{
 			"path": "pages/personalCenter/index",
 			"style": {
 				"navigationBarTitleText": "个人中心",
@@ -108,6 +126,48 @@
 			"path": "pages/personalCenter/blacklist/index",
 			"style": {
 				"navigationBarTitleText": "黑名单"
+			}
+		},
+		{
+			"path": "pages/personalCenter/businessStatus/index",
+			"style": {
+				"navigationBarTitleText": "营业状态"
+			}
+		},
+		{
+			"path": "pages/personalCenter/withdraw/index",
+			"style": {
+				"navigationBarTitleText": "提现"
+			}
+		},
+		{
+			"path": "pages/personalCenter/finance/index",
+			"style": {
+				"navigationBarTitleText": "流水查询"
+			}
+		},
+		{
+			"path": "pages/personalCenter/pending/index",
+			"style": {
+				"navigationBarTitleText": "待处理"
+			}
+		},
+		{
+			"path": "pages/personalCenter/cancel/index",
+			"style": {
+				"navigationBarTitleText": "取消工单"
+			}
+		},
+		{
+			"path": "pages/personalCenter/complete/index",
+			"style": {
+				"navigationBarTitleText": "确认完成"
+			}
+		},
+		{
+			"path": "pages/personalCenter/finished/index",
+			"style": {
+				"navigationBarTitleText": "已完成"
 			}
 		},
 		{

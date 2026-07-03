@@ -37,7 +37,7 @@ export function getPosterJson(info) {
 			},
 			{
 				type: 'image',
-				src: '/static/order/banner.png',
+				src: 'http://106.55.6.194:8999/xy-community/banner.png',
 				css: {
 					left: '50rpx',
 					top: '60rpx',

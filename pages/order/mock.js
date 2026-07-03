@@ -73,6 +73,24 @@ export const orderList = [
 	}
 ]
 
+export const ORDER_STORAGE_KEY = 'orderList'
+
+export function getOrderList() {
+	const cached = uni.getStorageSync(ORDER_STORAGE_KEY)
+	return cached && cached.length ? cached : [...orderList]
+}
+
+export function setOrderList(list) {
+	uni.setStorageSync(ORDER_STORAGE_KEY, list)
+}
+
+export function removeOrder(id) {
+	const list = getOrderList().filter(item => item.id !== id)
+	setOrderList(list)
+	return list
+}
+
 export function getOrderById(id) {
-	return orderList.find(item => item.id === id) || orderList[0]
+	const list = getOrderList()
+	return list.find(item => item.id === id) || list[0]
 }

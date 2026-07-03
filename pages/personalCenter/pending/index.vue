@@ -1,127 +1,81 @@
 <template>
-	<view class="order-page">
-		<u-title class="custom-title">
-			<u-icon name="map" size="18"></u-icon>
-			<text>{{socialName || '位置获取失败，请点击此处手动绑定'}}</text>
-		</u-title>
-		<!-- Banner 预留区域 -->
-		<view class="banner-wrap">
-			<image class="banner-img" src="http://106.55.6.194:8999/xy-community/banner.png" mode="contain" />
-		</view>
-
-		<!-- 分段器 -->
-		<view class="p-24 mt-24">
-			<up-subsection mode="button" :list="sectionList" :current="currentSection" activeColor="#00a896" inactiveColor="#ffffff"
-				bgColor="#00a896"></up-subsection>
-		</view>
-		<!-- 可接单列表 -->
-		<view v-if="orderList && orderList.length > 0" class="order-list">
-			<view v-for="item in orderList" :key="item.id" class="order-card" @click="goDetail(item)">
-				<!-- 卡片头部 -->
+	<view class="pending-page">
+		<view v-if="taskList.length" class="task-list">
+			<view v-for="item in taskList" :key="item.id" class="task-card" @click="goDetail(item)">
 				<view class="card-header">
 					<text class="company-name">{{ item.companyName }}</text>
 					<text class="status-tag" :class="'status-' + item.statusType">{{ item.status }}</text>
 				</view>
 
-				<!-- 卡片主体 -->
 				<view class="card-body">
 					<view class="fault-icon">
 						<text class="fault-icon-text">{{ item.faultType }}</text>
 					</view>
 					<view class="info-list">
 						<view class="info-row">
-							<text class="info-label">提交时间：</text>
+							<text class="info-label">接单时间：</text>
 							<text class="info-value">{{ item.submitTime }}</text>
 						</view>
 						<view class="info-row">
-							<text class="info-label">小费酬金：</text>
+							<text class="info-label">任务酬金：</text>
 							<text class="info-value price-value">{{ item.price }}元</text>
 						</view>
 						<view v-if="item.faultType === '取件'" class="info-row">
 							<text class="info-label take-code">取件码：</text>
 							<text class="info-value take-code">{{ item.startCode }}</text>
 						</view>
+						<view class="info-row">
+							<text class="info-label">任务地址：</text>
+							<text class="info-value">{{ item.address }}</text>
+						</view>
 					</view>
 				</view>
 
-				<!-- 详细描述 -->
 				<view class="card-desc">
-					<text class="desc-label">详细描述：</text>
+					<text class="desc-label">任务详情：</text>
 					<text class="desc-text">{{ item.description }}</text>
 				</view>
 
-				<!-- 操作按钮 -->
 				<view class="card-actions" @click.stop>
-					<text class="action-btn action-primary" @click="handleProgress(item)">进度查询</text>
-					<text v-if="item.faultType === '取件'" class="action-btn action-primary" @click="handleShowCode(item)">查看取件码</text>
+					<!-- <text class="action-btn action-primary" @click="handleProgress(item)">进度查询</text> -->
+					<!-- <text
+						v-if="item.faultType === '取件'"
+						class="action-btn action-primary"
+						@click="handleShowCode(item)"
+					>
+						查看取件码
+					</text> -->
+					<text class="action-btn action-primary" @click="handleCall(item)">联系客户</text>
+					<text class="action-btn action-success" @click="handleComplete(item)">确认完成</text>
 					<text class="action-btn action-danger" @click="handleCancel(item)">取消工单</text>
 				</view>
 			</view>
-			<view class="flex-center" style="color: #999999">
-				已经到底了～
-			</view>
+			<view class="list-footer">已经到底了～</view>
 		</view>
 
-		<view v-else>
-			<view class="no-order" style="color: #999999">暂无可接任务~</view>
-			<view class="btn-success-plain w-200 h-70 box-center mt-24 flex-center">
-				<up-icon name="reload" color="#00a896"></up-icon>
-				<text>刷新</text>
-			</view>
+		<view v-else class="empty-wrap">
+			<u-empty text="暂无待处理任务" mode="list"></u-empty>
 		</view>
-
-		<uni-fab ref="fab" :pattern="fabPattern" :content="fabContent" horizontal="right" vertical="bottom"
-			direction="horizontal" :show="true" @trigger="handlePublish" />
 	</view>
 </template>
 
 <script>
 	import {
-		getOrderList
+		getPendingTasks
 	} from './mock.js'
 
 	export default {
 		data() {
 			return {
-				orderList: [],
-				socialName: '上海-汤臣一品',
-				fabPattern: {
-					color: '#666',
-					backgroundColor: '#fff',
-					selectedColor: '#00a896',
-					buttonColor: '#00a896',
-					iconColor: '#fff',
-					icon: 'plusempty'
-				},
-				fabContent: [{
-					iconPath: '/static/plus.png',
-					selectedIconPath: '/static/plus.png',
-					text: '发布悬赏',
-					active: false
-				}],
-				currentSection: 1,
-				sectionList: [{
-						name: '可接任务'
-					},
-					{
-						name: '已接任务'
-					},
-				],
+				taskList: []
 			}
 		},
 		onShow() {
-			this.loadOrders()
-		},
-		onBackPress() {
-			if (this.$refs.fab && this.$refs.fab.isShow) {
-				this.$refs.fab.close()
-				return true
-			}
-			return false
+			this.loadTasks()
 		},
 		methods: {
-			loadOrders() {
-				this.orderList = getOrderList()
+			loadTasks() {
+				this.taskList = getPendingTasks()
 			},
 			goDetail(item) {
 				uni.navigateTo({
@@ -140,14 +94,26 @@
 					showCancel: false
 				})
 			},
-			handleCancel(item) {
-				uni.navigateTo({
-					url: `/pages/order/cancel/index?id=${item.id}`
+			handleCall(item) {
+				if (!item.phone) {
+					uni.showToast({ title: '暂无联系电话', icon: 'none' })
+					return
+				}
+				uni.makePhoneCall({
+					phoneNumber: item.phone,
+					fail: () => {
+						uni.showToast({ title: '拨打失败', icon: 'none' })
+					}
 				})
 			},
-			handlePublish() {
+			handleComplete(item) {
 				uni.navigateTo({
-					url: '/pages/order/publish/index'
+					url: `/pages/personalCenter/complete/index?id=${item.id}`
+				})
+			},
+			handleCancel(item) {
+				uni.navigateTo({
+					url: `/pages/personalCenter/cancel/index?id=${item.id}`
 				})
 			}
 		}
@@ -155,33 +121,18 @@
 </script>
 
 <style lang="scss" scoped>
-	.order-page {
+	$primary: #00a896;
+
+	.pending-page {
 		min-height: 100vh;
 		background-color: #f5f5f5;
 	}
 
-	.custom-title {
-		padding: 12rpx 24rpx;
-		color: #333333;
+	.task-list {
+		padding: 24rpx 24rpx 40rpx;
 	}
 
-	.banner-wrap {
-		width: 100%;
-		height: 350rpx;
-		overflow: hidden;
-		background-color: #e8e8e8;
-	}
-
-	.banner-img {
-		width: 100%;
-		height: 100%;
-	}
-
-	.order-list {
-		padding: 0rpx 24rpx 160rpx;
-	}
-
-	.order-card {
+	.task-card {
 		background-color: #fff;
 		border-radius: 16rpx;
 		padding: 28rpx 24rpx;
@@ -216,12 +167,12 @@
 		border-style: solid;
 	}
 
-	.status-dispatched {
-		color: #00a896;
-		border-color: #00a896;
+	.status-processing {
+		color: $primary;
+		border-color: $primary;
 	}
 
-	.status-dispatching {
+	.status-waiting {
 		color: #007aff;
 		border-color: #007aff;
 	}
@@ -236,7 +187,7 @@
 		flex-shrink: 0;
 		width: 88rpx;
 		height: 88rpx;
-		background-color: #00a896;
+		background-color: $primary;
 		border-radius: 12rpx;
 		display: flex;
 		align-items: center;
@@ -281,7 +232,7 @@
 		color: orange;
 		font-weight: bold;
 	}
-
+	
 	.take-code {
 		color: #00a896;
 		font-weight: bold;
@@ -319,8 +270,14 @@
 	}
 
 	.action-primary {
-		color: #00a896;
-		border-color: #00a896;
+		color: $primary;
+		border-color: $primary;
+	}
+
+	.action-success {
+		color: #fff;
+		background-color: $primary;
+		border-color: $primary;
 	}
 
 	.action-danger {
@@ -328,9 +285,14 @@
 		border-color: #e64340;
 	}
 
-	.no-order {
-		width: 100%;
+	.list-footer {
 		text-align: center;
-		margin-top: 24rpx;
+		font-size: 24rpx;
+		color: #999;
+		padding: 24rpx 0;
+	}
+
+	.empty-wrap {
+		padding-top: 200rpx;
 	}
 </style>

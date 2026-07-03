@@ -17,7 +17,7 @@
 			<view class="account-card" @click="goAccountOverview">
 				<view class="card-header">
 					<text class="card-title">账户总览</text>
-					<up-icon name="arrow-right" size="14" color="#ccc"></up-icon>
+					<!-- <up-icon name="arrow-right" size="14" color="#ccc"></up-icon> -->
 				</view>
 				<view class="account-row">
 					<view class="account-item">
@@ -90,18 +90,35 @@
 		serviceList,
 		ownerList
 	} from './mock.js'
+	import { getBusinessStatus } from './businessStatus/mock.js'
+	import { getWalletBalance } from './withdraw/mock.js'
+	import { getPendingCount } from './pending/mock.js'
 
 	export default {
 		data() {
 			return {
-				storeInfo,
+				storeInfo: { ...storeInfo },
 				accountList,
 				serviceList,
 				ownerList,
-				badgeCount: 99,
+				badgeCount: 0,
 			}
 		},
+		onShow() {
+			this.loadStoreStatus()
+			this.loadWalletBalance()
+			this.loadPendingCount()
+		},
 		methods: {
+			loadStoreStatus() {
+				this.storeInfo.status = getBusinessStatus()
+			},
+			loadWalletBalance() {
+				this.storeInfo.totalAssets = getWalletBalance()
+			},
+			loadPendingCount() {
+				this.badgeCount = getPendingCount()
+			},
 			formatMoney(value) {
 				return Number(value).toFixed(2)
 			},
