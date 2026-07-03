@@ -1,5 +1,5 @@
 export const storeInfo = {
-	avatar: '/static/userInfo/boy.png',
+	avatar: 'http://106.55.6.194:8999/xy-community/girl.png',
 	storeName: '用户9527',
 	phone: '188****8888',
 	status: '营业中',

@@ -6,7 +6,7 @@
 		</u-title>
 		<!-- Banner 预留区域 -->
 		<view class="banner-wrap">
-			<image class="banner-img" src="/static/order/banner.png" mode="contain" />
+			<image class="banner-img" src="http://106.55.6.194:8999/xy-community/banner.png" mode="contain" />
 		</view>
 
 		<!-- 分段器 -->

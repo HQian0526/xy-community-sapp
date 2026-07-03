@@ -4,6 +4,7 @@ logs
 *.log
 dist/*
 package-lock.json
+unpackage
 
 
 # editor directories and files
