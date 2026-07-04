@@ -6,13 +6,36 @@
 		</u-title>
 		<!-- Banner 预留区域 -->
 		<view class="banner-wrap">
-			<image class="banner-img" src="http://106.55.6.194:8999/xy-community/banner.png" mode="contain" />
+			<view v-if="!bannerLoaded && !bannerError" class="banner-loading">
+				<up-loading-icon color="#00a896"></up-loading-icon>
+				<text class="banner-loading-text">图片加载中...</text>
+			</view>
+			<view v-if="bannerError" class="banner-loading banner-error" @click="retryBanner">
+				<text class="banner-error-text">加载失败，点击重试</text>
+			</view>
+			<image
+				v-if="!bannerError"
+				class="banner-img"
+				:class="{ 'banner-img--visible': bannerLoaded }"
+				:src="bannerSrc"
+				mode="contain"
+				lazy-load
+				@load="onBannerLoad"
+				@error="onBannerError"
+			/>
 		</view>
 
 		<!-- 分段器 -->
-		<view class="p-24 mt-24">
-			<up-subsection mode="button" :list="sectionList" :current="currentSection" activeColor="#00a896" inactiveColor="#ffffff"
-				bgColor="#00a896"></up-subsection>
+		<view class="filter-wrap">
+			<up-subsection
+				mode="button"
+				:list="sectionList"
+				:current="currentSection"
+				activeColor="#00a896"
+				inactiveColor="#ffffff"
+				bgColor="#00a896"
+				@change="handleSectionChange"
+			></up-subsection>
 		</view>
 		<!-- 可接单列表 -->
 		<view v-if="orderList && orderList.length > 0" class="order-list">
@@ -77,7 +100,8 @@
 
 <script>
 	import {
-		getOrderList
+		getOrderList,
+		bannerUrl
 	} from './mock.js'
 
 	export default {
@@ -85,6 +109,10 @@
 			return {
 				orderList: [],
 				socialName: '上海-汤臣一品',
+				bannerUrl,
+				bannerSrc: bannerUrl,
+				bannerLoaded: false,
+				bannerError: false,
 				fabPattern: {
 					color: '#666',
 					backgroundColor: '#fff',
@@ -122,6 +150,23 @@
 		methods: {
 			loadOrders() {
 				this.orderList = getOrderList()
+			},
+			onBannerLoad() {
+				this.bannerLoaded = true
+				this.bannerError = false
+			},
+			onBannerError() {
+				this.bannerLoaded = false
+				this.bannerError = true
+			},
+			retryBanner() {
+				this.bannerError = false
+				this.bannerLoaded = false
+				const separator = this.bannerUrl.includes('?') ? '&' : '?'
+				this.bannerSrc = `${this.bannerUrl}${separator}t=${Date.now()}`
+			},
+			handleSectionChange(index) {
+				this.currentSection = index
 			},
 			goDetail(item) {
 				uni.navigateTo({
@@ -166,15 +211,52 @@
 	}
 
 	.banner-wrap {
+		position: relative;
 		width: 100%;
 		height: 350rpx;
 		overflow: hidden;
 		background-color: #e8e8e8;
 	}
 
+	.banner-loading {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		background-color: #e8f8f6;
+		z-index: 1;
+	}
+
+	.banner-loading-text,
+	.banner-error-text {
+		margin-top: 16rpx;
+		font-size: 24rpx;
+		color: #999;
+	}
+
+	.banner-error-text {
+		color: #00a896;
+	}
+
 	.banner-img {
 		width: 100%;
 		height: 100%;
+		opacity: 0;
+		transition: opacity 0.35s ease-in-out;
+
+		&--visible {
+			opacity: 1;
+		}
+	}
+
+	.filter-wrap {
+		padding: 0 24rpx;
+		margin-top: 20rpx;
 	}
 
 	.order-list {

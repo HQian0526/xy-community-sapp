@@ -14,10 +14,13 @@
 		</view>
 
 		<view class="content-wrap">
-			<view class="account-card" @click="goAccountOverview">
+			<view class="account-card">
 				<view class="card-header">
 					<text class="card-title">账户总览</text>
-					<!-- <up-icon name="arrow-right" size="14" color="#ccc"></up-icon> -->
+					<view style="display: flex" @click="goAccountOverview">
+						<text class="cash">去提现</text>
+						<up-icon name="arrow-right" size="10" color="#999"></up-icon>
+					</view>
 				</view>
 				<view class="account-row">
 					<view class="account-item">
@@ -36,14 +39,16 @@
 					</view>
 				</view>
 				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in accountList" :key="item.key" :name="item.key" @click="handleServiceClick(item)">
+					<up-grid-item v-for="item in accountList" :key="item.key" :name="item.key"
+						@click="handleServiceClick(item)">
 						<view class="service-item">
 							<view class="service-icon-square">
 								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
 							</view>
 							<view class="service-name">
 								{{ item.name }}
-								<up-badge v-if="item.name === '待处理'" class="badge" max="99" :value="badgeCount"></up-badge>
+								<up-badge v-if="item.name === '待处理'" class="badge" max="99"
+									:value="badgeCount"></up-badge>
 							</view>
 
 						</view>
@@ -54,7 +59,8 @@
 			<view class="service-card">
 				<text class="section-title">基础服务</text>
 				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in serviceList" :key="item.key" :name="item.key" @click="handleServiceClick(item)">
+					<up-grid-item v-for="item in serviceList" :key="item.key" :name="item.key"
+						@click="handleServiceClick(item)">
 						<view class="service-item">
 							<view class="service-icon-wrap">
 								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
@@ -68,7 +74,8 @@
 			<view class="service-card">
 				<text class="section-title">商家服务</text>
 				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in ownerList" :key="item.key" :name="item.key" @click="handleServiceClick(item)">
+					<up-grid-item v-for="item in ownerList" :key="item.key" :name="item.key"
+						@click="handleServiceClick(item)">
 						<view class="service-item">
 							<view class="service-icon-wrap">
 								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
@@ -79,7 +86,7 @@
 				</up-grid>
 			</view>
 		</view>
-		<view class="flex-center invite">想在您的区域引入并经营此小程序？点此申请</view>
+		<view class="flex-center invite" @click="goJoinApply">想在您的区域引入并经营此小程序？点此申请</view>
 	</view>
 </template>
 
@@ -90,14 +97,22 @@
 		serviceList,
 		ownerList
 	} from './mock.js'
-	import { getBusinessStatus } from './businessStatus/mock.js'
-	import { getWalletBalance } from './withdraw/mock.js'
-	import { getPendingCount } from './pending/mock.js'
+	import {
+		getBusinessStatus
+	} from './businessStatus/mock.js'
+	import {
+		getWalletBalance
+	} from './withdraw/mock.js'
+	import {
+		getPendingCount
+	} from './pending/mock.js'
 
 	export default {
 		data() {
 			return {
-				storeInfo: { ...storeInfo },
+				storeInfo: {
+					...storeInfo
+				},
 				accountList,
 				serviceList,
 				ownerList,
@@ -123,9 +138,8 @@
 				return Number(value).toFixed(2)
 			},
 			goAccountOverview() {
-				uni.showToast({
-					title: '账户总览',
-					icon: 'none'
+				uni.navigateTo({
+					url: '/pages/personalCenter/withdraw/index',
 				})
 			},
 			handleServiceClick(item) {
@@ -138,6 +152,11 @@
 				uni.showToast({
 					title: item ? item.name : '功能开发中',
 					icon: 'none'
+				})
+			},
+			goJoinApply() {
+				uni.navigateTo({
+					url: '/pages/join/index'
 				})
 			}
 		}
@@ -286,6 +305,11 @@
 		line-height: 1;
 	}
 
+	.cash {
+		color: #999;
+		font-size: 24rpx;
+	}
+
 	.section-title {
 		display: block;
 		font-size: 30rpx;
@@ -302,7 +326,7 @@
 		align-items: center;
 		padding: 20rpx 0;
 	}
-	
+
 	.service-icon-square {
 		width: 90rpx;
 		height: 90rpx;
@@ -332,11 +356,11 @@
 		line-height: 1.3;
 		position: relative;
 	}
-	
+
 	.badge {
 		position: absolute;
 		top: 0;
-		right: -45rpx;
+		right: -35rpx;
 	}
 
 	.invite {
