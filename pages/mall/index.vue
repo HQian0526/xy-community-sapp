@@ -2,14 +2,62 @@
 	<view class="mall-root">
 		<view class="mall-page">
 			<view class="search-wrap">
-				<view class="search-bar" @click="handleSearch">
-					<up-icon name="search" size="16" color="#999"></up-icon>
-					<text class="search-placeholder">搜索商品</text>
-				</view>
+				<up-search
+					v-model="searchKeyword"
+					placeholder="搜索商品名称"
+					shape="round"
+					bgColor="#fff"
+					:showAction="false"
+					@clear="handleSearchClear"
+				></up-search>
 			</view>
 
-			<view class="cate-tab-wrap">
-				<up-cate-tab mode="tab" :height="cateTabHeight" :tabList="categoryList" v-model:current="currentCate">
+			<view v-if="isSearching" class="search-result-wrap">
+				<scroll-view scroll-y class="search-result-scroll" :style="{ height: contentHeight }">
+					<view class="search-result-header">
+						<text class="search-result-tip">找到 {{ searchResults.length }} 件相关商品</text>
+					</view>
+					<u-empty
+						v-if="!searchResults.length"
+						text="未找到相关商品"
+						mode="search"
+						marginTop="80"
+					></u-empty>
+					<view v-else class="product-list" :class="{ 'product-list--with-cart': cartCount > 0 }">
+						<view
+							v-for="product in searchResults"
+							:key="product.id"
+							class="product-card"
+							@click="goProductDetail(product)"
+						>
+							<image
+								class="product-img"
+								:src="product.icon || '/static/image-wrong.png'"
+								mode="aspectFill"
+							/>
+							<view class="product-info">
+								<text class="product-name">{{ product.name }}</text>
+								<text class="product-sales">{{ product.categoryName }} · 库存 {{ product.has }}{{ product.unit }}</text>
+								<view class="product-bottom">
+									<view class="product-price">
+										<text class="price-symbol">¥</text>
+										<text class="price-value">{{ product.price }}</text>
+										<text v-if="product.originalPrice > product.price" class="price-original">
+											¥{{ product.originalPrice }}
+										</text>
+									</view>
+									<view class="add-btn" @click.stop="handleAddCart(product)">
+										<up-icon name="plus" size="14" color="#fff"></up-icon>
+									</view>
+								</view>
+							</view>
+						</view>
+					</view>
+				</scroll-view>
+			</view>
+
+			<view v-else class="cate-tab-wrap">
+				<up-cate-tab mode="tab" :height="contentHeight" :tabList="categoryList" v-model:current="currentCate">
 					<template #itemList="{ item }">
 						<view class="cate-header">
 							<text class="cate-name">{{ item.name }}</text>
@@ -108,6 +156,9 @@
 		categoryList
 	} from './mock.js'
 	import {
+		searchProducts
+	} from './search.js'
+	import {
 		getCartMap,
 		setCartMap,
 		clearCartMap,
@@ -121,10 +172,11 @@
 			return {
 				categoryList,
 				currentCate: 0,
+				searchKeyword: '',
 				socialName: '上海-汤臣一品',
 				cartMap: {},
 				cartShow: false,
-				cateTabHeight: '100%'
+				contentHeight: '100%'
 			}
 		},
 		onShow() {
@@ -134,6 +186,12 @@
 			this.updateCateTabHeight()
 		},
 		computed: {
+			isSearching() {
+				return !!String(this.searchKeyword || '').trim()
+			},
+			searchResults() {
+				return searchProducts(this.categoryList, this.searchKeyword)
+			},
 			cartCount() {
 				return getCartCount(this.cartMap)
 			},
@@ -153,17 +211,14 @@
 					windowHeight,
 					safeAreaInsets
 				} = uni.getSystemInfoSync()
-				const searchHeight = uni.upx2px(80)
+				const searchHeight = uni.upx2px(96)
 				const tabBarHeight = uni.upx2px(100)
 				const safeBottom = safeAreaInsets?.bottom || 0
 				const height = windowHeight - searchHeight - tabBarHeight - safeBottom
-				this.cateTabHeight = `${Math.max(height, 200)}px`
+				this.contentHeight = `${Math.max(height, 200)}px`
 			},
-			handleSearch() {
-				uni.showToast({
-					title: '搜索功能开发中',
-					icon: 'none'
-				})
+			handleSearchClear() {
+				this.searchKeyword = ''
 			},
 			goProductDetail(product) {
 				uni.showToast({
@@ -253,19 +308,28 @@
 		padding: 0 24rpx 16rpx;
 	}
 
-	.search-bar {
+	.search-result-wrap {
+		flex: 1;
+		min-height: 0;
 		display: flex;
-		align-items: center;
-		gap: 12rpx;
-		height: 64rpx;
-		padding: 0 24rpx;
-		background-color: #fff;
-		border-radius: 32rpx;
+		flex-direction: column;
+		overflow: hidden;
 	}
 
-	.search-placeholder {
-		font-size: 26rpx;
+	.search-result-header {
+		padding: 0 0 16rpx;
+	}
+
+	.search-result-tip {
+		font-size: 24rpx;
 		color: #999;
+	}
+
+	.search-result-scroll {
+		flex: 1;
+		min-height: 0;
+		padding: 0 24rpx;
+		box-sizing: border-box;
 	}
 
 	.cate-tab-wrap {

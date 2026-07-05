@@ -12,7 +12,7 @@ export const orderList = [
 		orderCode: '8651039100182298624',
 		reporter: 'test',
 		phone: '13710088789',
-		address: '冲冲冲',
+		address: '上海-汤臣一品 3栋2单元801',
 		repairer: '小红',
 		startCode: '981729',
 		price: 2
@@ -30,7 +30,7 @@ export const orderList = [
 		orderCode: '8651039100182298625',
 		reporter: 'test',
 		phone: '13710088789',
-		address: '冲冲冲',
+		address: '上海-汤臣一品 3栋2单元801',
 		repairer: '小红',
 		startCode: '981729',
 		price: 5
@@ -48,7 +48,7 @@ export const orderList = [
 		orderCode: '8651039100182298626',
 		reporter: 'test',
 		phone: '13710088789',
-		address: '冲冲冲',
+		address: '上海-汤臣一品 3栋2单元801',
 		repairer: '小红',
 		startCode: '981729',
 		price: 100
@@ -66,7 +66,7 @@ export const orderList = [
 		orderCode: '8651039100182298626',
 		reporter: 'test',
 		phone: '13710088789',
-		address: '冲冲冲',
+		address: '上海-汤臣一品 3栋2单元801',
 		repairer: '小红',
 		startCode: '981729',
 		price: 398

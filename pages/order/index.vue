@@ -37,9 +37,9 @@
 				@change="handleSectionChange"
 			></up-subsection>
 		</view>
-		<!-- 可接单列表 -->
-		<view v-if="orderList && orderList.length > 0" class="order-list">
-			<view v-for="item in orderList" :key="item.id" class="order-card" @click="goDetail(item)">
+		<!-- 任务列表 -->
+		<view v-if="displayList && displayList.length > 0" class="order-list">
+			<view v-for="item in displayList" :key="item.id" class="order-card">
 				<!-- 卡片头部 -->
 				<view class="card-header">
 					<text class="company-name">{{ item.companyName }}</text>
@@ -62,7 +62,11 @@
 						</view>
 						<view v-if="item.faultType === '取件'" class="info-row">
 							<text class="info-label take-code">取件码：</text>
-							<text class="info-value take-code">{{ item.startCode }}</text>
+							<text class="info-value take-code">{{ currentSection === 0 ? '接单后展示' : item.startCode }}</text>
+						</view>
+						<view class="info-row">
+							<text class="info-label">任务地址：</text>
+							<text class="info-value">{{ item.address }}</text>
 						</view>
 					</view>
 				</view>
@@ -75,9 +79,14 @@
 
 				<!-- 操作按钮 -->
 				<view class="card-actions" @click.stop>
-					<text class="action-btn action-primary" @click="handleProgress(item)">进度查询</text>
-					<text v-if="item.faultType === '取件'" class="action-btn action-primary" @click="handleShowCode(item)">查看取件码</text>
-					<text class="action-btn action-danger" @click="handleCancel(item)">取消工单</text>
+					<template v-if="currentSection === 0">
+						<text class="action-btn action-success" @click="handleAccept(item)">我要接单</text>
+					</template>
+					<template v-else>
+						<text class="action-btn action-primary" @click="handleCall(item)">联系客户</text>
+						<text class="action-btn action-success" @click="handleComplete(item)">确认完成</text>
+						<text class="action-btn action-danger" @click="handleCancelAccepted(item)">取消工单</text>
+					</template>
 				</view>
 			</view>
 			<view class="flex-center" style="color: #999999">
@@ -86,7 +95,7 @@
 		</view>
 
 		<view v-else>
-			<view class="no-order" style="color: #999999">暂无可接任务~</view>
+			<view class="no-order" style="color: #999999">{{ emptyText }}</view>
 			<view class="btn-success-plain w-200 h-70 box-center mt-24 flex-center">
 				<up-icon name="reload" color="#00a896"></up-icon>
 				<text>刷新</text>
@@ -101,13 +110,19 @@
 <script>
 	import {
 		getOrderList,
+		removeOrder,
 		bannerUrl
 	} from './mock.js'
+	import {
+		getPendingTasks,
+		setPendingTasks
+	} from '../personalCenter/pending/mock.js'
 
 	export default {
 		data() {
 			return {
-				orderList: [],
+				availableList: [],
+				acceptedList: [],
 				socialName: '上海-汤臣一品',
 				bannerUrl,
 				bannerSrc: bannerUrl,
@@ -127,14 +142,22 @@
 					text: '发布悬赏',
 					active: false
 				}],
-				currentSection: 1,
+				currentSection: 0,
 				sectionList: [{
-						name: '可接任务'
+						name: '求助广场'
 					},
 					{
 						name: '已接任务'
 					},
 				],
+			}
+		},
+		computed: {
+			displayList() {
+				return this.currentSection === 0 ? this.availableList : this.acceptedList
+			},
+			emptyText() {
+				return this.currentSection === 0 ? '暂无可接任务~' : '暂无已接任务~'
 			}
 		},
 		onShow() {
@@ -149,7 +172,8 @@
 		},
 		methods: {
 			loadOrders() {
-				this.orderList = getOrderList()
+				this.availableList = getOrderList()
+				this.acceptedList = getPendingTasks()
 			},
 			onBannerLoad() {
 				this.bannerLoaded = true
@@ -167,6 +191,58 @@
 			},
 			handleSectionChange(index) {
 				this.currentSection = index
+			},
+			handleAccept(item) {
+				uni.showModal({
+					title: '确认接单',
+					content: `确定接取「${item.companyName}」任务吗？`,
+					success: (res) => {
+						if (!res.confirm) return
+
+						const pending = getPendingTasks()
+						if (!pending.some(task => task.id === item.id)) {
+							setPendingTasks([{
+								...item,
+								status: '进行中',
+								statusType: 'processing'
+							}, ...pending])
+						}
+						removeOrder(item.id)
+						this.loadOrders()
+						uni.showToast({
+							title: '接单成功',
+							icon: 'success'
+						})
+					}
+				})
+			},
+			handleCall(item) {
+				if (!item.phone) {
+					uni.showToast({
+						title: '暂无联系电话',
+						icon: 'none'
+					})
+					return
+				}
+				uni.makePhoneCall({
+					phoneNumber: item.phone,
+					fail: () => {
+						uni.showToast({
+							title: '拨打失败',
+							icon: 'none'
+						})
+					}
+				})
+			},
+			handleComplete(item) {
+				uni.navigateTo({
+					url: `/pages/personalCenter/complete/index?id=${item.id}`
+				})
+			},
+			handleCancelAccepted(item) {
+				uni.navigateTo({
+					url: `/pages/personalCenter/cancel/index?id=${item.id}`
+				})
 			},
 			goDetail(item) {
 				uni.navigateTo({
@@ -307,6 +383,11 @@
 		color: #007aff;
 		border-color: #007aff;
 	}
+	
+	.status-processing {
+		color: #007aff;
+		border-color: #007aff;
+	}
 
 	.card-body {
 		display: flex;
@@ -402,6 +483,12 @@
 
 	.action-primary {
 		color: #00a896;
+		border-color: #00a896;
+	}
+
+	.action-success {
+		color: #fff;
+		background-color: #00a896;
 		border-color: #00a896;
 	}
 

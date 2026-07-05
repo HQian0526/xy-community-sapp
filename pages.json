@@ -189,6 +189,18 @@
 			}
 		},
 		{
+			"path": "pages/personalCenter/transfer/index",
+			"style": {
+				"navigationBarTitleText": "店铺转让"
+			}
+		},
+		{
+			"path": "pages/personalCenter/transferAgreement/index",
+			"style": {
+				"navigationBarTitleText": "店铺转让规则"
+			}
+		},
+		{
 			"path": "pages/mall/index",
 			"style": {
 				"navigationBarTitleText": "社区便利店",

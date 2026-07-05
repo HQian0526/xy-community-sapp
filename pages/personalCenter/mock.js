@@ -27,5 +27,6 @@ export const ownerList = [
 	{ key: 'status', name: '营业状态', icon: 'star', url: '/pages/personalCenter/businessStatus/index' },
 	{ key: 'blacklist', name: '黑名单', icon: 'close-circle', url: '/pages/personalCenter/blacklist/index' },
 	{ key: 'agreement', name: '服务协议', icon: 'question-circle', url: '/pages/personalCenter/businessAgreement/index' },
+	{ key: 'change', name: '店铺转让', icon: 'pushpin', url: '/pages/personalCenter/transfer/index' },
 	{ key: 'help', name: '联系客服', icon: 'kefu-ermai', url: '/pages/personalCenter/contactService/index' },
 ]

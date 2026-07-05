@@ -63,7 +63,7 @@
 						placeholder="请输入详细收货地址"
 						:inputBorder="false"
 					/>
-				</uni-forms-item>
+				</uni-forms-item>  
 
 				<uni-forms-item label="备注" name="remark">
 					<uni-easyinput

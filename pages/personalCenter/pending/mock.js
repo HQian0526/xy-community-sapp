@@ -18,8 +18,8 @@ export const pendingTaskList = [
 	{
 		id: '3',
 		companyName: '有会修洗衣机的吗',
-		status: '待上门',
-		statusType: 'waiting',
+		status: '进行中',
+		statusType: 'processing',
 		faultType: '维修',
 		submitTime: '2025-09-01 15:30:00',
 		description: '洗衣机脱水时有异响，需要上门检修',
@@ -32,8 +32,8 @@ export const pendingTaskList = [
 	{
 		id: '2',
 		companyName: '逛商场的帮忙带瓶花生油',
-		status: '待取货',
-		statusType: 'waiting',
+		status: '进行中',
+		statusType: 'processing',
 		faultType: '代购',
 		submitTime: '2025-09-02 09:20:15',
 		description: '任意超市商场都行，主要是我懒',
