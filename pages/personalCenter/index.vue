@@ -3,28 +3,33 @@
 		<view class="header-bg"></view>
 
 		<view class="profile-section">
-			<view class="avatar-wrap">
+			<view class="avatar-wrap" @click="goStoreProfile">
 				<image class="avatar-img" :src="storeInfo.avatar" mode="aspectFill" />
 			</view>
-			<view class="profile-info">
+			<view class="profile-info" @click="goStoreProfile">
 				<text class="store-name">{{ storeInfo.storeName }}</text>
 				<text class="store-phone">{{ storeInfo.phone }}</text>
 			</view>
-			<text class="store-status">{{ storeInfo.status }}</text>
+			<text
+				class="store-status"
+				:class="{ 'store-status--closed': isPaused }"
+				@click="goBusinessStatus"
+			>{{ storeInfo.status }}</text>
 		</view>
 
 		<view class="content-wrap">
+			<!-- 商家端 -->
 			<view class="account-card">
 				<view class="card-header">
-					<text class="card-title">账户总览</text>
-					<view style="display: flex" @click="goAccountOverview">
+					<text class="card-title">订单管理</text>
+					<!-- <view style="display: flex" @click="goAccountOverview">
 						<text class="cash">去提现</text>
 						<up-icon name="arrow-right" size="10" color="#999"></up-icon>
-					</view>
+					</view> -->
 				</view>
 				<view class="account-row">
 					<view class="account-item">
-						<text class="account-label">我的钱包</text>
+						<text class="account-label">待结算金额</text>
 						<view class="account-value">
 							<text class="currency">¥</text>
 							<text class="amount">{{ formatMoney(storeInfo.totalAssets) }}</text>
@@ -39,7 +44,7 @@
 					</view>
 				</view>
 				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in accountList" :key="item.key" :name="item.key"
+					<up-grid-item v-for="item in businessList" :key="item.key" :name="item.key"
 						@click="handleServiceClick(item)">
 						<view class="service-item">
 							<view class="service-icon-square">
@@ -48,6 +53,44 @@
 							<view class="service-name">
 								{{ item.name }}
 								<up-badge v-if="item.name === '待处理'" class="badge" max="99"
+									:value="badgeCount"></up-badge>
+							</view>
+			
+						</view>
+					</up-grid-item>
+				</up-grid>
+			</view>
+			
+			<view class="service-card">
+				<text class="section-title">商家服务</text>
+				<up-grid :col="4" :border="false">
+					<up-grid-item v-for="item in ownerList" :key="item.key" :name="item.key"
+						@click="handleServiceClick(item)">
+						<view class="service-item">
+							<view class="service-icon-wrap">
+								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+							</view>
+							<text class="service-name">{{ item.name }}</text>
+						</view>
+					</up-grid-item>
+				</up-grid>
+			</view>
+			
+			<!-- 用户端 -->
+			<view class="account-card">
+				<view class="card-header">
+					<text class="card-title">我的订单</text>
+				</view>
+				<up-grid :col="4" :border="false">
+					<up-grid-item v-for="item in accountList" :key="item.key" :name="item.key"
+						@click="handleServiceClick(item)">
+						<view class="service-item">
+							<view class="service-icon-square">
+								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+							</view>
+							<view class="service-name">
+								{{ item.name }}
+								<up-badge v-if="item.name === '进行中'" class="badge" max="99"
 									:value="badgeCount"></up-badge>
 							</view>
 
@@ -70,23 +113,18 @@
 					</up-grid-item>
 				</up-grid>
 			</view>
-
-			<view class="service-card">
-				<text class="section-title">商家服务</text>
-				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in ownerList" :key="item.key" :name="item.key"
-						@click="handleServiceClick(item)">
-						<view class="service-item">
-							<view class="service-icon-wrap">
-								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
-							</view>
-							<text class="service-name">{{ item.name }}</text>
-						</view>
-					</up-grid-item>
-				</up-grid>
-			</view>
 		</view>
 		<view class="flex-center invite" @click="goJoinApply">想在您的区域引入并经营此小程序？点此申请</view>
+
+		<!-- #ifdef MP-WEIXIN -->
+		<u-popup :show="sharePopupShow" mode="center" round="16" closeOnClickOverlay @close="closeSharePopup">
+			<view class="share-popup">
+				<text class="share-popup-title">分享小程序</text>
+				<text class="share-popup-desc">邀请好友一起使用，享受邻里互助便民服务</text>
+				<button class="share-popup-btn" open-type="share" @click="closeSharePopup">分享给微信好友</button>
+			</view>
+		</u-popup>
+		<!-- #endif -->
 	</view>
 </template>
 
@@ -95,17 +133,25 @@
 		storeInfo,
 		accountList,
 		serviceList,
-		ownerList
+		ownerList,
+		businessList
 	} from './mock.js'
 	import {
-		getBusinessStatus
+		getBusinessStatus,
+		STATUS_CLOSED
 	} from './businessStatus/mock.js'
+	import {
+		getStoreProfile
+	} from './storeProfile/mock.js'
 	import {
 		getWalletBalance
 	} from './withdraw/mock.js'
 	import {
 		getPendingCount
 	} from './pending/mock.js'
+	import {
+		DEFAULT_SHARE
+	} from '@/common/share/config.js'
 
 	export default {
 		data() {
@@ -116,15 +162,29 @@
 				accountList,
 				serviceList,
 				ownerList,
+				businessList,
 				badgeCount: 0,
+				sharePopupShow: false,
+			}
+		},
+		computed: {
+			isPaused() {
+				return this.storeInfo.status === STATUS_CLOSED
 			}
 		},
 		onShow() {
+			this.loadStoreProfile()
 			this.loadStoreStatus()
 			this.loadWalletBalance()
 			this.loadPendingCount()
 		},
 		methods: {
+			loadStoreProfile() {
+				const profile = getStoreProfile()
+				this.storeInfo.storeName = profile.storeName
+				this.storeInfo.phone = profile.phone
+				this.storeInfo.avatar = profile.storePhoto || this.storeInfo.avatar
+			},
 			loadStoreStatus() {
 				this.storeInfo.status = getBusinessStatus()
 			},
@@ -143,6 +203,10 @@
 				})
 			},
 			handleServiceClick(item) {
+				if (item.key === 'share') {
+					this.handleShareMiniProgram()
+					return
+				}
 				if (item.url) {
 					uni.navigateTo({
 						url: item.url,
@@ -158,6 +222,35 @@
 				uni.navigateTo({
 					url: '/pages/join/index'
 				})
+			},
+			goStoreProfile() {
+				uni.navigateTo({
+					url: '/pages/personalCenter/storeProfile/index'
+				})
+			},
+			goBusinessStatus() {
+				uni.navigateTo({
+					url: '/pages/personalCenter/businessStatus/index'
+				})
+			},
+			handleShareMiniProgram() {
+				// #ifdef MP-WEIXIN
+				this.shareConfig = {
+					title: DEFAULT_SHARE.title,
+					path: '/pages/personalCenter/index',
+					imageUrl: DEFAULT_SHARE.imageUrl
+				}
+				this.sharePopupShow = true
+				// #endif
+				// #ifndef MP-WEIXIN
+				uni.showToast({
+					title: '请在微信小程序中使用分享',
+					icon: 'none'
+				})
+				// #endif
+			},
+			closeSharePopup() {
+				this.sharePopupShow = false
 			}
 		}
 	}
@@ -233,6 +326,10 @@
 		font-size: 26rpx;
 		color: $primary;
 		font-weight: 500;
+
+		&--closed {
+			color: #999;
+		}
 	}
 
 	.content-wrap {
@@ -367,5 +464,46 @@
 		color: #1179ff;
 		font-size: 24rpx;
 		text-decoration: underline;
+	}
+
+	.share-popup {
+		width: 560rpx;
+		padding: 48rpx 40rpx 40rpx;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.share-popup-title {
+		font-size: 32rpx;
+		font-weight: 600;
+		color: #333;
+	}
+
+	.share-popup-desc {
+		margin-top: 16rpx;
+		font-size: 26rpx;
+		color: #999;
+		text-align: center;
+		line-height: 1.5;
+	}
+
+	.share-popup-btn {
+		margin-top: 40rpx;
+		width: 100%;
+		height: 88rpx;
+		line-height: 88rpx;
+		background-color: #00a896;
+		color: #fff;
+		font-size: 30rpx;
+		font-weight: 600;
+		border-radius: 44rpx;
+		border: none;
+		padding: 0;
+	}
+
+	.share-popup-btn::after {
+		border: none;
 	}
 </style>

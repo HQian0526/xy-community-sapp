@@ -5,10 +5,8 @@ export const STORE_NAME = checkoutInfo.storeName
 
 export const statusMap = {
 	all: '全部',
-	pending: '待配送',
-	delivering: '配送中',
+	pending: '待处理',
 	finished: '已完成',
-	cancelled: '已取消'
 }
 
 export const storeOrderList = [
@@ -16,7 +14,7 @@ export const storeOrderList = [
 		id: '1001',
 		orderNo: 'M20250902103015001',
 		storeName: STORE_NAME,
-		status: '待配送',
+		status: '待处理',
 		statusType: 'pending',
 		createTime: '2025-09-02 10:30:15',
 		address: '上海-汤臣一品 3栋2单元801',
@@ -34,8 +32,8 @@ export const storeOrderList = [
 		id: '1002',
 		orderNo: 'M20250901184522002',
 		storeName: STORE_NAME,
-		status: '配送中',
-		statusType: 'delivering',
+		status: '待处理',
+		statusType: 'pending',
 		createTime: '2025-09-01 18:45:22',
 		address: '上海-汤臣一品 5栋1单元1203',
 		contact: '13800138000',
@@ -100,6 +98,22 @@ export function addStoreOrder(orderData) {
 	const list = getStoreOrders().filter(item => item.storeName === STORE_NAME)
 	setStoreOrders([order, ...list])
 	return order
+}
+
+export function completeStoreOrder(id) {
+	const list = getStoreOrders()
+	const next = list.map((item) => {
+		if (item.id === id) {
+			return {
+				...item,
+				status: '已完成',
+				statusType: 'finished'
+			}
+		}
+		return item
+	})
+	setStoreOrders(next)
+	return next.filter(item => item.storeName === STORE_NAME)
 }
 
 export function filterStoreOrders(orders, filterType) {

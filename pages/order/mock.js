@@ -95,4 +95,4 @@ export function getOrderById(id) {
 	return list.find(item => item.id === id) || list[0]
 }
 
-export const bannerUrl = 'http://106.55.6.194:8999/xy-community/banner.png'
+export const bannerUrl = 'https://www.gzstarfly.com/xy-community/banner.png'

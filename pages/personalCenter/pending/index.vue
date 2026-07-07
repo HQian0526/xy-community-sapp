@@ -1,119 +1,87 @@
 <template>
 	<view class="pending-page">
-		<view v-if="taskList.length" class="task-list">
-			<view v-for="item in taskList" :key="item.id" class="task-card" @click="goDetail(item)">
+		<view v-if="displayList.length" class="order-list">
+			<view v-for="item in displayList" :key="item.id" class="order-card">
 				<view class="card-header">
-					<text class="company-name">{{ item.companyName }}</text>
+					<text class="store-name">{{ item.storeName }}</text>
 					<text class="status-tag" :class="'status-' + item.statusType">{{ item.status }}</text>
 				</view>
 
-				<view class="card-body">
-					<view class="fault-icon">
-						<text class="fault-icon-text">{{ item.faultType }}</text>
-					</view>
-					<view class="info-list">
-						<view class="info-row">
-							<text class="info-label">接单时间：</text>
-							<text class="info-value">{{ item.submitTime }}</text>
-						</view>
-						<view class="info-row">
-							<text class="info-label">任务酬金：</text>
-							<text class="info-value price-value">{{ item.price }}元</text>
-						</view>
-						<view v-if="item.faultType === '取件'" class="info-row">
-							<text class="info-label take-code">取件码：</text>
-							<text class="info-value take-code">{{ item.startCode }}</text>
-						</view>
-						<view class="info-row">
-							<text class="info-label">任务地址：</text>
-							<text class="info-value">{{ item.address }}</text>
-						</view>
+				<view class="goods-detail goods-detail--always">
+					<view v-for="(goods, goodsIndex) in item.goods" :key="goodsIndex" class="goods-row">
+						<text class="goods-row-name">{{ goods.name }}</text>
+						<text class="goods-row-count">x{{ goods.count }}</text>
 					</view>
 				</view>
 
-				<view class="card-desc">
-					<text class="desc-label">任务详情：</text>
-					<text class="desc-text">{{ item.description }}</text>
+				<view class="order-meta">
+					<text class="order-time">{{ item.createTime }}</text>
+					<view class="order-amount">
+						<text class="amount-value">¥{{ formatMoney(item.payTotal) }}</text>
+						<text class="amount-label">共{{ getGoodsCount(item.goods) }}件</text>
+					</view>
 				</view>
 
-				<view class="card-actions" @click.stop>
-					<!-- <text class="action-btn action-primary" @click="handleProgress(item)">进度查询</text> -->
-					<!-- <text
-						v-if="item.faultType === '取件'"
-						class="action-btn action-primary"
-						@click="handleShowCode(item)"
-					>
-						查看取件码
-					</text> -->
-					<text class="action-btn action-primary" @click="handleCall(item)">联系客户</text>
+				<view class="card-footer">
+					<text class="order-no">订单号：{{ item.orderNo }}</text>
 					<text class="action-btn action-success" @click="handleComplete(item)">确认完成</text>
-					<text class="action-btn action-danger" @click="handleCancel(item)">取消工单</text>
 				</view>
 			</view>
 			<view class="list-footer">已经到底了～</view>
 		</view>
 
 		<view v-else class="empty-wrap">
-			<u-empty text="暂无待处理任务" mode="list"></u-empty>
+			<u-empty text="暂无待处理订单" mode="order"></u-empty>
 		</view>
 	</view>
 </template>
 
 <script>
 	import {
-		getPendingTasks
-	} from './mock.js'
+		getStoreOrders,
+		filterStoreOrders,
+		completeStoreOrder,
+		formatMoney
+	} from '../storeOrder/mock.js'
 
 	export default {
 		data() {
 			return {
-				taskList: []
+				orders: []
+			}
+		},
+		computed: {
+			displayList() {
+				return filterStoreOrders(this.orders, 'pending')
 			}
 		},
 		onShow() {
-			this.loadTasks()
+			this.loadOrders()
+		},
+		onPullDownRefresh() {
+			this.loadOrders()
+			uni.stopPullDownRefresh()
 		},
 		methods: {
-			loadTasks() {
-				this.taskList = getPendingTasks()
+			formatMoney,
+			loadOrders() {
+				this.orders = getStoreOrders()
 			},
-			goDetail(item) {
-				uni.navigateTo({
-					url: `/pages/order/detail?id=${item.id}`
-				})
-			},
-			handleProgress(item) {
-				uni.navigateTo({
-					url: `/pages/step/index?id=${item.id}`
-				})
-			},
-			handleShowCode(item) {
-				uni.showModal({
-					title: '取件码',
-					content: item.startCode || '暂无取件码',
-					showCancel: false
-				})
-			},
-			handleCall(item) {
-				if (!item.phone) {
-					uni.showToast({ title: '暂无联系电话', icon: 'none' })
-					return
-				}
-				uni.makePhoneCall({
-					phoneNumber: item.phone,
-					fail: () => {
-						uni.showToast({ title: '拨打失败', icon: 'none' })
-					}
-				})
+			getGoodsCount(goods = []) {
+				return goods.reduce((sum, item) => sum + item.count, 0)
 			},
 			handleComplete(item) {
-				uni.navigateTo({
-					url: `/pages/personalCenter/complete/index?id=${item.id}`
-				})
-			},
-			handleCancel(item) {
-				uni.navigateTo({
-					url: `/pages/personalCenter/cancel/index?id=${item.id}`
+				uni.showModal({
+					title: '确认完成',
+					content: '确认该订单已完成配送吗？',
+					success: (res) => {
+						if (!res.confirm) return
+						this.orders = completeStoreOrder(item.id)
+						uni.showToast({
+							title: '订单已完成',
+							icon: 'success'
+						})
+					}
 				})
 			}
 		}
@@ -126,17 +94,19 @@
 	.pending-page {
 		min-height: 100vh;
 		background-color: #f5f5f5;
+		padding: 24rpx;
+		box-sizing: border-box;
 	}
 
-	.task-list {
-		padding: 24rpx 24rpx 40rpx;
+	.order-list {
+		padding-bottom: 40rpx;
 	}
 
-	.task-card {
+	.order-card {
 		background-color: #fff;
 		border-radius: 16rpx;
 		padding: 28rpx 24rpx;
-		margin-bottom: 20rpx;
+		margin-bottom: 16rpx;
 		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 	}
 
@@ -144,18 +114,15 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: 24rpx;
+		margin-bottom: 20rpx;
+		padding-bottom: 16rpx;
+		border-bottom: 1rpx solid #f0f0f0;
 	}
 
-	.company-name {
-		flex: 1;
+	.store-name {
 		font-size: 30rpx;
 		font-weight: 600;
 		color: #333;
-		margin-right: 16rpx;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 
 	.status-tag {
@@ -167,101 +134,106 @@
 		border-style: solid;
 	}
 
-	.status-processing {
-		color: $primary;
-		border-color: $primary;
+	.status-pending {
+		color: #ff6034;
+		border-color: #ff6034;
 	}
 
-	.status-waiting {
+	.status-delivering {
 		color: #007aff;
 		border-color: #007aff;
 	}
 
-	.card-body {
-		display: flex;
-		align-items: flex-start;
-		margin-bottom: 20rpx;
-	}
-
-	.fault-icon {
-		flex-shrink: 0;
-		width: 88rpx;
-		height: 88rpx;
-		background-color: $primary;
+	.goods-detail {
+		padding: 16rpx 20rpx;
+		background-color: #f8f8f8;
 		border-radius: 12rpx;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		margin-right: 20rpx;
-	}
 
-	.fault-icon-text {
-		font-size: 28rpx;
-		color: #fff;
-		font-weight: 500;
-	}
-
-	.info-list {
-		flex: 1;
-		min-width: 0;
-	}
-
-	.info-row {
-		display: flex;
-		align-items: flex-start;
-		margin-bottom: 8rpx;
-		font-size: 26rpx;
-		line-height: 1.5;
-
-		&:last-child {
-			margin-bottom: 0;
+		&--always {
+			margin-top: 0;
 		}
 	}
 
-	.info-label {
-		color: #999;
-		flex-shrink: 0;
-	}
-
-	.info-value {
-		color: #666;
-		flex: 1;
-	}
-
-	.price-value {
-		color: orange;
-		font-weight: bold;
-	}
-	
-	.take-code {
-		color: #00a896;
-		font-weight: bold;
-	}
-
-	.card-desc {
-		font-size: 26rpx;
-		line-height: 1.6;
-		margin-bottom: 24rpx;
-		padding-top: 4rpx;
-	}
-
-	.desc-label {
-		color: #999;
-	}
-
-	.desc-text {
-		color: #666;
-	}
-
-	.card-actions {
+	.goods-row {
 		display: flex;
 		align-items: center;
-		justify-content: flex-end;
-		flex-wrap: wrap;
-		gap: 16rpx;
+		justify-content: space-between;
+		gap: 24rpx;
+		padding: 12rpx 0;
+
+		& + .goods-row {
+			border-top: 1rpx solid #eee;
+		}
+	}
+
+	.goods-row-name {
+		flex: 1;
+		min-width: 0;
+		font-size: 26rpx;
+		color: #666;
+		line-height: 1.4;
+	}
+
+	.goods-row-count {
+		flex-shrink: 0;
+		font-size: 26rpx;
+		color: #999;
+	}
+
+	.order-meta {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 20rpx;
+		margin-top: 20rpx;
+		padding-top: 16rpx;
+		border-top: 1rpx solid #f5f5f5;
+	}
+
+	.order-time {
+		font-size: 24rpx;
+		color: #999;
+	}
+
+	.order-amount {
+		flex-shrink: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 8rpx;
+	}
+
+	.amount-value {
+		font-size: 32rpx;
+		font-weight: 700;
+		color: #ff6034;
+		line-height: 1;
+	}
+
+	.amount-label {
+		font-size: 22rpx;
+		color: #999;
+	}
+
+	.card-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 20rpx;
+		padding-top: 16rpx;
+		border-top: 1rpx solid #f5f5f5;
+	}
+
+	.order-no {
+		flex: 1;
+		min-width: 0;
+		font-size: 24rpx;
+		color: #999;
 	}
 
 	.action-btn {
+		flex-shrink: 0;
+		margin-left: 16rpx;
 		font-size: 26rpx;
 		padding: 10rpx 24rpx;
 		border-radius: 30rpx;
@@ -269,20 +241,10 @@
 		border-style: solid;
 	}
 
-	.action-primary {
-		color: $primary;
-		border-color: $primary;
-	}
-
 	.action-success {
 		color: #fff;
 		background-color: $primary;
 		border-color: $primary;
-	}
-
-	.action-danger {
-		color: #e64340;
-		border-color: #e64340;
 	}
 
 	.list-footer {
@@ -293,6 +255,6 @@
 	}
 
 	.empty-wrap {
-		padding-top: 200rpx;
+		padding-top: 160rpx;
 	}
 </style>

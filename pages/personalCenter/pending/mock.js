@@ -1,3 +1,5 @@
+import { filterStoreOrders, getStoreOrders } from '../storeOrder/mock.js'
+
 export const PENDING_STORAGE_KEY = 'pendingTasks'
 
 export const pendingTaskList = [
@@ -55,7 +57,7 @@ export function setPendingTasks(list) {
 }
 
 export function getPendingCount() {
-	return getPendingTasks().length
+	return filterStoreOrders(getStoreOrders(), 'pending').length
 }
 
 export function completePendingTask(id) {

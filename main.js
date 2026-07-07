@@ -1,6 +1,7 @@
 import App from './App'
 import store from './store'
-import uviewPlus from '@/uni_modules/uview-plus'
+	import uviewPlus from '@/uni_modules/uview-plus'
+	import shareMixin from '@/common/mixin/shareMixin.js'
 
 // #ifndef VUE3
 import Vue from 'vue'
@@ -31,6 +32,9 @@ export function createApp() {
 	app.use(store)
 	app.use(Pinia.createPinia());
 	app.use(uviewPlus);
+	// #ifdef MP-WEIXIN
+	app.mixin(shareMixin)
+	// #endif
 	app.config.globalProperties.$adpid = "1111111111"
 	app.config.globalProperties.$backgroundAudioData = {
 		playing: false,

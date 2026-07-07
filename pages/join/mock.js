@@ -1,1 +1,1 @@
-export const joinPosterUrl = 'http://106.55.6.194:8999/xy-community/share.png'
+export const joinPosterUrl = 'https://www.gzstarfly.com/xy-community/share.png'

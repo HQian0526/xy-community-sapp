@@ -2007,6 +2007,22 @@ function drawYAxisTitle(title, opts, config, context) {
   context.restore();
 }
 
+function fillColumnRoundRect(context, x, y, width, bottomY, radius) {
+  const height = bottomY - y;
+  const r = Math.min(radius, width / 2, height);
+  if (r <= 0) {
+    context.rect(x, y, width, height);
+    return;
+  }
+  context.moveTo(x + r, y);
+  context.lineTo(x + width - r, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + r);
+  context.lineTo(x + width, bottomY);
+  context.lineTo(x, bottomY);
+  context.lineTo(x, y + r);
+  context.quadraticCurveTo(x, y, x + r, y);
+}
+
 function drawColumnDataPoints(series, opts, config, context) {
   let process = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1;
   let ranges = [].concat(opts.chartData.yAxisData.ranges);
@@ -2049,12 +2065,19 @@ function drawColumnDataPoints(series, opts, config, context) {
             context.setFillStyle(item.color || eachSeries.color);
             var startX = item.x - item.width / 2;
             var height = opts.height - item.y - opts.area[2];
-            context.moveTo(startX-1, item.y);
-            context.lineTo(startX+item.width-2,item.y);
-            context.lineTo(startX+item.width-2,opts.height - opts.area[2]);
-            context.lineTo(startX,opts.height - opts.area[2]);
-            context.lineTo(startX,item.y);
-            //context.rect(startX, item.y, item.width, height);
+            var bottomY = opts.height - opts.area[2];
+            var barBorderRadius = columnOption.barBorderRadius;
+            if (barBorderRadius) {
+              var radius = Array.isArray(barBorderRadius) ? (barBorderRadius[0] || 0) : barBorderRadius;
+              radius = radius * (opts.pixelRatio || 1);
+              fillColumnRoundRect(context, startX, item.y, item.width - 2, bottomY, radius);
+            } else {
+              context.moveTo(startX-1, item.y);
+              context.lineTo(startX+item.width-2,item.y);
+              context.lineTo(startX+item.width-2,opts.height - opts.area[2]);
+              context.lineTo(startX,opts.height - opts.area[2]);
+              context.lineTo(startX,item.y);
+            }
             context.closePath();
             context.stroke();
             context.fill();
@@ -5042,5 +5065,5 @@ Charts.prototype.scrollEnd = function(e) {
 };
 if (typeof module === "object" && typeof module.exports === "object") {
   module.exports = Charts;
-  //export default Charts;//建议使用nodejs的module导出方式，如报错请使用export方式导出
 }
+export default Charts;

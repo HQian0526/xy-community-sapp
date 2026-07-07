@@ -14,7 +14,7 @@
 		<view class="submit-wrap">
 			<view
 				class="submit-btn"
-				:class="isOpen ? 'btn-success-plain' : 'btn-success'"
+				:class="isOpen ? 'btn-gray-solid' : 'btn-success'"
 				@click="handleToggle"
 			>
 				{{ actionText }}
@@ -164,5 +164,12 @@
 		line-height: 88rpx;
 		font-size: 30rpx;
 		font-weight: 600;
+		text-align: center;
+		border-radius: 44rpx;
+	}
+
+	.btn-gray-solid {
+		color: #fff;
+		background-color: #999;
 	}
 </style>

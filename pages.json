@@ -23,9 +23,43 @@
 	"pages": [
 		// pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
 		{
-			"path": "pages/order/index",
+			"path": "pages/mall/index",
 			"style": {
-				"navigationBarTitleText": "社区互助",
+				"navigationBarTitleText": "社区便利店",
+				"app-plus": {
+					"bounce": "vertical",
+					"titleNView": {
+						"buttons": [{
+							"text": "\ue534",
+							"fontSrc": "/static/uni.ttf",
+							"fontSize": "22px",
+							"color": "#FFFFFF"
+						}]
+					}
+				}
+			}
+		},
+		{
+			"path": "pages/tabBar/template/template",
+			"style": {
+				"navigationBarTitleText": "我的",
+				"app-plus": {
+					"titleNView": {
+						"buttons": [{
+							"text": "\ue534",
+							"fontSrc": "/static/uni.ttf",
+							"fontSize": "22px",
+							"color": "#FFFFFF"
+						}]
+					}
+				}
+			}
+		},
+		{
+			"path": "pages/otherBusiness/index",
+			"style": {
+				"navigationBarTitleText": "其他业务",
+				"enablePullDownRefresh": true,
 				"app-plus": {
 					"bounce": "vertical",
 					"titleNView": {
@@ -141,9 +175,27 @@
 			}
 		},
 		{
+			"path": "pages/personalCenter/otherBusinessSetting/index",
+			"style": {
+				"navigationBarTitleText": "更多业务"
+			}
+		},
+		{
+			"path": "pages/personalCenter/otherBusinessSetting/form/index",
+			"style": {
+				"navigationBarTitleText": "新增业务"
+			}
+		},
+		{
 			"path": "pages/personalCenter/businessStatus/index",
 			"style": {
 				"navigationBarTitleText": "营业状态"
+			}
+		},
+		{
+			"path": "pages/personalCenter/storeProfile/index",
+			"style": {
+				"navigationBarTitleText": "店铺资料"
 			}
 		},
 		{
@@ -159,15 +211,23 @@
 			}
 		},
 		{
+			"path": "pages/personalCenter/monthlyReport/index",
+			"style": {
+				"navigationBarTitleText": "月度报表"
+			}
+		},
+		{
 			"path": "pages/personalCenter/storeOrder/index",
 			"style": {
-				"navigationBarTitleText": "商店订单"
+				"navigationBarTitleText": "商店订单",
+				"enablePullDownRefresh": true
 			}
 		},
 		{
 			"path": "pages/personalCenter/pending/index",
 			"style": {
-				"navigationBarTitleText": "待处理"
+				"navigationBarTitleText": "待处理",
+				"enablePullDownRefresh": true
 			}
 		},
 		{
@@ -185,7 +245,8 @@
 		{
 			"path": "pages/personalCenter/finished/index",
 			"style": {
-				"navigationBarTitleText": "已完成"
+				"navigationBarTitleText": "已完成",
+				"enablePullDownRefresh": true
 			}
 		},
 		{
@@ -201,60 +262,9 @@
 			}
 		},
 		{
-			"path": "pages/mall/index",
-			"style": {
-				"navigationBarTitleText": "社区便利店",
-				"app-plus": {
-					"bounce": "vertical",
-					"titleNView": {
-						"buttons": [{
-							"text": "\ue534",
-							"fontSrc": "/static/uni.ttf",
-							"fontSize": "22px",
-							"color": "#FFFFFF"
-						}]
-					}
-				}
-			}
-		},
-		{
 			"path": "pages/mall/checkout/index",
 			"style": {
 				"navigationBarTitleText": "确认订单"
-			}
-		},
-		{
-			"path": "pages/tabBar/template/template",
-			"style": {
-				"navigationBarTitleText": "我的",
-				"app-plus": {
-					"titleNView": {
-						"buttons": [{
-							"text": "\ue534",
-							"fontSrc": "/static/uni.ttf",
-							"fontSize": "22px",
-							"color": "#FFFFFF"
-						}]
-					}
-				}
-			}
-		},
-		{
-			"path": "pages/component/view/view",
-			"style": {
-				"navigationBarTitleText": "view"
-			}
-		},
-		{
-			"path": "pages/component/scroll-view/scroll-view",
-			"style": {
-				"navigationBarTitleText": "scroll-view"
-			}
-		},
-		{
-			"path": "pages/component/swiper/swiper",
-			"style": {
-				"navigationBarTitleText": "swiper"
 			}
 		},
 		// #ifndef MP-TOUTIAO
@@ -1560,23 +1570,18 @@
 		"selectedColor": "#00a896",
 		"borderStyle": "black",
 		"backgroundColor": "#F8F8F8",
-		"list": [{
-				"pagePath": "pages/order/index",
-				"iconPath": "static/tarbar/tarbar1.png",
-				"selectedIconPath": "/static/tarbar/tarbar1-active.png",
-				"text": "社区互助"
-			},
-			// {
-			// 	"pagePath": "pages/tabBar/API/API",
-			// 	"iconPath": "static/api.png",
-			// 	"selectedIconPath": "static/apiHL.png",
-			// 	"text": "接口"
-			// },
+		"list": [
 			{
 				"pagePath": "pages/mall/index",
 				"iconPath": "static/tarbar/tarbar2.png",
 				"selectedIconPath": "/static/tarbar/tarbar2-active.png",
 				"text": "社区便利店"
+			},
+			{
+				"pagePath": "pages/otherBusiness/index",
+				"iconPath": "static/tarbar/tarbar1.png",
+				"selectedIconPath": "/static/tarbar/tarbar1-active.png",
+				"text": "其他业务"
 			},
 			{
 				"pagePath": "pages/personalCenter/index",

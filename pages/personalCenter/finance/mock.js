@@ -10,7 +10,7 @@ export const financeRecordList = [
 		id: '1',
 		type: 'income',
 		title: '任务酬金',
-		desc: '帮拿快递 - 取件任务',
+		orderNo: 'M20250902183015001',
 		amount: 2,
 		time: '2025-09-02 18:30:15',
 		status: '已到账'
@@ -19,7 +19,7 @@ export const financeRecordList = [
 		id: '2',
 		type: 'income',
 		title: '分享赚佣',
-		desc: '邀请好友注册奖励',
+		orderNo: 'M20250901142008002',
 		amount: 5,
 		time: '2025-09-01 14:20:08',
 		status: '已到账'
@@ -28,7 +28,7 @@ export const financeRecordList = [
 		id: '3',
 		type: 'expense',
 		title: '发布任务',
-		desc: '逛商场的帮忙带瓶花生油',
+		orderNo: 'M20250901101227003',
 		amount: 5,
 		time: '2025-09-01 10:12:27',
 		status: '已支付'
@@ -37,7 +37,7 @@ export const financeRecordList = [
 		id: '4',
 		type: 'expense',
 		title: '提现',
-		desc: '提现至微信零钱',
+		orderNo: 'M20250828094533004',
 		amount: 100,
 		time: '2025-08-28 09:45:33',
 		status: '处理中'
@@ -46,7 +46,7 @@ export const financeRecordList = [
 		id: '5',
 		type: 'income',
 		title: '任务酬金',
-		desc: '有会修洗衣机的吗 - 维修任务',
+		orderNo: 'M20250827160842005',
 		amount: 100,
 		time: '2025-08-27 16:08:42',
 		status: '已到账'
@@ -55,7 +55,7 @@ export const financeRecordList = [
 		id: '6',
 		type: 'expense',
 		title: '发布任务',
-		desc: '上门安装openclaw小龙虾',
+		orderNo: 'M20250826113000006',
 		amount: 398,
 		time: '2025-08-26 11:30:00',
 		status: '已支付'

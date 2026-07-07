@@ -29,7 +29,7 @@
 				<view class="record-main">
 					<view class="record-info">
 						<text class="record-title">{{ item.title }}</text>
-						<text class="record-desc">{{ item.desc }}</text>
+						<text class="record-desc">订单号：{{ item.orderNo }}</text>
 						<text class="record-time">{{ item.time }}</text>
 					</view>
 					<view class="record-right">
@@ -146,11 +146,11 @@
 	}
 
 	.summary-value--income {
-		color: $primary;
+		color: #ff6034;
 	}
 
 	.summary-value--expense {
-		color: #e64340;
+		color: $primary;
 	}
 
 	.filter-wrap {
@@ -218,11 +218,11 @@
 	}
 
 	.record-amount--income {
-		color: $primary;
+		color: #ff6034;
 	}
 
 	.record-amount--expense {
-		color: #e64340;
+		color: $primary;
 	}
 
 	.record-status {

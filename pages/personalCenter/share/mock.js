@@ -37,7 +37,7 @@ export function getPosterJson(info) {
 			},
 			{
 				type: 'image',
-				src: 'http://106.55.6.194:8999/xy-community/banner.png',
+				src: 'https://www.gzstarfly.com/xy-community/banner.png',
 				css: {
 					left: '50rpx',
 					top: '60rpx',

@@ -11,6 +11,12 @@
 
 	export default {
 		onLaunch: function() {
+			// #ifdef MP-WEIXIN
+			uni.showShareMenu({
+				withShareTicket: true,
+				menus: ['shareAppMessage', 'shareTimeline']
+			})
+			// #endif
 			// #ifdef H5
 			console.log(
 				`%c hello uniapp %c v${version} `,

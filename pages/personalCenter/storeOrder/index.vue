@@ -19,30 +19,54 @@
 					<text class="status-tag" :class="'status-' + item.statusType">{{ item.status }}</text>
 				</view>
 
-				<view class="order-summary">
-					<view class="summary-info">
-						<text class="goods-name">{{ getGoodsSummary(item.goods) }}</text>
+				<template v-if="isPendingTab">
+					<view class="goods-detail goods-detail--always">
+						<view v-for="(goods, goodsIndex) in item.goods" :key="goodsIndex" class="goods-row">
+							<text class="goods-row-name">{{ goods.name }}</text>
+							<text class="goods-row-count">x{{ goods.count }}</text>
+						</view>
+					</view>
+
+					<view class="order-meta">
 						<text class="order-time">{{ item.createTime }}</text>
+						<view class="order-amount">
+							<text class="amount-value">¥{{ formatMoney(item.payTotal) }}</text>
+							<text class="amount-label">共{{ getGoodsCount(item.goods) }}件</text>
+						</view>
 					</view>
-					<view class="order-amount">
-						<text class="amount-value">¥{{ formatMoney(item.payTotal) }}</text>
-						<text class="amount-label">共{{ getGoodsCount(item.goods) }}件</text>
-					</view>
-				</view>
 
-				<view v-if="isExpanded(item.id)" class="goods-detail">
-					<view v-for="(goods, goodsIndex) in item.goods" :key="goodsIndex" class="goods-row">
-						<text class="goods-row-name">{{ goods.name }}</text>
-						<text class="goods-row-count">x{{ goods.count }}</text>
+					<view class="card-footer">
+						<text class="order-no">订单号：{{ item.orderNo }}</text>
+						<text class="action-btn action-success" @click="handleComplete(item)">确认完成</text>
 					</view>
-				</view>
+				</template>
 
-				<view class="card-footer">
-					<text class="order-no">订单号：{{ item.orderNo }}</text>
-					<text class="expand-btn" @click="toggleExpand(item.id)">
-						{{ isExpanded(item.id) ? '收起' : '展开' }}
-					</text>
-				</view>
+				<template v-else>
+					<view class="order-summary">
+						<view class="summary-info">
+							<text class="goods-name">{{ getGoodsSummary(item.goods) }}</text>
+							<text class="order-time">{{ item.createTime }}</text>
+						</view>
+						<view class="order-amount">
+							<text class="amount-value">¥{{ formatMoney(item.payTotal) }}</text>
+							<text class="amount-label">共{{ getGoodsCount(item.goods) }}件</text>
+						</view>
+					</view>
+
+					<view v-if="isExpanded(item.id)" class="goods-detail">
+						<view v-for="(goods, goodsIndex) in item.goods" :key="goodsIndex" class="goods-row">
+							<text class="goods-row-name">{{ goods.name }}</text>
+							<text class="goods-row-count">x{{ goods.count }}</text>
+						</view>
+					</view>
+
+					<view class="card-footer">
+						<text class="order-no">订单号：{{ item.orderNo }}</text>
+						<text class="expand-btn" @click="toggleExpand(item.id)">
+							{{ isExpanded(item.id) ? '收起' : '展开' }}
+						</text>
+					</view>
+				</template>
 			</view>
 			<view class="list-footer">已经到底了～</view>
 		</view>
@@ -57,6 +81,7 @@
 	import {
 		getStoreOrders,
 		filterStoreOrders,
+		completeStoreOrder,
 		formatMoney,
 		getGoodsSummary
 	} from './mock.js'
@@ -69,13 +94,16 @@
 				currentSection: 0,
 				sectionList: [
 					{ name: '全部' },
-					{ name: '待配送' },
+					{ name: '待处理' },
 					{ name: '已完成' }
 				],
 				filterMap: ['all', 'pending', 'finished']
 			}
 		},
 		computed: {
+			isPendingTab() {
+				return this.currentSection === 1
+			},
 			displayList() {
 				const filterType = this.filterMap[this.currentSection]
 				return filterStoreOrders(this.orders, filterType)
@@ -83,6 +111,10 @@
 		},
 		onShow() {
 			this.loadOrders()
+		},
+		onPullDownRefresh() {
+			this.loadOrders()
+			uni.stopPullDownRefresh()
 		},
 		methods: {
 			formatMoney,
@@ -104,6 +136,20 @@
 			},
 			handleSectionChange(index) {
 				this.currentSection = index
+			},
+			handleComplete(item) {
+				uni.showModal({
+					title: '确认完成',
+					content: '确认该订单已完成配送吗？',
+					success: (res) => {
+						if (!res.confirm) return
+						this.orders = completeStoreOrder(item.id)
+						uni.showToast({
+							title: '订单已完成',
+							icon: 'success'
+						})
+					}
+				})
 			}
 		}
 	}
@@ -205,6 +251,16 @@
 		overflow: hidden;
 	}
 
+	.order-meta {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 20rpx;
+		margin-top: 20rpx;
+		padding-top: 16rpx;
+		border-top: 1rpx solid #f5f5f5;
+	}
+
 	.order-time {
 		font-size: 24rpx;
 		color: #999;
@@ -235,6 +291,10 @@
 		padding: 16rpx 20rpx;
 		background-color: #f8f8f8;
 		border-radius: 12rpx;
+
+		&--always {
+			margin-top: 0;
+		}
 	}
 
 	.goods-row {
@@ -284,6 +344,22 @@
 		margin-left: 16rpx;
 		font-size: 26rpx;
 		color: $primary;
+	}
+
+	.action-btn {
+		flex-shrink: 0;
+		margin-left: 16rpx;
+		font-size: 26rpx;
+		padding: 10rpx 24rpx;
+		border-radius: 30rpx;
+		border-width: 1rpx;
+		border-style: solid;
+	}
+
+	.action-success {
+		color: #fff;
+		background-color: $primary;
+		border-color: $primary;
 	}
 
 	.list-footer {
