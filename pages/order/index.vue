@@ -104,6 +104,7 @@
 
 		<uni-fab ref="fab" :pattern="fabPattern" :content="fabContent" horizontal="right" vertical="bottom"
 			direction="horizontal" :show="true" @trigger="handlePublish" />
+		<bind-phone-popup ref="bindPhonePopup" />
 	</view>
 </template>
 
@@ -117,10 +118,16 @@
 		getPendingTasks,
 		setPendingTasks
 	} from '../personalCenter/pending/mock.js'
+	import {
+		requireLogin
+	} from '@/common/auth.js'
+	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
 
 	export default {
+		mixins: [bindPhoneMixin],
 		data() {
 			return {
+				loginChecking: false,
 				availableList: [],
 				acceptedList: [],
 				socialName: '上海-汤臣一品',
@@ -160,6 +167,9 @@
 				return this.currentSection === 0 ? '暂无可接任务~' : '暂无已接任务~'
 			}
 		},
+		onLoad() {
+			this.checkLogin()
+		},
 		onShow() {
 			this.loadOrders()
 		},
@@ -171,6 +181,15 @@
 			return false
 		},
 		methods: {
+			async checkLogin() {
+				if (this.loginChecking) return
+				this.loginChecking = true
+				try {
+					await requireLogin()
+				} finally {
+					this.loginChecking = false
+				}
+			},
 			loadOrders() {
 				this.availableList = getOrderList()
 				this.acceptedList = getPendingTasks()

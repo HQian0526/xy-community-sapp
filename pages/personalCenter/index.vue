@@ -4,13 +4,14 @@
 
 		<view class="profile-section">
 			<view class="avatar-wrap" @click="goStoreProfile">
-				<image class="avatar-img" :src="storeInfo.avatar" mode="aspectFill" />
+				<image class="avatar-img" :src="headerAvatar" mode="aspectFill" />
 			</view>
 			<view class="profile-info" @click="goStoreProfile">
-				<text class="store-name">{{ storeInfo.storeName }}</text>
-				<text class="store-phone">{{ storeInfo.phone }}</text>
+				<text class="store-name">{{ headerName }}</text>
+				<text class="store-phone">{{ headerPhone }}</text>
 			</view>
 			<text
+				v-if="isMerchant"
 				class="store-status"
 				:class="{ 'store-status--closed': isPaused }"
 				@click="goBusinessStatus"
@@ -18,102 +19,101 @@
 		</view>
 
 		<view class="content-wrap">
-			<!-- 商家端 -->
-			<view class="account-card">
-				<view class="card-header">
-					<text class="card-title">订单管理</text>
-					<!-- <view style="display: flex" @click="goAccountOverview">
-						<text class="cash">去提现</text>
-						<up-icon name="arrow-right" size="10" color="#999"></up-icon>
-					</view> -->
-				</view>
-				<view class="account-row">
-					<view class="account-item">
-						<text class="account-label">待结算金额</text>
-						<view class="account-value">
-							<text class="currency">¥</text>
-							<text class="amount">{{ formatMoney(storeInfo.totalAssets) }}</text>
+			<!-- 商家端 identityType === 2 -->
+			<template v-if="isMerchant">
+				<view class="account-card">
+					<view class="card-header">
+						<text class="card-title">订单管理</text>
+					</view>
+					<view class="account-row">
+						<view class="account-item">
+							<text class="account-label">待结算金额</text>
+							<view class="account-value">
+								<text class="currency">¥</text>
+								<text class="amount">{{ formatMoney(storeInfo.totalAssets) }}</text>
+							</view>
+						</view>
+						<view class="account-item account-item-right">
+							<text class="account-label">今日收入</text>
+							<view class="account-value">
+								<text class="currency">¥</text>
+								<text class="amount">{{ formatMoney(storeInfo.yesterdayIncome) }}</text>
+							</view>
 						</view>
 					</view>
-					<view class="account-item account-item-right">
-						<text class="account-label">今日收入</text>
-						<view class="account-value">
-							<text class="currency">¥</text>
-							<text class="amount">{{ formatMoney(storeInfo.yesterdayIncome) }}</text>
-						</view>
+					<up-grid :col="4" :border="false">
+						<up-grid-item v-for="item in businessList" :key="item.key" :name="item.key"
+							@click="handleServiceClick(item)">
+							<view class="service-item">
+								<view class="service-icon-square">
+									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+								</view>
+								<view class="service-name">
+									{{ item.name }}
+									<up-badge v-if="item.name === '待处理'" class="badge" max="99"
+										:value="badgeCount"></up-badge>
+								</view>
+							</view>
+						</up-grid-item>
+					</up-grid>
+				</view>
+
+				<view class="service-card">
+					<text class="section-title">商家服务</text>
+					<up-grid :col="4" :border="false">
+						<up-grid-item v-for="item in ownerList" :key="item.key" :name="item.key"
+							@click="handleServiceClick(item)">
+							<view class="service-item">
+								<view class="service-icon-wrap">
+									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+								</view>
+								<text class="service-name">{{ item.name }}</text>
+							</view>
+						</up-grid-item>
+					</up-grid>
+				</view>
+			</template>
+
+			<!-- 个人用户 identityType === 1 -->
+			<template v-else>
+				<view class="account-card">
+					<view class="card-header">
+						<text class="card-title">我的订单</text>
 					</view>
+					<up-grid :col="4" :border="false">
+						<up-grid-item v-for="item in accountList" :key="item.key" :name="item.key"
+							@click="handleServiceClick(item)">
+							<view class="service-item">
+								<view class="service-icon-square">
+									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+								</view>
+								<view class="service-name">
+									{{ item.name }}
+									<up-badge v-if="item.name === '进行中'" class="badge" max="99"
+										:value="badgeCount"></up-badge>
+								</view>
+							</view>
+						</up-grid-item>
+					</up-grid>
 				</view>
-				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in businessList" :key="item.key" :name="item.key"
-						@click="handleServiceClick(item)">
-						<view class="service-item">
-							<view class="service-icon-square">
-								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+
+				<view class="service-card">
+					<text class="section-title">基础服务</text>
+					<up-grid :col="4" :border="false">
+						<up-grid-item v-for="item in serviceList" :key="item.key" :name="item.key"
+							@click="handleServiceClick(item)">
+							<view class="service-item">
+								<view class="service-icon-wrap">
+									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+								</view>
+								<text class="service-name">{{ item.name }}</text>
 							</view>
-							<view class="service-name">
-								{{ item.name }}
-								<up-badge v-if="item.name === '待处理'" class="badge" max="99"
-									:value="badgeCount"></up-badge>
-							</view>
-			
-						</view>
-					</up-grid-item>
-				</up-grid>
-			</view>
-			
-			<view class="service-card">
-				<text class="section-title">商家服务</text>
-				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in ownerList" :key="item.key" :name="item.key"
-						@click="handleServiceClick(item)">
-						<view class="service-item">
-							<view class="service-icon-wrap">
-								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
-							</view>
-							<text class="service-name">{{ item.name }}</text>
-						</view>
-					</up-grid-item>
-				</up-grid>
-			</view>
-			
-			<!-- 用户端 -->
-			<view class="account-card">
-				<view class="card-header">
-					<text class="card-title">我的订单</text>
+						</up-grid-item>
+					</up-grid>
 				</view>
-				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in accountList" :key="item.key" :name="item.key"
-						@click="handleServiceClick(item)">
-						<view class="service-item">
-							<view class="service-icon-square">
-								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
-							</view>
-							<view class="service-name">
-								{{ item.name }}
-								<up-badge v-if="item.name === '进行中'" class="badge" max="99"
-									:value="badgeCount"></up-badge>
-							</view>
-
-						</view>
-					</up-grid-item>
-				</up-grid>
-			</view>
-
-			<view class="service-card">
-				<text class="section-title">基础服务</text>
-				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in serviceList" :key="item.key" :name="item.key"
-						@click="handleServiceClick(item)">
-						<view class="service-item">
-							<view class="service-icon-wrap">
-								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
-							</view>
-							<text class="service-name">{{ item.name }}</text>
-						</view>
-					</up-grid-item>
-				</up-grid>
-			</view>
+			</template>
 		</view>
+
 		<view class="flex-center invite" @click="goJoinApply">想在您的区域引入并经营此小程序？点此申请</view>
 
 		<!-- #ifdef MP-WEIXIN -->
@@ -125,6 +125,7 @@
 			</view>
 		</u-popup>
 		<!-- #endif -->
+		<bind-phone-popup ref="bindPhonePopup" />
 	</view>
 </template>
 
@@ -141,9 +142,6 @@
 		STATUS_CLOSED
 	} from './businessStatus/mock.js'
 	import {
-		getStoreProfile
-	} from './storeProfile/mock.js'
-	import {
 		getWalletBalance
 	} from './withdraw/mock.js'
 	import {
@@ -152,12 +150,43 @@
 	import {
 		DEFAULT_SHARE
 	} from '@/common/share/config.js'
+	import {
+		requireLogin,
+		saveLoginInfo,
+		getToken
+	} from '@/common/auth.js'
+	import {
+		getUserInfoApi
+	} from '@/common/api/personalCenter/user.js'
+	import {
+		getStoreListApi
+	} from '@/common/api/personalCenter/store.js'
+	import {
+		resolveFileUrl
+	} from '@/common/api/config.js'
+	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
+
+	const DEFAULT_AVATAR = storeInfo.avatar
+	const IDENTITY_USER = 1
+	const IDENTITY_MERCHANT = 2
 
 	export default {
+		mixins: [bindPhoneMixin],
 		data() {
 			return {
 				storeInfo: {
 					...storeInfo
+				},
+				userProfile: {
+					id: null,
+					realName: '',
+					phone: '',
+					avatar: '',
+					identityType: IDENTITY_USER
+				},
+				storeProfile: {
+					storeName: '',
+					avatar: ''
 				},
 				accountList,
 				serviceList,
@@ -165,25 +194,110 @@
 				businessList,
 				badgeCount: 0,
 				sharePopupShow: false,
+				userLoading: false,
 			}
 		},
 		computed: {
+			isMerchant() {
+				return Number(this.userProfile.identityType) === IDENTITY_MERCHANT
+			},
 			isPaused() {
 				return this.storeInfo.status === STATUS_CLOSED
+			},
+			headerName() {
+				if (this.isMerchant) {
+					return this.storeProfile.storeName || this.storeInfo.storeName || '我的店铺'
+				}
+				return this.userProfile.realName || '微信用户'
+			},
+			headerPhone() {
+				return this.userProfile.phone || '未绑定手机号'
+			},
+			headerAvatar() {
+				if (this.isMerchant) {
+					return this.storeProfile.avatar || this.storeInfo.avatar || DEFAULT_AVATAR
+				}
+				return this.userProfile.avatar || DEFAULT_AVATAR
 			}
 		},
-		onShow() {
-			this.loadStoreProfile()
-			this.loadStoreStatus()
-			this.loadWalletBalance()
+		async onShow() {
+			await this.initUserProfile()
+			if (this.isMerchant) {
+				this.loadStoreStatus()
+				this.loadWalletBalance()
+			}
 			this.loadPendingCount()
 		},
 		methods: {
-			loadStoreProfile() {
-				const profile = getStoreProfile()
-				this.storeInfo.storeName = profile.storeName
-				this.storeInfo.phone = profile.phone
-				this.storeInfo.avatar = profile.storePhoto || this.storeInfo.avatar
+			async initUserProfile() {
+				if (this.userLoading) return
+				this.userLoading = true
+				try {
+					const ok = await requireLogin()
+					if (!ok) return
+					await this.fetchUserInfo()
+					if (this.isMerchant && this.userProfile.id) {
+						await this.fetchStoreInfo(this.userProfile.id)
+					} else {
+						this.storeProfile = {
+							storeName: '',
+							avatar: ''
+						}
+					}
+				} finally {
+					this.userLoading = false
+				}
+			},
+			async fetchUserInfo() {
+				try {
+					const user = await getUserInfoApi()
+					if (!user) return
+					this.userProfile = {
+						id: user.id,
+						realName: user.realName || '',
+						phone: user.phone || '',
+						avatar: resolveFileUrl(user.avatar || ''),
+						identityType: user.identityType == null ? IDENTITY_USER : Number(user.identityType)
+					}
+					saveLoginInfo(getToken(), {
+						id: user.id,
+						userName: user.userName,
+						realName: user.realName,
+						phone: user.phone,
+						avatar: user.avatar,
+						identityType: user.identityType,
+						openid: user.openid,
+						needBindPhone: !user.phone
+					})
+				} catch (error) {
+					console.error('获取用户信息失败', error)
+				}
+			},
+			async fetchStoreInfo(userId) {
+				try {
+					const data = await getStoreListApi({
+						userId
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					const store = list[0]
+					if (!store) {
+						this.storeProfile = {
+							storeName: '',
+							avatar: ''
+						}
+						return
+					}
+					this.storeProfile = {
+						storeName: store.storeName || '',
+						avatar: resolveFileUrl(store.avatar || '')
+					}
+					this.storeInfo.storeName = this.storeProfile.storeName || this.storeInfo.storeName
+					if (this.storeProfile.avatar) {
+						this.storeInfo.avatar = this.storeProfile.avatar
+					}
+				} catch (error) {
+					console.error('获取商户信息失败', error)
+				}
 			},
 			loadStoreStatus() {
 				this.storeInfo.status = getBusinessStatus()
@@ -197,12 +311,14 @@
 			formatMoney(value) {
 				return Number(value).toFixed(2)
 			},
-			goAccountOverview() {
+			async goAccountOverview() {
+				if (!(await requireLogin())) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/withdraw/index',
 				})
 			},
-			handleServiceClick(item) {
+			async handleServiceClick(item) {
+				if (!(await requireLogin())) return
 				if (item.key === 'share') {
 					this.handleShareMiniProgram()
 					return
@@ -224,11 +340,14 @@
 				})
 			},
 			goStoreProfile() {
+				if (!this.isMerchant) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/storeProfile/index'
 				})
 			},
-			goBusinessStatus() {
+			async goBusinessStatus() {
+				if (!this.isMerchant) return
+				if (!(await requireLogin())) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/businessStatus/index'
 				})

@@ -70,6 +70,7 @@
 				</view>
 			</u-popup>
 		</view>
+		<bind-phone-popup ref="bindPhonePopup" />
 	</view>
 </template>
 
@@ -78,8 +79,11 @@
 	import { getStoreProfile } from '../personalCenter/storeProfile/mock.js'
 	import { storeInfo as defaultStoreInfo } from '../personalCenter/mock.js'
 	import { parseBusinessUnitPrice, formatMoney } from './mock.js'
+	import { requireLogin } from '@/common/auth.js'
+	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
 
 	export default {
+		mixins: [bindPhoneMixin],
 		data() {
 			return {
 				storeInfo: {
@@ -120,7 +124,8 @@
 				}
 				this.businessList = getOtherBusinessList()
 			},
-			openPayPopup(item) {
+			async openPayPopup(item) {
+				if (!(await requireLogin())) return
 				this.currentItem = item
 				this.payCount = 1
 				this.payPopupShow = true
@@ -149,7 +154,8 @@
 
 				this.paying = true
 			},
-			handleContact() {
+			async handleContact() {
+				if (!(await requireLogin())) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/contactService/index'
 				})

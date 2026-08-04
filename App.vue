@@ -5,6 +5,9 @@
 	import {
 		version
 	} from './package.json'
+	import {
+		bootstrapAuth
+	} from '@/common/auth.js'
 	// #ifdef APP
 	import checkUpdate from '@/uni_modules/uni-upgrade-center-app/utils/check-update';
 	// #endif
@@ -16,6 +19,8 @@
 				withShareTicket: true,
 				menus: ['shareAppMessage', 'shareTimeline']
 			})
+			// 启动即预登录，减少首页接口抢跑导致的 401
+			bootstrapAuth()
 			// #endif
 			// #ifdef H5
 			console.log(

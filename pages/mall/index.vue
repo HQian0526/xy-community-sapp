@@ -61,10 +61,16 @@
 					<template #itemList="{ item }">
 						<view class="cate-header">
 							<text class="cate-name">{{ item.name }}</text>
-							<text class="cate-count">共 {{ item.children.length }} 件商品</text>
+							<text class="cate-count">共 {{ (item.children || []).length }} 件商品</text>
 						</view>
 						<view class="product-list" :class="{ 'product-list--with-cart': cartCount > 0 }">
-							<view v-for="product in item.children" :key="product.id" class="product-card"
+							<u-empty
+								v-if="!(item.children && item.children.length)"
+								text="该分类暂无商品"
+								mode="list"
+								marginTop="60"
+							></u-empty>
+							<view v-for="product in (item.children || [])" :key="product.id" class="product-card"
 								@click="goProductDetail(product)">
 								<image class="product-img" :src="product.icon || '/static/image-wrong.png'"
 									mode="aspectFill" />
@@ -89,7 +95,7 @@
 				</up-cate-tab>
 			</view>
 
-			<view v-if="cartCount > 0" class="cart-bar">
+			<view v-if="cartCount > 0" class="cart-bar" :style="{ bottom: cartBarBottom }">
 				<view class="cart-left" @click="openCartPopup">
 					<view class="cart-icon-wrap">
 						<up-icon name="shopping-cart" size="22" color="#fff"></up-icon>
@@ -148,13 +154,11 @@
 				</view>
 			</u-popup>
 		</view>
+		<bind-phone-popup ref="bindPhonePopup" />
 	</view>
 </template>
 
 <script>
-	import {
-		categoryList
-	} from './mock.js'
 	import {
 		searchProducts
 	} from './search.js'
@@ -164,26 +168,80 @@
 		clearCartMap,
 		getCartItems,
 		getCartCount,
-		getCartTotal
+		getCartTotal,
+		rememberCartProduct
 	} from './cart.js'
+	import {
+		requireLogin
+	} from '@/common/auth.js'
+	import {
+		getCatagoryListApi
+	} from '@/common/api/mall/catagory.js'
+	import {
+		getProductListApi
+	} from '@/common/api/mall/product.js'
+	import {
+		resolveFileUrl
+	} from '@/common/api/config.js'
+	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
+
+	function mapProductItem(item, categoryName = '') {
+		return {
+			id: String(item.productId || item.id),
+			productId: item.productId || item.id,
+			catagoryId: item.catagoryId,
+			name: item.productName || '',
+			icon: resolveFileUrl(item.productImg || ''),
+			price: Number(item.price || 0),
+			originalPrice: Number(item.price || 0),
+			has: item.productNum == null ? 0 : Number(item.productNum),
+			unit: '件',
+			saleNum: item.saleNum == null ? 0 : Number(item.saleNum),
+			categoryName: item.catagoryName || categoryName || '',
+			remark: item.remark || ''
+		}
+	}
 
 	export default {
+		mixins: [bindPhoneMixin],
 		data() {
 			return {
-				categoryList,
+				categoryList: [],
+				categoryLoading: false,
+				pageBootstrapping: false,
 				currentCate: 0,
 				searchKeyword: '',
 				socialName: '上海-汤臣一品',
 				cartMap: {},
 				cartShow: false,
-				contentHeight: '100%'
+				contentHeight: '100%',
+				cartBarBottom: '66px'
 			}
 		},
-		onShow() {
+		async onShow() {
 			this.cartMap = getCartMap()
+			this.$nextTick(() => {
+				this.updateCateTabHeight()
+			})
+			// 等页面/弹窗组件挂载完成，避免首进时登录与请求竞态
+			await new Promise((resolve) => this.$nextTick(resolve))
+			if (this.pageBootstrapping) return
+			this.pageBootstrapping = true
+			try {
+				const ok = await requireLogin()
+				if (!ok) return
+				await this.loadCategoryList()
+			} finally {
+				this.pageBootstrapping = false
+			}
 		},
 		onReady() {
 			this.updateCateTabHeight()
+		},
+		watch: {
+			currentCate(index) {
+				this.loadCategoryProducts(index)
+			}
 		},
 		computed: {
 			isSearching() {
@@ -203,19 +261,102 @@
 			}
 		},
 		methods: {
+			async loadCategoryList() {
+				if (this.categoryLoading) return
+				this.categoryLoading = true
+				try {
+					const data = await getCatagoryListApi()
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					this.categoryList = list
+						.slice()
+						.sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0))
+						.map((item) => ({
+							id: item.catagoryId || item.id,
+							catagoryId: item.catagoryId || item.id,
+							name: item.catagoryName || '',
+							children: [],
+							productsLoaded: false,
+							productsLoading: false
+						}))
+					if (this.currentCate >= this.categoryList.length) {
+						this.currentCate = 0
+					}
+					await this.loadCategoryProducts(this.currentCate)
+				} catch (error) {
+					console.error('获取商品分类失败', error)
+					this.categoryList = []
+				} finally {
+					this.categoryLoading = false
+				}
+			},
+			async loadCategoryProducts(index) {
+				const cate = this.categoryList[index]
+				if (!cate || !cate.catagoryId) return
+				if (cate.productsLoaded || cate.productsLoading) return
+
+				this.categoryList = this.categoryList.map((item, i) => {
+					if (i !== index) return item
+					return {
+						...item,
+						productsLoading: true
+					}
+				})
+
+				try {
+					const data = await getProductListApi({
+						catagoryId: cate.catagoryId,
+						productStatus: 1
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					const children = list
+						.filter((item) => item.productStatus !== 0)
+						.map((item) => mapProductItem(item, cate.name))
+
+					this.categoryList = this.categoryList.map((item, i) => {
+						if (i !== index) return item
+						return {
+							...item,
+							children,
+							productsLoaded: true,
+							productsLoading: false
+						}
+					})
+				} catch (error) {
+					console.error('获取分类商品失败', error)
+					this.categoryList = this.categoryList.map((item, i) => {
+						if (i !== index) return item
+						return {
+							...item,
+							children: [],
+							productsLoaded: false,
+							productsLoading: false
+						}
+					})
+				}
+			},
 			saveCartMap() {
 				setCartMap(this.cartMap)
 			},
 			updateCateTabHeight() {
-				const {
-					windowHeight,
-					safeAreaInsets
-				} = uni.getSystemInfoSync()
-				const searchHeight = uni.upx2px(96)
-				const tabBarHeight = uni.upx2px(100)
-				const safeBottom = safeAreaInsets?.bottom || 0
-				const height = windowHeight - searchHeight - tabBarHeight - safeBottom
-				this.contentHeight = `${Math.max(height, 200)}px`
+				const sys = uni.getSystemInfoSync()
+				// windowHeight：已扣除导航栏和原生 tabBar 后的可用高度，不要再减 tabBar/safeBottom
+				const windowHeight = sys.windowHeight || sys.screenHeight || 0
+				// windowBottom：窗口底到屏幕底距离（有 tabBar 时约等于 tabBar 高度，含安全区）
+				const windowBottom = typeof sys.windowBottom === 'number' ? sys.windowBottom : 50
+				const gap = uni.upx2px(16)
+				this.cartBarBottom = `${windowBottom + gap}px`
+
+				this.$nextTick(() => {
+					uni.createSelectorQuery()
+						.in(this)
+						.select('.search-wrap')
+						.boundingClientRect((rect) => {
+							const searchHeight = rect && rect.height ? rect.height : uni.upx2px(96)
+							const height = windowHeight - searchHeight
+							this.contentHeight = `${Math.max(height, 200)}px`
+						})
+						.exec()
+				})
 			},
 			handleSearchClear() {
 				this.searchKeyword = ''
@@ -227,6 +368,7 @@
 				})
 			},
 			handleAddCart(product) {
+				rememberCartProduct(product)
 				const count = this.cartMap[product.id] || 0
 				this.cartMap = {
 					...this.cartMap,
@@ -265,7 +407,7 @@
 				clearCartMap()
 				this.cartShow = false
 			},
-			handleCheckout() {
+			async handleCheckout() {
 				if (!this.cartCount) {
 					uni.showToast({
 						title: '请先选择商品',
@@ -273,6 +415,7 @@
 					})
 					return
 				}
+				if (!(await requireLogin())) return
 				this.saveCartMap()
 				this.closeCartPopup()
 				uni.navigateTo({
@@ -285,7 +428,8 @@
 
 <style lang="scss" scoped>
 	.mall-root {
-		height: 100vh;
+		height: 100%;
+		min-height: 100%;
 		overflow: hidden;
 	}
 
@@ -295,6 +439,7 @@
 		flex-direction: column;
 		background-color: #f5f5f5;
 		overflow: hidden;
+		box-sizing: border-box;
 	}
 
 	.custom-title {
@@ -465,7 +610,7 @@
 		position: fixed;
 		left: 24rpx;
 		right: 24rpx;
-		bottom: calc(100rpx + env(safe-area-inset-bottom));
+		/* bottom 由 JS 按 windowBottom 动态设置，贴齐原生 tabBar 上方 */
 		height: 96rpx;
 		background-color: #2b2b2b;
 		border-radius: 48rpx;
@@ -694,5 +839,13 @@
 		font-weight: 600;
 		color: #fff;
 		line-height: 72rpx;
+	}
+</style>
+
+<style lang="scss">
+	/* 页面高度撑满可用区域（已不含原生 tabBar），供子元素 height:100% 生效 */
+	page {
+		height: 100%;
+		background-color: #f5f5f5;
 	}
 </style>

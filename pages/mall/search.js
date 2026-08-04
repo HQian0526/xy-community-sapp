@@ -39,7 +39,7 @@ export function searchProducts(categoryList, keyword) {
 
 	const results = []
 	categoryList.forEach((category) => {
-		category.children.forEach((product) => {
+		;(category.children || []).forEach((product) => {
 			if (matchProductKeyword(product, key, category.name)) {
 				results.push({
 					...product,
