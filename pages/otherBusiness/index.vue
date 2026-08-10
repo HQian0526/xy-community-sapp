@@ -1,9 +1,9 @@
 <template>
 	<view class="other-business-page">
 		<view class="store-banner">
-			<image class="store-avatar" :src="storeInfo.avatar" mode="aspectFill" />
+			<image class="store-avatar" :src="headerAvatar" mode="aspectFill" />
 			<view class="store-info">
-				<text class="store-name">{{ storeInfo.storeName }}</text>
+				<text class="store-name">{{ headerName }}</text>
 				<text class="store-tip">以下为本店提供的其他业务服务</text>
 			</view>
 		</view>
@@ -76,19 +76,45 @@
 
 <script>
 	import { getOtherBusinessList } from '../personalCenter/otherBusinessSetting/mock.js'
-	import { getStoreProfile } from '../personalCenter/storeProfile/mock.js'
 	import { storeInfo as defaultStoreInfo } from '../personalCenter/mock.js'
 	import { parseBusinessUnitPrice, formatMoney } from './mock.js'
-	import { requireLogin } from '@/common/auth.js'
+	import {
+		requireLogin,
+		isLoggedIn,
+		saveLoginInfo,
+		getToken
+	} from '@/common/auth.js'
+	import {
+		getUserInfoApi
+	} from '@/common/api/personalCenter/user.js'
+	import {
+		getStoreListApi
+	} from '@/common/api/personalCenter/store.js'
+	import {
+		resolveFileUrl
+	} from '@/common/api/config.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
+
+	const DEFAULT_AVATAR = defaultStoreInfo.avatar
+	const IDENTITY_USER = 1
+	const IDENTITY_MERCHANT = 2
 
 	export default {
 		mixins: [bindPhoneMixin],
 		data() {
 			return {
-				storeInfo: {
-					...defaultStoreInfo
+				userProfile: {
+					id: null,
+					realName: '',
+					phone: '',
+					avatar: '',
+					identityType: IDENTITY_USER
 				},
+				storeProfile: {
+					storeName: '',
+					avatar: ''
+				},
+				headerLoading: false,
 				businessList: [],
 				payPopupShow: false,
 				currentItem: null,
@@ -97,6 +123,21 @@
 			}
 		},
 		computed: {
+			isMerchant() {
+				return Number(this.userProfile.identityType) === IDENTITY_MERCHANT
+			},
+			headerName() {
+				if (this.isMerchant) {
+					return this.storeProfile.storeName || '我的店铺'
+				}
+				return this.userProfile.realName || '微信用户'
+			},
+			headerAvatar() {
+				if (this.isMerchant) {
+					return this.storeProfile.avatar || DEFAULT_AVATAR
+				}
+				return this.userProfile.avatar || DEFAULT_AVATAR
+			},
 			unitPrice() {
 				if (!this.currentItem) return 0
 				return parseBusinessUnitPrice(this.currentItem.fee)
@@ -105,27 +146,105 @@
 				return this.unitPrice * this.payCount
 			}
 		},
-		onShow() {
-			this.loadPageData()
+		async onShow() {
+			this.loadBusinessList()
+			await this.loadHeaderProfile()
 		},
 		onPullDownRefresh() {
-			this.loadPageData()
-			uni.stopPullDownRefresh()
+			Promise.all([
+				this.loadBusinessList(),
+				this.loadHeaderProfile()
+			]).finally(() => {
+				uni.stopPullDownRefresh()
+			})
 		},
 		methods: {
 			formatMoney,
-			loadPageData() {
-				const profile = getStoreProfile()
-				this.storeInfo = {
-					...defaultStoreInfo,
-					storeName: profile.storeName,
-					avatar: profile.storePhoto || defaultStoreInfo.avatar,
-					phone: profile.phone
-				}
+			loadBusinessList() {
 				this.businessList = getOtherBusinessList()
+			},
+			async loadHeaderProfile() {
+				if (this.headerLoading) return
+				// 未登录时用默认头像/昵称，不强制进页登录（支付/联系仍按需登录）
+				if (!isLoggedIn()) {
+					this.userProfile = {
+						id: null,
+						realName: '',
+						phone: '',
+						avatar: '',
+						identityType: IDENTITY_USER
+					}
+					this.storeProfile = {
+						storeName: '',
+						avatar: ''
+					}
+					return
+				}
+				this.headerLoading = true
+				try {
+					await this.fetchUserInfo()
+					if (this.isMerchant && this.userProfile.id) {
+						await this.fetchStoreInfo(this.userProfile.id)
+					} else {
+						this.storeProfile = {
+							storeName: '',
+							avatar: ''
+						}
+					}
+				} finally {
+					this.headerLoading = false
+				}
+			},
+			async fetchUserInfo() {
+				try {
+					const user = await getUserInfoApi()
+					if (!user) return
+					this.userProfile = {
+						id: user.id,
+						realName: user.realName || '',
+						phone: user.phone || '',
+						avatar: resolveFileUrl(user.avatar || ''),
+						identityType: user.identityType == null ? IDENTITY_USER : Number(user.identityType)
+					}
+					saveLoginInfo(getToken(), {
+						id: user.id,
+						userName: user.userName,
+						realName: user.realName,
+						phone: user.phone,
+						avatar: user.avatar,
+						identityType: user.identityType,
+						openid: user.openid,
+						needBindPhone: !user.phone
+					})
+				} catch (error) {
+					console.error('获取用户信息失败', error)
+				}
+			},
+			async fetchStoreInfo(userId) {
+				try {
+					const data = await getStoreListApi({
+						userId
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					const store = list[0]
+					if (!store) {
+						this.storeProfile = {
+							storeName: '',
+							avatar: ''
+						}
+						return
+					}
+					this.storeProfile = {
+						storeName: store.storeName || '',
+						avatar: resolveFileUrl(store.avatar || '')
+					}
+				} catch (error) {
+					console.error('获取商户信息失败', error)
+				}
 			},
 			async openPayPopup(item) {
 				if (!(await requireLogin())) return
+				await this.loadHeaderProfile()
 				this.currentItem = item
 				this.payCount = 1
 				this.payPopupShow = true
