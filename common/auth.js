@@ -8,6 +8,13 @@ const USER_INFO_KEY = 'userInfo'
 
 let loginPromise = null
 let bindPhoneUI = null
+/** 用户在启动登录弹窗中点了「暂不登录」 */
+let loginDeclined = false
+/** 本次冷启动是否已弹出过登录提示（避免重复弹窗） */
+let loginPromptShown = false
+/** 启动登录引导完成态，供首页等待，避免与 onLaunch 弹窗竞态 */
+let bootstrapPromise = null
+let bootstrapDone = false
 
 export function isLoggedIn() {
 	return !!uni.getStorageSync(TOKEN_KEY)
@@ -147,6 +154,19 @@ export function wxLogin() {
 	return loginPromise
 }
 
+/**
+ * 等待进行中的登录换票结束（不二次触发 bootstrap，避免死等）
+ */
+export async function waitLoginReady() {
+	if (loginPromise) {
+		try {
+			await loginPromise
+		} catch (_) {
+			// 登录失败由调用方/引导流程处理，这里只负责排队
+		}
+	}
+}
+
 export function ensureLogin() {
 	if (isLoggedIn()) {
 		return Promise.resolve({
@@ -157,27 +177,125 @@ export function ensureLogin() {
 	return wxLogin()
 }
 
-/** 应用启动时预登录，避免首页首屏接口早于登录完成 */
-export function bootstrapAuth() {
-	return ensureLogin().catch((error) => {
-		console.warn('启动预登录失败', error)
-		return null
+export function isLoginDeclined() {
+	return loginDeclined && !isLoggedIn()
+}
+
+export function clearLoginDeclined() {
+	loginDeclined = false
+}
+
+function showLoginPromptModal() {
+	return new Promise((resolve) => {
+		uni.showModal({
+			title: '登录提示',
+			content: '登录后可正常使用社区便利店等服务',
+			confirmText: '去登录',
+			cancelText: '暂不登录',
+			success: (res) => {
+				resolve(!!res.confirm)
+			},
+			fail: () => {
+				resolve(false)
+			}
+		})
 	})
 }
 
 /**
- * 登录闸门：先确保已登录，再按需引导绑定手机号（用于账号合并）
+ * 应用启动：
+ * - 已有本地 token：先静默换票，避免过期 token 抢跑业务接口
+ * - 无 token：弹窗引导登录
+ * 用户点「暂不登录」后返回 null，由默认页展示「登录」按钮再次触发。
+ */
+export function bootstrapAuth() {
+	if (bootstrapPromise) {
+		return bootstrapPromise
+	}
+	bootstrapPromise = (async () => {
+		try {
+			// 本地有 token 也要换票，防止真机冷启动用过期 JWT 先打业务接口
+			if (isLoggedIn()) {
+				try {
+					const result = await wxLogin()
+					loginDeclined = false
+					return result
+				} catch (error) {
+					console.warn('启动静默换票失败，改为弹窗引导', error)
+					clearLoginInfo()
+				}
+			}
+			if (loginPromptShown) {
+				return null
+			}
+			loginPromptShown = true
+			const confirmed = await showLoginPromptModal()
+			if (!confirmed) {
+				loginDeclined = true
+				return null
+			}
+			try {
+				const result = await wxLogin()
+				loginDeclined = false
+				return result
+			} catch (error) {
+				console.warn('启动登录失败', error)
+				loginDeclined = true
+				uni.showToast({
+					title: error?.message || '登录失败，请稍后重试',
+					icon: 'none'
+				})
+				return null
+			}
+		} finally {
+			bootstrapDone = true
+		}
+	})()
+	return bootstrapPromise
+}
+
+/** 等待启动登录引导结束（已完成则立刻返回） */
+export function waitBootstrapAuth() {
+	if (bootstrapDone) {
+		return Promise.resolve()
+	}
+	if (bootstrapPromise) {
+		return bootstrapPromise.then(() => undefined).catch(() => undefined)
+	}
+	// App.onLaunch 尚未触发时，主动走一遍引导，避免首页抢跑
+	return bootstrapAuth().then(() => undefined).catch(() => undefined)
+}
+
+/**
+ * 登录闸门：先确保已登录；手机号绑定异步引导，不阻断业务接口
+ * @param {{ force?: boolean, bindPhone?: boolean }} [options]
  * @returns {Promise<boolean>}
  */
-export async function requireLogin() {
+export async function requireLogin(options = {}) {
+	const force = !!options.force
+	const bindPhone = options.bindPhone !== false
 	try {
+		if (!force && isLoginDeclined()) {
+			return false
+		}
+		if (force) {
+			clearLoginDeclined()
+		}
+		// 若启动换票仍在进行，先等它结束，避免业务接口抢跑
+		await waitLoginReady()
 		await ensureLogin()
 		if (!getToken()) {
 			await wxLogin()
 		}
-		await ensurePhoneBound()
 		if (!getToken()) {
 			throw new Error('登录失败，未获取到 token')
+		}
+		loginDeclined = false
+		// 绑手机号弹窗改为异步，避免卡住分类/商品列表请求
+		if (bindPhone) {
+			ensurePhoneBound().catch((error) => {
+				console.warn('手机号绑定引导失败', error)
+			})
 		}
 		return true
 	} catch (error) {

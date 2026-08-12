@@ -1,6 +1,14 @@
 <template>
 	<view class="mall-root">
 		<view class="mall-page">
+			<view v-if="needLogin" class="login-gate">
+				<u-empty text="登录后查看商品" mode="permission" marginTop="120"></u-empty>
+				<button class="login-btn" :loading="loginLoading" :disabled="loginLoading" @click="handleLogin">
+					登录
+				</button>
+			</view>
+
+			<template v-else>
 			<view class="search-wrap">
 				<up-search
 					v-model="searchKeyword"
@@ -108,6 +116,7 @@
 				</view>
 				<view class="cart-submit" @click.stop="handleCheckout">去结算</view>
 			</view>
+			</template>
 		</view>
 
 		<view class="cart-popup-host">
@@ -172,7 +181,10 @@
 		rememberCartProduct
 	} from './cart.js'
 	import {
-		requireLogin
+		requireLogin,
+		isLoggedIn,
+		isLoginDeclined,
+		waitBootstrapAuth
 	} from '@/common/auth.js'
 	import {
 		getCatagoryListApi
@@ -209,6 +221,8 @@
 				categoryList: [],
 				categoryLoading: false,
 				pageBootstrapping: false,
+				needLogin: !isLoggedIn(),
+				loginLoading: false,
 				currentCate: 0,
 				searchKeyword: '',
 				socialName: '上海-汤臣一品',
@@ -228,8 +242,19 @@
 			if (this.pageBootstrapping) return
 			this.pageBootstrapping = true
 			try {
+				// 先等启动登录弹窗结束，避免与 App.onLaunch 竞态
+				await waitBootstrapAuth()
+				// 启动弹窗点了「暂不登录」：展示登录入口，不再静默登录
+				if (isLoginDeclined() || !isLoggedIn()) {
+					this.needLogin = !isLoggedIn()
+					if (this.needLogin) return
+				}
 				const ok = await requireLogin()
-				if (!ok) return
+				if (!ok) {
+					this.needLogin = true
+					return
+				}
+				this.needLogin = false
 				await this.loadCategoryList()
 			} finally {
 				this.pageBootstrapping = false
@@ -261,6 +286,20 @@
 			}
 		},
 		methods: {
+			async handleLogin() {
+				if (this.loginLoading) return
+				this.loginLoading = true
+				try {
+					const ok = await requireLogin({
+						force: true
+					})
+					if (!ok) return
+					this.needLogin = false
+					await this.loadCategoryList()
+				} finally {
+					this.loginLoading = false
+				}
+			},
 			async loadCategoryList() {
 				if (this.categoryLoading) return
 				this.categoryLoading = true
@@ -415,7 +454,9 @@
 					})
 					return
 				}
-				if (!(await requireLogin())) return
+				if (!(await requireLogin({
+						force: true
+					}))) return
 				this.saveCartMap()
 				this.closeCartPopup()
 				uni.navigateTo({
@@ -440,6 +481,38 @@
 		background-color: #f5f5f5;
 		overflow: hidden;
 		box-sizing: border-box;
+	}
+
+	.login-gate {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 0 80rpx;
+		box-sizing: border-box;
+	}
+
+	.login-btn {
+		width: 100%;
+		max-width: 480rpx;
+		height: 88rpx;
+		line-height: 88rpx;
+		margin-top: 48rpx;
+		border-radius: 44rpx;
+		background-color: #00a896;
+		color: #fff;
+		font-size: 30rpx;
+		font-weight: 600;
+		border: none;
+		padding: 0;
+
+		&::after {
+			border: none;
+		}
+
+		&[disabled] {
+			opacity: 0.7;
+		}
 	}
 
 	.custom-title {

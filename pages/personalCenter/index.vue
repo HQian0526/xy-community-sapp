@@ -211,7 +211,10 @@
 				return this.userProfile.realName || '微信用户'
 			},
 			headerPhone() {
-				return this.userProfile.phone || '未绑定手机号'
+				const phone = String(this.userProfile.phone || '').trim()
+				if (!phone) return '未绑定手机号'
+				if (phone.length < 7) return phone
+				return `${phone.slice(0, 3)}****${phone.slice(-4)}`
 			},
 			headerAvatar() {
 				if (this.isMerchant) {
@@ -312,13 +315,13 @@
 				return Number(value).toFixed(2)
 			},
 			async goAccountOverview() {
-				if (!(await requireLogin())) return
+				if (!(await requireLogin({ force: true }))) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/withdraw/index',
 				})
 			},
 			async handleServiceClick(item) {
-				if (!(await requireLogin())) return
+				if (!(await requireLogin({ force: true }))) return
 				if (item.key === 'share') {
 					this.handleShareMiniProgram()
 					return
@@ -347,7 +350,7 @@
 			},
 			async goBusinessStatus() {
 				if (!this.isMerchant) return
-				if (!(await requireLogin())) return
+				if (!(await requireLogin({ force: true }))) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/businessStatus/index'
 				})

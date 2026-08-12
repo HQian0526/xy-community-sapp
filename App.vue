@@ -13,14 +13,14 @@
 	// #endif
 
 	export default {
-		onLaunch: function() {
+		onLaunch: async function() {
 			// #ifdef MP-WEIXIN
 			uni.showShareMenu({
 				withShareTicket: true,
 				menus: ['shareAppMessage', 'shareTimeline']
 			})
-			// 启动即预登录，减少首页接口抢跑导致的 401
-			bootstrapAuth()
+			// 启动立即提示登录；拒绝后由默认页「登录」按钮再次触发
+			await bootstrapAuth()
 			// #endif
 			// #ifdef H5
 			console.log(

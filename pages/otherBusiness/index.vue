@@ -243,7 +243,7 @@
 				}
 			},
 			async openPayPopup(item) {
-				if (!(await requireLogin())) return
+				if (!(await requireLogin({ force: true }))) return
 				await this.loadHeaderProfile()
 				this.currentItem = item
 				this.payCount = 1
@@ -274,7 +274,7 @@
 				this.paying = true
 			},
 			async handleContact() {
-				if (!(await requireLogin())) return
+				if (!(await requireLogin({ force: true }))) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/contactService/index'
 				})
