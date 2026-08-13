@@ -193,15 +193,19 @@
 		getProductListApi
 	} from '@/common/api/mall/product.js'
 	import {
+		assertStoreOpenForOrder
+	} from '@/common/api/personalCenter/store.js'
+	import {
 		resolveFileUrl
 	} from '@/common/api/config.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
 
-	function mapProductItem(item, categoryName = '') {
+	function mapProductItem(item, categoryName = '', fallbackStoreId = '') {
 		return {
 			id: String(item.productId || item.id),
 			productId: item.productId || item.id,
 			catagoryId: item.catagoryId,
+			storeId: item.storeId || fallbackStoreId || '',
 			name: item.productName || '',
 			icon: resolveFileUrl(item.productImg || ''),
 			price: Number(item.price || 0),
@@ -312,6 +316,7 @@
 						.map((item) => ({
 							id: item.catagoryId || item.id,
 							catagoryId: item.catagoryId || item.id,
+							storeId: item.storeId || '',
 							name: item.catagoryName || '',
 							children: [],
 							productsLoaded: false,
@@ -349,7 +354,7 @@
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					const children = list
 						.filter((item) => item.productStatus !== 0)
-						.map((item) => mapProductItem(item, cate.name))
+						.map((item) => mapProductItem(item, cate.name, cate.storeId))
 
 					this.categoryList = this.categoryList.map((item, i) => {
 						if (i !== index) return item
@@ -446,6 +451,12 @@
 				clearCartMap()
 				this.cartShow = false
 			},
+			resolveCheckoutStoreId() {
+				const cartItem = this.cartItems.find((item) => item.storeId)
+				if (cartItem?.storeId) return cartItem.storeId
+				const cate = this.categoryList.find((item) => item.storeId)
+				return cate?.storeId || ''
+			},
 			async handleCheckout() {
 				if (!this.cartCount) {
 					uni.showToast({
@@ -457,6 +468,9 @@
 				if (!(await requireLogin({
 						force: true
 					}))) return
+				// 点结算时实时查 /store/findStore，覆盖「选购中商家突然打烊」
+				const check = await assertStoreOpenForOrder(this.resolveCheckoutStoreId())
+				if (!check.ok) return
 				this.saveCartMap()
 				this.closeCartPopup()
 				uni.navigateTo({

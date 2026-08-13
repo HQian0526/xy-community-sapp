@@ -30,7 +30,8 @@ export function rememberCartProduct(product) {
 		icon: product.icon || '',
 		unit: product.unit || '',
 		has: product.has,
-		catagoryId: product.catagoryId
+		catagoryId: product.catagoryId,
+		storeId: product.storeId || ''
 	}
 	uni.setStorageSync(CART_PRODUCTS_KEY, map)
 }

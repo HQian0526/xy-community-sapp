@@ -89,6 +89,7 @@
 	import { checkoutInfo, DELIVERY_FEE, getDefaultContact, formatMoney } from './mock.js'
 	import { getCartItems, getCartTotal, clearCartMap } from '../cart.js'
 	import { addStoreOrder } from '../../personalCenter/storeOrder/mock.js'
+	import { assertStoreOpenForOrder } from '@/common/api/personalCenter/store.js'
 
 	const defaultFormData = () => ({
 		contact: '',
@@ -102,6 +103,7 @@
 				checkoutInfo,
 				deliveryFee: DELIVERY_FEE,
 				cartItems: [],
+				submitting: false,
 				formData: defaultFormData(),
 				rules: {
 					contact: {
@@ -129,6 +131,10 @@
 		},
 		methods: {
 			formatMoney,
+			resolveCheckoutStoreId() {
+				const item = this.cartItems.find((row) => row.storeId)
+				return item?.storeId || ''
+			},
 			loadCheckoutData() {
 				this.cartItems = getCartItems()
 				if (!this.cartItems.length) return
@@ -138,17 +144,32 @@
 					...defaults
 				}
 			},
-			handleSubmit() {
+			async handleSubmit() {
+				if (this.submitting) return
 				if (!this.cartItems.length) {
 					uni.showToast({ title: '购物车是空的', icon: 'none' })
 					return
 				}
-				this.$refs.formRef.validate().then(() => {
-					uni.showModal({
-						title: '确认下单',
-						content: `确定支付 ¥${formatMoney(this.payTotal)} 吗？`,
-						success: (res) => {
-							if (!res.confirm) return
+				try {
+					await this.$refs.formRef.validate()
+				} catch (e) {
+					return
+				}
+
+				// 提交前再查一次，覆盖「进结算页后商家打烊」
+				const check = await assertStoreOpenForOrder(this.resolveCheckoutStoreId())
+				if (!check.ok) return
+
+				uni.showModal({
+					title: '确认下单',
+					content: `确定支付 ¥${formatMoney(this.payTotal)} 吗？`,
+					success: async (res) => {
+						if (!res.confirm) return
+						// 确认瞬间再拦一次，尽量缩小竞态窗口
+						const recheck = await assertStoreOpenForOrder(this.resolveCheckoutStoreId())
+						if (!recheck.ok) return
+						this.submitting = true
+						try {
 							addStoreOrder({
 								address: this.formData.address,
 								contact: this.formData.contact,
@@ -172,9 +193,11 @@
 							setTimeout(() => {
 								uni.navigateBack()
 							}, 1200)
+						} finally {
+							this.submitting = false
 						}
-					})
-				}).catch(() => {})
+					}
+				})
 			}
 		}
 	}

@@ -16,7 +16,7 @@
 		</view>
 
 		<view v-else class="empty-wrap">
-			<u-empty text="暂无业务项，请新增" mode="list"></u-empty>
+			<u-empty :text="loading ? '加载中...' : '暂无业务项，请新增'" mode="list"></u-empty>
 		</view>
 
 		<view class="submit-wrap">
@@ -27,22 +27,44 @@
 
 <script>
 	import {
-		getOtherBusinessList,
-		deleteOtherBusiness
-	} from './mock.js'
+		requireLogin
+	} from '@/common/auth.js'
+	import {
+		getOtherBusinessListApi,
+		deleteOtherBusinessApi,
+		mapOtherBusinessItem
+	} from '@/common/api/personalCenter/otherBusiness.js'
 
 	export default {
 		data() {
 			return {
-				businessList: []
+				businessList: [],
+				loading: false,
+				deleting: false
 			}
 		},
-		onShow() {
-			this.loadList()
+		async onShow() {
+			await this.loadList()
 		},
 		methods: {
-			loadList() {
-				this.businessList = getOtherBusinessList()
+			async loadList() {
+				if (this.loading) return
+				const ok = await requireLogin({
+					force: true
+				})
+				if (!ok) return
+
+				this.loading = true
+				try {
+					const data = await getOtherBusinessListApi()
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					this.businessList = list.map(mapOtherBusinessItem)
+				} catch (error) {
+					console.error('获取其他业务列表失败', error)
+					this.businessList = []
+				} finally {
+					this.loading = false
+				}
 			},
 			handleAdd() {
 				uni.navigateTo({
@@ -55,16 +77,25 @@
 				})
 			},
 			handleDelete(item) {
+				if (this.deleting) return
 				uni.showModal({
 					title: '确认删除',
 					content: `确定删除「${item.name}」吗？`,
-					success: (res) => {
+					success: async (res) => {
 						if (!res.confirm) return
-						this.businessList = deleteOtherBusiness(item.id)
-						uni.showToast({
-							title: '已删除',
-							icon: 'success'
-						})
+						this.deleting = true
+						try {
+							await deleteOtherBusinessApi([item.id])
+							uni.showToast({
+								title: '已删除',
+								icon: 'success'
+							})
+							await this.loadList()
+						} catch (error) {
+							console.error('删除其他业务失败', error)
+						} finally {
+							this.deleting = false
+						}
 					}
 				})
 			}

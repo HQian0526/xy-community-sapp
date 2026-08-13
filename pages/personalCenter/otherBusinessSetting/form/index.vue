@@ -31,16 +31,26 @@
 		</view>
 
 		<view class="submit-wrap">
-			<view class="btn-success submit-btn" @click="handleSubmit">{{ isEdit ? '保存修改' : '确认新增' }}</view>
+			<view
+				class="btn-success submit-btn"
+				:class="{ 'is-loading': submitting }"
+				@click="handleSubmit"
+			>{{ submitting ? '提交中...' : (isEdit ? '保存修改' : '确认新增') }}</view>
 		</view>
 	</view>
 </template>
 
 <script>
 	import {
-		getOtherBusinessById,
-		saveOtherBusiness
-	} from '../mock.js'
+		requireLogin
+	} from '@/common/auth.js'
+	import {
+		getOtherBusinessListApi,
+		addOtherBusinessApi,
+		updateOtherBusinessApi,
+		mapOtherBusinessItem,
+		toOtherBusinessPayload
+	} from '@/common/api/personalCenter/otherBusiness.js'
 
 	const defaultFormData = () => ({
 		id: '',
@@ -53,33 +63,80 @@
 		data() {
 			return {
 				isEdit: false,
+				submitting: false,
 				formData: defaultFormData(),
 				rules: {
 					name: {
-						rules: [{ required: true, errorMessage: '请输入业务名称' }]
+						rules: [{
+							required: true,
+							errorMessage: '请输入业务名称'
+						}]
 					},
 					fee: {
-						rules: [{ required: true, errorMessage: '请输入收费标准' }]
+						rules: [{
+							required: true,
+							errorMessage: '请输入收费标准'
+						}]
 					}
 				}
 			}
 		},
-		onLoad(options) {
+		async onLoad(options) {
+			const ok = await requireLogin({
+				force: true
+			})
+			if (!ok) return
+
 			if (options.id) {
 				this.isEdit = true
-				const item = getOtherBusinessById(options.id)
-				if (item) {
-					this.formData = { ...item }
-				}
+				await this.loadDetail(options.id)
 			}
 			uni.setNavigationBarTitle({
 				title: this.isEdit ? '编辑业务' : '新增业务'
 			})
 		},
 		methods: {
-			handleSubmit() {
-				this.$refs.formRef.validate().then(() => {
-					saveOtherBusiness({ ...this.formData })
+			async loadDetail(id) {
+				try {
+					const data = await getOtherBusinessListApi({
+						id
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					const item = list[0]
+					if (!item) {
+						uni.showToast({
+							title: '业务不存在或已删除',
+							icon: 'none'
+						})
+						return
+					}
+					const mapped = mapOtherBusinessItem(item)
+					this.formData = {
+						id: mapped.id,
+						name: mapped.name,
+						description: mapped.description,
+						fee: mapped.fee
+					}
+				} catch (error) {
+					console.error('获取业务详情失败', error)
+				}
+			},
+			async handleSubmit() {
+				if (this.submitting) return
+				try {
+					await this.$refs.formRef.validate()
+				} catch (e) {
+					return
+				}
+
+				this.submitting = true
+				try {
+					const payload = toOtherBusinessPayload(this.formData)
+					if (this.isEdit) {
+						await updateOtherBusinessApi(payload)
+					} else {
+						await addOtherBusinessApi(payload)
+					}
 					uni.showToast({
 						title: this.isEdit ? '修改成功' : '新增成功',
 						icon: 'success'
@@ -87,7 +144,11 @@
 					setTimeout(() => {
 						uni.navigateBack()
 					}, 1200)
-				}).catch(() => {})
+				} catch (error) {
+					console.error('保存其他业务失败', error)
+				} finally {
+					this.submitting = false
+				}
 			}
 		}
 	}
@@ -124,5 +185,9 @@
 		line-height: 88rpx;
 		font-size: 30rpx;
 		font-weight: 600;
+	}
+
+	.submit-btn.is-loading {
+		opacity: 0.7;
 	}
 </style>

@@ -138,7 +138,6 @@
 		businessList
 	} from './mock.js'
 	import {
-		getBusinessStatus,
 		STATUS_CLOSED
 	} from './businessStatus/mock.js'
 	import {
@@ -159,7 +158,9 @@
 		getUserInfoApi
 	} from '@/common/api/personalCenter/user.js'
 	import {
-		getStoreListApi
+		getStoreListApi,
+		getStoreStatusLabel,
+		isStoreClosed
 	} from '@/common/api/personalCenter/store.js'
 	import {
 		resolveFileUrl
@@ -185,8 +186,11 @@
 					identityType: IDENTITY_USER
 				},
 				storeProfile: {
+					id: null,
+					storeId: null,
 					storeName: '',
-					avatar: ''
+					avatar: '',
+					storeStatus: null
 				},
 				accountList,
 				serviceList,
@@ -202,6 +206,9 @@
 				return Number(this.userProfile.identityType) === IDENTITY_MERCHANT
 			},
 			isPaused() {
+				if (this.storeProfile.storeStatus != null) {
+					return isStoreClosed(this.storeProfile.storeStatus)
+				}
 				return this.storeInfo.status === STATUS_CLOSED
 			},
 			headerName() {
@@ -226,7 +233,6 @@
 		async onShow() {
 			await this.initUserProfile()
 			if (this.isMerchant) {
-				this.loadStoreStatus()
 				this.loadWalletBalance()
 			}
 			this.loadPendingCount()
@@ -243,8 +249,11 @@
 						await this.fetchStoreInfo(this.userProfile.id)
 					} else {
 						this.storeProfile = {
+							id: null,
+							storeId: null,
 							storeName: '',
-							avatar: ''
+							avatar: '',
+							storeStatus: null
 						}
 					}
 				} finally {
@@ -285,25 +294,29 @@
 					const store = list[0]
 					if (!store) {
 						this.storeProfile = {
+							id: null,
+							storeId: null,
 							storeName: '',
-							avatar: ''
+							avatar: '',
+							storeStatus: null
 						}
 						return
 					}
 					this.storeProfile = {
+						id: store.id || null,
+						storeId: store.storeId || null,
 						storeName: store.storeName || '',
-						avatar: resolveFileUrl(store.avatar || '')
+						avatar: resolveFileUrl(store.avatar || ''),
+						storeStatus: store.storeStatus == null ? null : Number(store.storeStatus)
 					}
 					this.storeInfo.storeName = this.storeProfile.storeName || this.storeInfo.storeName
+					this.storeInfo.status = getStoreStatusLabel(this.storeProfile.storeStatus)
 					if (this.storeProfile.avatar) {
 						this.storeInfo.avatar = this.storeProfile.avatar
 					}
 				} catch (error) {
 					console.error('获取商户信息失败', error)
 				}
-			},
-			loadStoreStatus() {
-				this.storeInfo.status = getBusinessStatus()
 			},
 			loadWalletBalance() {
 				this.storeInfo.totalAssets = getWalletBalance()

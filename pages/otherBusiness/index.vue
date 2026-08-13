@@ -1,35 +1,41 @@
 <template>
 	<view class="other-business-page">
-		<view class="store-banner">
-			<image class="store-avatar" :src="headerAvatar" mode="aspectFill" />
-			<view class="store-info">
+		<view class="header-bg"></view>
+
+		<view class="profile-section">
+			<view class="avatar-wrap">
+				<image class="avatar-img" :src="headerAvatar" mode="aspectFill" />
+			</view>
+			<view class="profile-info">
 				<text class="store-name">{{ headerName }}</text>
 				<text class="store-tip">以下为本店提供的其他业务服务</text>
 			</view>
 		</view>
 
-		<view v-if="businessList.length" class="business-list">
-			<view v-for="item in businessList" :key="item.id" class="business-card">
-				<view class="card-main">
-					<view class="business-icon">
-						<up-icon name="grid" size="22" color="#00a896"></up-icon>
+		<view class="content-wrap">
+			<view v-if="businessList.length" class="business-list">
+				<view v-for="item in businessList" :key="item.id" class="business-card">
+					<view class="card-main">
+						<view class="business-icon">
+							<up-icon name="grid" size="22" color="#00a896"></up-icon>
+						</view>
+						<view class="business-content">
+							<text class="business-name">{{ item.name }}</text>
+							<text v-if="item.description" class="business-desc">{{ item.description }}</text>
+							<text class="business-fee">收费标准：{{ item.fee }}</text>
+						</view>
 					</view>
-					<view class="business-content">
-						<text class="business-name">{{ item.name }}</text>
-						<text v-if="item.description" class="business-desc">{{ item.description }}</text>
-						<text class="business-fee">收费标准：{{ item.fee }}</text>
+					<view class="card-footer">
+						<text class="action-btn btn-success" @click="openPayPopup(item)">直接支付</text>
+						<text class="action-btn btn-success-plain" @click="handleContact">联系店家</text>
 					</view>
 				</view>
-				<view class="card-footer">
-					<text class="action-btn btn-success" @click="openPayPopup(item)">直接支付</text>
-					<text class="action-btn btn-success-plain" @click="handleContact">联系店家</text>
-				</view>
+				<view class="list-footer">已经到底了～</view>
 			</view>
-			<view class="list-footer">已经到底了～</view>
-		</view>
 
-		<view v-else class="empty-wrap">
-			<u-empty text="店家暂未发布其他业务" mode="list"></u-empty>
+			<view v-else class="empty-wrap">
+				<u-empty text="店家暂未发布其他业务" mode="list"></u-empty>
+			</view>
 		</view>
 
 		<view class="pay-popup-host">
@@ -75,9 +81,12 @@
 </template>
 
 <script>
-	import { getOtherBusinessList } from '../personalCenter/otherBusinessSetting/mock.js'
 	import { storeInfo as defaultStoreInfo } from '../personalCenter/mock.js'
 	import { parseBusinessUnitPrice, formatMoney } from './mock.js'
+	import {
+		getOtherBusinessListApi,
+		mapOtherBusinessItem
+	} from '@/common/api/personalCenter/otherBusiness.js'
 	import {
 		requireLogin,
 		isLoggedIn,
@@ -127,16 +136,10 @@
 				return Number(this.userProfile.identityType) === IDENTITY_MERCHANT
 			},
 			headerName() {
-				if (this.isMerchant) {
-					return this.storeProfile.storeName || '我的店铺'
-				}
-				return this.userProfile.realName || '微信用户'
+				return this.storeProfile.storeName || '社区店铺'
 			},
 			headerAvatar() {
-				if (this.isMerchant) {
-					return this.storeProfile.avatar || DEFAULT_AVATAR
-				}
-				return this.userProfile.avatar || DEFAULT_AVATAR
+				return this.storeProfile.avatar || DEFAULT_AVATAR
 			},
 			unitPrice() {
 				if (!this.currentItem) return 0
@@ -147,25 +150,49 @@
 			}
 		},
 		async onShow() {
-			this.loadBusinessList()
 			await this.loadHeaderProfile()
+			await this.loadBusinessList()
+			// 业务列表带回 storeId/storeName 时补全头部店铺信息
+			if (!this.storeProfile.storeName && this.businessList.length) {
+				await this.fetchStoreInfo({
+					storeId: this.businessList[0].storeId
+				})
+			}
 		},
 		onPullDownRefresh() {
-			Promise.all([
-				this.loadBusinessList(),
-				this.loadHeaderProfile()
-			]).finally(() => {
-				uni.stopPullDownRefresh()
-			})
+			Promise.resolve()
+				.then(async () => {
+					await this.loadHeaderProfile()
+					await this.loadBusinessList()
+					if (!this.storeProfile.storeName && this.businessList.length) {
+						await this.fetchStoreInfo({
+							storeId: this.businessList[0].storeId
+						})
+					}
+				})
+				.finally(() => {
+					uni.stopPullDownRefresh()
+				})
 		},
 		methods: {
 			formatMoney,
-			loadBusinessList() {
-				this.businessList = getOtherBusinessList()
+			async loadBusinessList() {
+				if (!isLoggedIn()) {
+					this.businessList = []
+					return
+				}
+				try {
+					const data = await getOtherBusinessListApi()
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					this.businessList = list.map(mapOtherBusinessItem)
+				} catch (error) {
+					console.error('获取其他业务列表失败', error)
+					this.businessList = []
+				}
 			},
 			async loadHeaderProfile() {
 				if (this.headerLoading) return
-				// 未登录时用默认头像/昵称，不强制进页登录（支付/联系仍按需登录）
+				// 未登录时用默认店铺头图，不强制进页登录（支付/联系仍按需登录）
 				if (!isLoggedIn()) {
 					this.userProfile = {
 						id: null,
@@ -183,14 +210,14 @@
 				this.headerLoading = true
 				try {
 					await this.fetchUserInfo()
-					if (this.isMerchant && this.userProfile.id) {
-						await this.fetchStoreInfo(this.userProfile.id)
-					} else {
-						this.storeProfile = {
-							storeName: '',
-							avatar: ''
-						}
-					}
+					// 头部始终展示店铺信息（与「我的」商家头部一致）
+					await this.fetchStoreInfo(
+						this.isMerchant && this.userProfile.id
+							? {
+								userId: this.userProfile.id
+							}
+							: {}
+					)
 				} finally {
 					this.headerLoading = false
 				}
@@ -220,17 +247,20 @@
 					console.error('获取用户信息失败', error)
 				}
 			},
-			async fetchStoreInfo(userId) {
+			async fetchStoreInfo(params = {}) {
 				try {
-					const data = await getStoreListApi({
-						userId
-					})
+					const query = {}
+					if (params.userId) query.userId = params.userId
+					if (params.storeId) query.storeId = params.storeId
+					const data = await getStoreListApi(query)
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					const store = list[0]
 					if (!store) {
+						// 业务列表上已有店铺名时先用其兜底展示
+						const fallback = this.businessList[0]
 						this.storeProfile = {
-							storeName: '',
-							avatar: ''
+							storeName: fallback?.storeName || this.storeProfile.storeName || '',
+							avatar: this.storeProfile.avatar || ''
 						}
 						return
 					}
@@ -289,30 +319,44 @@
 	.other-business-page {
 		min-height: 100vh;
 		background-color: #f5f5f5;
-		padding: 24rpx;
 		padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
 		box-sizing: border-box;
 	}
 
-	.store-banner {
+	.header-bg {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 320rpx;
+		background: linear-gradient(180deg, #e8f8f6 0%, #f2fbfb 60%, #f5f5f5 100%);
+	}
+
+	.profile-section {
+		position: relative;
 		display: flex;
 		align-items: center;
-		background-color: #fff;
-		border-radius: 16rpx;
-		padding: 28rpx 24rpx;
-		margin-bottom: 20rpx;
-		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+		padding: 32rpx 32rpx 24rpx;
 	}
 
-	.store-avatar {
-		width: 96rpx;
-		height: 96rpx;
-		border-radius: 50%;
+	.avatar-wrap {
 		flex-shrink: 0;
-		background-color: #f5f5f5;
+		width: 112rpx;
+		height: 112rpx;
+		border-radius: 50%;
+		overflow: hidden;
+		background: linear-gradient(135deg, $primary 0%, #33b9ab 100%);
+		padding: 4rpx;
 	}
 
-	.store-info {
+	.avatar-img {
+		width: 100%;
+		height: 100%;
+		border-radius: 50%;
+		background-color: #fff;
+	}
+
+	.profile-info {
 		flex: 1;
 		min-width: 0;
 		margin-left: 24rpx;
@@ -322,14 +366,22 @@
 	}
 
 	.store-name {
-		font-size: 32rpx;
-		font-weight: 600;
+		font-size: 34rpx;
+		font-weight: 700;
 		color: #333;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.store-tip {
-		font-size: 24rpx;
+		font-size: 26rpx;
 		color: #999;
+	}
+
+	.content-wrap {
+		position: relative;
+		padding: 0 24rpx;
 	}
 
 	.business-list {
