@@ -20,6 +20,15 @@
 					/>
 				</uni-forms-item>
 
+				<uni-forms-item label="微信号" name="wechatId">
+					<uni-easyinput
+						v-model="formData.wechatId"
+						placeholder="选填，便于客服添加您"
+						:inputBorder="false"
+					/>
+				</uni-forms-item>
+
+				<!--
 				<uni-forms-item label="绑定区域" name="region" required>
 					<uni-easyinput
 						v-model="formData.region"
@@ -44,46 +53,37 @@
 						<text class="fee-tip">（限时特惠价，享永久经营权）</text>
 					</view>
 				</uni-forms-item>
+				-->
 			</uni-forms>
-		</view>
-
-		<view class="agreement-row" @click="toggleAgreed">
-			<view class="agreement-check" :class="{ 'agreement-check--active': agreed }">
-				<up-icon v-if="agreed" name="checkmark" size="12" color="#fff"></up-icon>
-			</view>
-			<text class="agreement-text">我已阅读并同意</text>
-			<text class="agreement-link" @click.stop="goAgreement">服务协议</text>
-			<text class="agreement-text">内容</text>
+			<text class="apply-tip">稍后客服将尽快添加您</text>
 		</view>
 
 		<view class="submit-wrap">
 			<view
 				class="btn-success submit-btn"
-				:class="{ 'submit-btn--disabled': !agreed || submitting }"
+				:class="{ 'submit-btn--disabled': submitting }"
 				@click="handleSubmit"
 			>
-				确认入驻
+				提交
 			</view>
 		</view>
 	</view>
 </template>
 
 <script>
-	import { saveJoinApplication, JOIN_FEE } from './mock.js'
+	import { requireLogin } from '@/common/auth.js'
+	import { addVisitorApi } from '@/common/api/join/visitor.js'
 
 	const defaultFormData = () => ({
 		name: '',
 		contact: '',
-		region: '',
-		address: ''
+		wechatId: ''
 	})
 
 	export default {
 		data() {
 			return {
 				formData: defaultFormData(),
-				joinFee: JOIN_FEE,
-				agreed: false,
 				submitting: false,
 				rules: {
 					name: {
@@ -94,52 +94,44 @@
 							{ required: true, errorMessage: '请输入联系方式' },
 							{ pattern: /^1[3-9]\d{9}$/, errorMessage: '请输入正确的11位手机号码' }
 						]
-					},
-					region: {
-						rules: [{ required: true, errorMessage: '请输入绑定区域' }]
-					},
-					address: {
-						rules: [{ required: true, errorMessage: '请输入详细地址' }]
 					}
 				}
 			}
 		},
 		methods: {
-			toggleAgreed() {
-				this.agreed = !this.agreed
-			},
-			goAgreement() {
-				uni.navigateTo({
-					url: '/pages/personalCenter/businessAgreement/index'
-				})
-			},
-			handleSubmit() {
-				if (!this.agreed || this.submitting) {
-					if (!this.agreed) {
-						uni.showToast({
-							title: '请先阅读并同意服务协议',
-							icon: 'none'
-						})
-					}
+			async handleSubmit() {
+				if (this.submitting) return
+				try {
+					await this.$refs.formRef.validate()
+				} catch (e) {
 					return
 				}
 
-				this.$refs.formRef.validate().then(() => {
-					this.submitting = true
-					saveJoinApplication({
-						...this.formData,
-						joinFee: this.joinFee
+				const ok = await requireLogin({
+					force: true
+				})
+				if (!ok) return
+
+				this.submitting = true
+				try {
+					const wechatId = String(this.formData.wechatId || '').trim()
+					await addVisitorApi({
+						visitorName: String(this.formData.name || '').trim(),
+						phone: String(this.formData.contact || '').trim(),
+						remark: wechatId ? `微信号：${wechatId}` : ''
 					})
 					uni.showToast({
-						title: '申请已提交，我们将尽快联系您',
+						title: '申请已提交',
 						icon: 'success'
 					})
 					setTimeout(() => {
 						uni.navigateBack()
 					}, 1200)
-				}).catch(() => {}).finally(() => {
+				} catch (error) {
+					console.error('提交入驻申请失败', error)
+				} finally {
 					this.submitting = false
-				})
+				}
 			}
 		}
 	}
@@ -163,6 +155,15 @@
 		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 	}
 
+	.apply-tip {
+		display: block;
+		margin-top: 8rpx;
+		padding: 0 8rpx;
+		font-size: 24rpx;
+		color: #999;
+		line-height: 1.5;
+	}
+
 	.fee-value {
 		min-height: 72rpx;
 		display: flex;
@@ -174,47 +175,10 @@
 		font-weight: 600;
 		color: $primary;
 	}
-	
+
 	.fee-tip {
 		font-size: 20rpx;
 		color: #999;
-	}
-
-	.agreement-row {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		margin-top: 32rpx;
-		padding: 0 8rpx;
-	}
-
-	.agreement-check {
-		width: 32rpx;
-		height: 32rpx;
-		border-radius: 6rpx;
-		border: 2rpx solid #c8c9cc;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		margin-right: 12rpx;
-		flex-shrink: 0;
-		box-sizing: border-box;
-
-		&--active {
-			background-color: $primary;
-			border-color: $primary;
-		}
-	}
-
-	.agreement-text {
-		font-size: 26rpx;
-		color: #666;
-	}
-
-	.agreement-link {
-		font-size: 26rpx;
-		color: $primary;
-		text-decoration: underline;
 	}
 
 	.submit-wrap {

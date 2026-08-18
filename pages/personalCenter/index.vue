@@ -120,7 +120,7 @@
 		<u-popup :show="sharePopupShow" mode="center" round="16" closeOnClickOverlay @close="closeSharePopup">
 			<view class="share-popup">
 				<text class="share-popup-title">分享小程序</text>
-				<text class="share-popup-desc">邀请好友一起使用，享受邻里互助便民服务</text>
+				<!-- <text class="share-popup-desc">邀请好友一起使用</text> -->
 				<button class="share-popup-btn" open-type="share" @click="closeSharePopup">分享给微信好友</button>
 			</view>
 		</u-popup>

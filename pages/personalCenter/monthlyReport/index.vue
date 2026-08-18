@@ -17,115 +17,72 @@
 				<text class="chart-title">月度收入趋势</text>
 				<text class="chart-tip">近6个月</text>
 			</view>
-			<view class="chart-wrap">
-				<!-- #ifdef MP-ALIPAY -->
-				<canvas
-					canvas-id="monthlyIncomeChart"
-					id="monthlyIncomeChart"
-					class="chart-canvas"
-					:width="cWidth * pixelRatio"
-					:height="cHeight * pixelRatio"
-					:style="{ width: cWidth + 'px', height: cHeight + 'px' }"
-					@touchstart="touchChart"
-				></canvas>
-				<!-- #endif -->
-				<!-- #ifndef MP-ALIPAY -->
-				<canvas
-					canvas-id="monthlyIncomeChart"
-					id="monthlyIncomeChart"
-					class="chart-canvas"
-					@touchstart="touchChart"
-				></canvas>
-				<!-- #endif -->
+
+			<view class="ucharts-column">
+				<view class="ucharts-plot">
+					<view class="ucharts-grid">
+						<view v-for="n in 4" :key="n" class="ucharts-grid-line"></view>
+					</view>
+					<view class="ucharts-bars">
+						<view
+							v-for="(item, index) in chartColumns"
+							:key="item.category"
+							class="ucharts-col"
+							@click="activeIndex = index"
+						>
+							<text class="ucharts-label">{{ item.label }}</text>
+							<view class="ucharts-bar-track">
+								<view
+									class="ucharts-bar"
+									:class="{ 'ucharts-bar--active': activeIndex === index }"
+									:style="{ height: item.height + '%' }"
+								></view>
+							</view>
+							<text class="ucharts-cate">{{ item.category }}</text>
+						</view>
+					</view>
+				</view>
 			</view>
 		</view>
 	</view>
 </template>
 
 <script>
-	import uCharts from '../../../components/u-charts/u-charts.js'
 	import { getMonthlyReportData, formatMoney } from './mock.js'
-
-	let chartInstance = null
 
 	export default {
 		data() {
 			return {
 				reportData: getMonthlyReportData(),
-				cWidth: 0,
-				cHeight: 0,
-				pixelRatio: 1
+				activeIndex: -1
 			}
 		},
-		onLoad() {
-			// #ifdef MP-ALIPAY
-			uni.getSystemInfo({
-				success: (res) => {
-					if (res.pixelRatio > 1) {
-						this.pixelRatio = 2
+		computed: {
+			chartColumns() {
+				const series = this.reportData.series?.[0] || { data: [] }
+				const categories = this.reportData.categories || []
+				const values = series.data || []
+				const max = Math.max(...values, 1)
+				return categories.map((category, index) => {
+					const value = Number(values[index] || 0)
+					return {
+						category,
+						value,
+						label: value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value),
+						height: Math.round((value / max) * 100)
 					}
-				}
-			})
-			// #endif
-			this.cWidth = uni.upx2px(702)
-			this.cHeight = uni.upx2px(520)
-		},
-		onReady() {
-			this.renderChart()
+				})
+			}
 		},
 		methods: {
-			formatMoney,
-			renderChart() {
-				const { categories, series } = this.reportData
-				chartInstance = new uCharts({
-					$this: this,
-					canvasId: 'monthlyIncomeChart',
-					type: 'column',
-					padding: [20, 15, 0, 10],
-					legend: {
-						show: false
-					},
-					fontSize: 11,
-					background: '#FFFFFF',
-					pixelRatio: this.pixelRatio,
-					animation: true,
-					categories,
-					series,
-					xAxis: {
-						disableGrid: true,
-						fontColor: '#999999'
-					},
-					yAxis: {
-						gridType: 'dash',
-						dashLength: 4,
-						data: [{
-							format: (val) => `${Math.round(val)}`
-						}]
-					},
-					dataLabel: true,
-					width: this.cWidth * this.pixelRatio,
-					height: this.cHeight * this.pixelRatio,
-					extra: {
-						column: {
-							type: 'group',
-							width: this.cWidth * this.pixelRatio * 0.35 / categories.length,
-							barBorderRadius: [8, 8, 0, 0]
-						}
-					}
-				})
-			},
-			touchChart(e) {
-				if (!chartInstance) return
-				chartInstance.showToolTip(e, {
-					format: (item, category) => `${category} 收入：¥${Number(item.data).toFixed(2)}`
-				})
-			}
+			formatMoney
 		}
 	}
 </script>
 
 <style lang="scss" scoped>
 	$primary: #00a896;
+	$bar: #ff6034;
 
 	.report-page {
 		min-height: 100vh;
@@ -166,7 +123,7 @@
 	.summary-value {
 		font-size: 36rpx;
 		font-weight: 700;
-		color: #ff6034;
+		color: $bar;
 		line-height: 1;
 	}
 
@@ -201,14 +158,83 @@
 		color: #999;
 	}
 
-	.chart-wrap {
+	.ucharts-column {
 		width: 100%;
-		display: flex;
-		justify-content: center;
 	}
 
-	.chart-canvas {
-		width: 702rpx;
-		height: 520rpx;
+	.ucharts-plot {
+		position: relative;
+		height: 460rpx;
+		padding: 8rpx 8rpx 0;
+		box-sizing: border-box;
+	}
+
+	.ucharts-grid {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 48rpx;
+		bottom: 48rpx;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		pointer-events: none;
+	}
+
+	.ucharts-grid-line {
+		height: 0;
+		border-top: 1px dashed #e8e8e8;
+	}
+
+	.ucharts-bars {
+		position: relative;
+		z-index: 1;
+		height: 100%;
+		display: flex;
+		align-items: stretch;
+		justify-content: space-between;
+	}
+
+	.ucharts-col {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		min-width: 0;
+	}
+
+	.ucharts-label {
+		height: 40rpx;
+		line-height: 40rpx;
+		font-size: 20rpx;
+		color: #999;
+	}
+
+	.ucharts-bar-track {
+		flex: 1;
+		width: 36rpx;
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+	}
+
+	.ucharts-bar {
+		width: 100%;
+		min-height: 8rpx;
+		border-radius: 8rpx 8rpx 0 0;
+		background: linear-gradient(180deg, #ff8a5b 0%, $bar 100%);
+		transition: height 0.35s ease, opacity 0.2s ease;
+	}
+
+	.ucharts-bar--active {
+		opacity: 0.85;
+		background: linear-gradient(180deg, $primary 0%, #00a896 100%);
+	}
+
+	.ucharts-cate {
+		height: 48rpx;
+		line-height: 48rpx;
+		font-size: 22rpx;
+		color: #666;
 	}
 </style>

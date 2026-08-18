@@ -26,7 +26,7 @@
 		</scroll-view>
 
 		<view class="submit-wrap">
-			<view class="btn-success submit-btn" @click="handleApply">申请入驻</view>
+			<view class="btn-success submit-btn" @click="handleApply">进一步了解</view>
 		</view>
 	</view>
 </template>

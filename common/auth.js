@@ -189,7 +189,7 @@ function showLoginPromptModal() {
 	return new Promise((resolve) => {
 		uni.showModal({
 			title: '登录提示',
-			content: '登录后可正常使用社区便利店等服务',
+			content: '登录后可正常使用小程序服务',
 			confirmText: '去登录',
 			cancelText: '暂不登录',
 			success: (res) => {
