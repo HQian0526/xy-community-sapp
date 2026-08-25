@@ -2,6 +2,9 @@ import {
 	wxLoginApi,
 	wxBindPhoneApi
 } from '@/common/api/wx.js'
+import {
+	getUserInfoApi
+} from '@/common/api/personalCenter/user.js'
 
 const TOKEN_KEY = 'token'
 const USER_INFO_KEY = 'userInfo'
@@ -15,6 +18,10 @@ let loginPromptShown = false
 /** 启动登录引导完成态，供首页等待，避免与 onLaunch 弹窗竞态 */
 let bootstrapPromise = null
 let bootstrapDone = false
+/** 本次启动是否已成功拉取过 /user/getUserInfo */
+let userInfoFetched = false
+/** 进行中的 getUserInfo 请求，供多页面并发复用 */
+let userInfoPromise = null
 
 export function isLoggedIn() {
 	return !!uni.getStorageSync(TOKEN_KEY)
@@ -28,18 +35,69 @@ export function getUserInfo() {
 	return uni.getStorageSync(USER_INFO_KEY) || null
 }
 
+function normalizeUserInfo(user) {
+	if (!user || typeof user !== 'object') return null
+	return {
+		...user,
+		needBindPhone: user.needBindPhone === true || (user.needBindPhone !== false && !user.phone)
+	}
+}
+
 export function saveLoginInfo(token, userInfo) {
 	if (token) {
 		uni.setStorageSync(TOKEN_KEY, token)
 	}
 	if (userInfo) {
-		uni.setStorageSync(USER_INFO_KEY, userInfo)
+		uni.setStorageSync(USER_INFO_KEY, normalizeUserInfo(userInfo) || userInfo)
 	}
 }
 
 export function clearLoginInfo() {
 	uni.removeStorageSync(TOKEN_KEY)
 	uni.removeStorageSync(USER_INFO_KEY)
+	userInfoFetched = false
+	userInfoPromise = null
+}
+
+/**
+ * 启动后只请求一次 getUserInfo，之后各页读缓存。
+ * @param {{ force?: boolean }} [options]
+ */
+export async function ensureUserInfo(options = {}) {
+	const force = !!options.force
+	if (!isLoggedIn()) {
+		return null
+	}
+	if (!force && userInfoFetched) {
+		const cached = getUserInfo()
+		if (cached) {
+			return cached
+		}
+		userInfoFetched = false
+	}
+	if (!force && userInfoPromise) {
+		return userInfoPromise
+	}
+
+	userInfoPromise = (async () => {
+		try {
+			const user = await getUserInfoApi()
+			if (user) {
+				saveLoginInfo(getToken(), user)
+			}
+			userInfoFetched = true
+			return getUserInfo()
+		} catch (error) {
+			console.error('获取用户信息失败', error)
+			if (getUserInfo()) {
+				userInfoFetched = true
+			}
+			return getUserInfo()
+		} finally {
+			userInfoPromise = null
+		}
+	})()
+	return userInfoPromise
 }
 
 export function isNeedBindPhone(userInfo = getUserInfo()) {
@@ -71,10 +129,13 @@ export async function bindPhoneByCode(code) {
 	const token = data.token || data.accessToken
 	const userInfo = data.userInfo || null
 	saveLoginInfo(token, userInfo)
+	if (userInfo) {
+		userInfoFetched = true
+	}
 	return {
 		...data,
 		token,
-		userInfo,
+		userInfo: getUserInfo() || userInfo,
 		merged: !!data.merged
 	}
 }
@@ -219,6 +280,7 @@ export function bootstrapAuth() {
 				try {
 					const result = await wxLogin()
 					loginDeclined = false
+					await ensureUserInfo()
 					return result
 				} catch (error) {
 					console.warn('启动静默换票失败，改为弹窗引导', error)
@@ -237,6 +299,7 @@ export function bootstrapAuth() {
 			try {
 				const result = await wxLogin()
 				loginDeclined = false
+				await ensureUserInfo()
 				return result
 			} catch (error) {
 				console.warn('启动登录失败', error)
@@ -291,6 +354,7 @@ export async function requireLogin(options = {}) {
 			throw new Error('登录失败，未获取到 token')
 		}
 		loginDeclined = false
+		await ensureUserInfo()
 		// 绑手机号弹窗改为异步，避免卡住分类/商品列表请求
 		if (bindPhone) {
 			ensurePhoneBound().catch((error) => {

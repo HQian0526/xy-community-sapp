@@ -184,8 +184,12 @@
 		requireLogin,
 		isLoggedIn,
 		isLoginDeclined,
-		waitBootstrapAuth
+		waitBootstrapAuth,
+		ensureUserInfo
 	} from '@/common/auth.js'
+	import {
+		resolveMallStoreId
+	} from '@/config/index.js'
 	import {
 		getCatagoryListApi
 	} from '@/common/api/mall/catagory.js'
@@ -233,7 +237,8 @@
 				cartMap: {},
 				cartShow: false,
 				contentHeight: '100%',
-				cartBarBottom: '66px'
+				cartBarBottom: '66px',
+				queryStoreId: ''
 			}
 		},
 		async onShow() {
@@ -259,6 +264,7 @@
 					return
 				}
 				this.needLogin = false
+				await this.ensureMallStoreId()
 				await this.loadCategoryList()
 			} finally {
 				this.pageBootstrapping = false
@@ -290,6 +296,15 @@
 			}
 		},
 		methods: {
+			async ensureMallStoreId() {
+				try {
+					const user = await ensureUserInfo()
+					this.queryStoreId = resolveMallStoreId(user)
+				} catch (error) {
+					console.error('获取用户绑定店铺失败', error)
+					this.queryStoreId = resolveMallStoreId(null)
+				}
+			},
 			async handleLogin() {
 				if (this.loginLoading) return
 				this.loginLoading = true
@@ -299,6 +314,7 @@
 					})
 					if (!ok) return
 					this.needLogin = false
+					await this.ensureMallStoreId()
 					await this.loadCategoryList()
 				} finally {
 					this.loginLoading = false
@@ -308,7 +324,11 @@
 				if (this.categoryLoading) return
 				this.categoryLoading = true
 				try {
-					const data = await getCatagoryListApi()
+					const params = {}
+					if (this.queryStoreId) {
+						params.storeId = this.queryStoreId
+					}
+					const data = await getCatagoryListApi(params)
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					this.categoryList = list
 						.slice()
@@ -316,7 +336,7 @@
 						.map((item) => ({
 							id: item.catagoryId || item.id,
 							catagoryId: item.catagoryId || item.id,
-							storeId: item.storeId || '',
+							storeId: item.storeId || this.queryStoreId || '',
 							name: item.catagoryName || '',
 							children: [],
 							productsLoaded: false,
@@ -349,7 +369,10 @@
 				try {
 					const data = await getProductListApi({
 						catagoryId: cate.catagoryId,
-						productStatus: 1
+						productStatus: 1,
+						...(this.queryStoreId ? {
+							storeId: this.queryStoreId
+						} : {})
 					})
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					const children = list
@@ -455,7 +478,7 @@
 				const cartItem = this.cartItems.find((item) => item.storeId)
 				if (cartItem?.storeId) return cartItem.storeId
 				const cate = this.categoryList.find((item) => item.storeId)
-				return cate?.storeId || ''
+				return cate?.storeId || this.queryStoreId || ''
 			},
 			async handleCheckout() {
 				if (!this.cartCount) {

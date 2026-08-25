@@ -1,7 +1,12 @@
 <template>
 	<view class="pending-page">
 		<view v-if="displayList.length" class="order-list">
-			<view v-for="item in displayList" :key="item.id" class="order-card">
+			<view
+				v-for="item in displayList"
+				:key="item.id"
+				class="order-card"
+				@click="goDetail(item)"
+			>
 				<view class="card-header">
 					<text class="store-name">{{ item.storeName }}</text>
 					<text class="status-tag" :class="'status-' + item.statusType">{{ item.status }}</text>
@@ -24,25 +29,26 @@
 
 				<view class="card-footer">
 					<text class="order-no">订单号：{{ item.orderNo }}</text>
-					<text class="action-btn action-success" @click="handleComplete(item)">确认完成</text>
+					<text class="expand-btn" @click.stop="goDetail(item)">查看详情</text>
 				</view>
 			</view>
 			<view class="list-footer">已经到底了～</view>
 		</view>
 
 		<view v-else class="empty-wrap">
-			<u-empty text="暂无待处理订单" mode="order"></u-empty>
+			<u-empty text="暂无进行中订单" mode="order"></u-empty>
 		</view>
 	</view>
 </template>
 
 <script>
+	import { formatMoney } from '../storeOrder/mock.js'
 	import {
-		getStoreOrders,
-		filterStoreOrders,
-		completeStoreOrder,
-		formatMoney
-	} from '../storeOrder/mock.js'
+		findMallOrderApi,
+		mapMallOrderCard,
+		goMallOrderDetail
+	} from '@/common/api/mall/order.js'
+	import { requireLogin } from '@/common/auth.js'
 
 	export default {
 		data() {
@@ -52,37 +58,37 @@
 		},
 		computed: {
 			displayList() {
-				return filterStoreOrders(this.orders, 'pending')
+				return this.orders
 			}
 		},
-		onShow() {
+		async onShow() {
+			if (!(await requireLogin({ force: true }))) return
 			this.loadOrders()
 		},
 		onPullDownRefresh() {
-			this.loadOrders()
-			uni.stopPullDownRefresh()
+			this.loadOrders().finally(() => uni.stopPullDownRefresh())
 		},
 		methods: {
 			formatMoney,
-			loadOrders() {
-				this.orders = getStoreOrders()
+			async loadOrders() {
+				try {
+					// 进行中/待处理：待支付
+					const data = await findMallOrderApi({
+						payStatus: 0,
+						pageNum: 1,
+						pageSize: 100
+					})
+					this.orders = (data?.list || []).map(mapMallOrderCard)
+				} catch (e) {
+					console.error('加载进行中订单失败', e)
+					this.orders = []
+				}
 			},
 			getGoodsCount(goods = []) {
-				return goods.reduce((sum, item) => sum + item.count, 0)
+				return goods.reduce((sum, item) => sum + Number(item.count || 0), 0)
 			},
-			handleComplete(item) {
-				uni.showModal({
-					title: '确认完成',
-					content: '确认该订单已完成配送吗？',
-					success: (res) => {
-						if (!res.confirm) return
-						this.orders = completeStoreOrder(item.id)
-						uni.showToast({
-							title: '订单已完成',
-							icon: 'success'
-						})
-					}
-				})
+			goDetail(item) {
+				goMallOrderDetail(item?.orderNo)
 			}
 		}
 	}
@@ -231,20 +237,11 @@
 		color: #999;
 	}
 
-	.action-btn {
+	.expand-btn {
 		flex-shrink: 0;
 		margin-left: 16rpx;
 		font-size: 26rpx;
-		padding: 10rpx 24rpx;
-		border-radius: 30rpx;
-		border-width: 1rpx;
-		border-style: solid;
-	}
-
-	.action-success {
-		color: #fff;
-		background-color: $primary;
-		border-color: $primary;
+		color: $primary;
 	}
 
 	.list-footer {

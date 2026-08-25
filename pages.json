@@ -25,7 +25,7 @@
 		{
 			"path": "pages/mall/index",
 			"style": {
-				"navigationBarTitleText": "社区便利店",
+				"navigationBarTitleText": "逛店",
 				"app-plus": {
 					"bounce": "vertical",
 					"titleNView": {
@@ -265,6 +265,13 @@
 			"path": "pages/mall/checkout/index",
 			"style": {
 				"navigationBarTitleText": "确认订单"
+			}
+		},
+		{
+			"path": "pages/mall/detail",
+			"style": {
+				"navigationBarTitleText": "订单详情",
+				"enablePullDownRefresh": true
 			}
 		},
 		// #ifndef MP-TOUTIAO
@@ -1291,7 +1298,7 @@
 				"pagePath": "pages/mall/index",
 				"iconPath": "static/tarbar/tarbar2.png",
 				"selectedIconPath": "/static/tarbar/tarbar2-active.png",
-				"text": "社区便利店"
+				"text": "逛店"
 			},
 			{
 				"pagePath": "pages/otherBusiness/index",

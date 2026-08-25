@@ -26,7 +26,7 @@
 						</view>
 					</view>
 					<view class="card-footer">
-						<text class="action-btn btn-success" @click="openPayPopup(item)">直接支付</text>
+						<!-- <text class="action-btn btn-success" @click="openPayPopup(item)">直接支付</text> -->
 						<text class="action-btn btn-success-plain" @click="handleContact">联系店家</text>
 					</view>
 				</view>
@@ -90,15 +90,14 @@
 	import {
 		requireLogin,
 		isLoggedIn,
-		saveLoginInfo,
-		getToken
+		ensureUserInfo
 	} from '@/common/auth.js'
-	import {
-		getUserInfoApi
-	} from '@/common/api/personalCenter/user.js'
 	import {
 		getStoreListApi
 	} from '@/common/api/personalCenter/store.js'
+	import {
+		resolveMallStoreId
+	} from '@/config/index.js'
 	import {
 		resolveFileUrl
 	} from '@/common/api/config.js'
@@ -117,8 +116,10 @@
 					realName: '',
 					phone: '',
 					avatar: '',
-					identityType: IDENTITY_USER
+					identityType: IDENTITY_USER,
+					bindStoreId: ''
 				},
+				queryStoreId: '',
 				storeProfile: {
 					storeName: '',
 					avatar: ''
@@ -182,7 +183,11 @@
 					return
 				}
 				try {
-					const data = await getOtherBusinessListApi()
+					const params = {}
+					if (this.queryStoreId) {
+						params.storeId = this.queryStoreId
+					}
+					const data = await getOtherBusinessListApi(params)
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					this.businessList = list.map(mapOtherBusinessItem)
 				} catch (error) {
@@ -199,8 +204,10 @@
 						realName: '',
 						phone: '',
 						avatar: '',
-						identityType: IDENTITY_USER
+						identityType: IDENTITY_USER,
+						bindStoreId: ''
 					}
+					this.queryStoreId = ''
 					this.storeProfile = {
 						storeName: '',
 						avatar: ''
@@ -210,41 +217,35 @@
 				this.headerLoading = true
 				try {
 					await this.fetchUserInfo()
-					// 头部始终展示店铺信息（与「我的」商家头部一致）
-					await this.fetchStoreInfo(
-						this.isMerchant && this.userProfile.id
-							? {
-								userId: this.userProfile.id
-							}
-							: {}
-					)
+					if (this.isMerchant && this.userProfile.id) {
+						await this.fetchStoreInfo({
+							userId: this.userProfile.id
+						})
+					} else if (this.queryStoreId) {
+						await this.fetchStoreInfo({
+							storeId: this.queryStoreId
+						})
+					}
 				} finally {
 					this.headerLoading = false
 				}
 			},
 			async fetchUserInfo() {
 				try {
-					const user = await getUserInfoApi()
+					const user = await ensureUserInfo()
 					if (!user) return
 					this.userProfile = {
 						id: user.id,
 						realName: user.realName || '',
 						phone: user.phone || '',
 						avatar: resolveFileUrl(user.avatar || ''),
-						identityType: user.identityType == null ? IDENTITY_USER : Number(user.identityType)
+						identityType: user.identityType == null ? IDENTITY_USER : Number(user.identityType),
+						bindStoreId: user.bindStoreId
 					}
-					saveLoginInfo(getToken(), {
-						id: user.id,
-						userName: user.userName,
-						realName: user.realName,
-						phone: user.phone,
-						avatar: user.avatar,
-						identityType: user.identityType,
-						openid: user.openid,
-						needBindPhone: !user.phone
-					})
+					this.queryStoreId = resolveMallStoreId(this.userProfile)
 				} catch (error) {
 					console.error('获取用户信息失败', error)
+					this.queryStoreId = resolveMallStoreId(null)
 				}
 			},
 			async fetchStoreInfo(params = {}) {

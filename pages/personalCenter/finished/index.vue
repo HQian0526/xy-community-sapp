@@ -1,7 +1,12 @@
 <template>
 	<view class="finished-page">
 		<view v-if="displayList.length" class="order-list">
-			<view v-for="item in displayList" :key="item.id" class="order-card">
+			<view
+				v-for="item in displayList"
+				:key="item.id"
+				class="order-card"
+				@click="goDetail(item)"
+			>
 				<view class="card-header">
 					<text class="store-name">{{ item.storeName }}</text>
 					<text class="status-tag" :class="'status-' + item.statusType">{{ item.status }}</text>
@@ -27,9 +32,10 @@
 
 				<view class="card-footer">
 					<text class="order-no">订单号：{{ item.orderNo }}</text>
-					<text class="expand-btn" @click="toggleExpand(item.id)">
+					<text class="expand-btn" @click.stop="toggleExpand(item.id)">
 						{{ isExpanded(item.id) ? '收起' : '展开' }}
 					</text>
+					<text class="expand-btn" @click.stop="goDetail(item)">详情</text>
 				</view>
 			</view>
 			<view class="list-footer">已经到底了～</view>
@@ -42,12 +48,13 @@
 </template>
 
 <script>
+	import { formatMoney, getGoodsSummary } from '../storeOrder/mock.js'
 	import {
-		getStoreOrders,
-		filterStoreOrders,
-		formatMoney,
-		getGoodsSummary
-	} from '../storeOrder/mock.js'
+		findMallOrderApi,
+		mapMallOrderCard,
+		goMallOrderDetail
+	} from '@/common/api/mall/order.js'
+	import { requireLogin } from '@/common/auth.js'
 
 	export default {
 		data() {
@@ -58,24 +65,35 @@
 		},
 		computed: {
 			displayList() {
-				return filterStoreOrders(this.orders, 'finished')
+				return this.orders
 			}
 		},
-		onShow() {
+		async onShow() {
+			if (!(await requireLogin({ force: true }))) return
 			this.loadOrders()
 		},
 		onPullDownRefresh() {
-			this.loadOrders()
-			uni.stopPullDownRefresh()
+			this.loadOrders().finally(() => uni.stopPullDownRefresh())
 		},
 		methods: {
 			formatMoney,
 			getGoodsSummary,
-			loadOrders() {
-				this.orders = getStoreOrders()
+			async loadOrders() {
+				try {
+					// 已完成：已支付
+					const data = await findMallOrderApi({
+						payStatus: 1,
+						pageNum: 1,
+						pageSize: 100
+					})
+					this.orders = (data?.list || []).map(mapMallOrderCard)
+				} catch (e) {
+					console.error('加载已完成订单失败', e)
+					this.orders = []
+				}
 			},
 			getGoodsCount(goods = []) {
-				return goods.reduce((sum, item) => sum + item.count, 0)
+				return goods.reduce((sum, item) => sum + Number(item.count || 0), 0)
 			},
 			isExpanded(id) {
 				return !!this.expandedMap[id]
@@ -85,6 +103,9 @@
 					...this.expandedMap,
 					[id]: !this.expandedMap[id]
 				}
+			},
+			goDetail(item) {
+				goMallOrderDetail(item?.orderNo)
 			}
 		}
 	}
@@ -134,6 +155,16 @@
 		border-radius: 6rpx;
 		border-width: 1rpx;
 		border-style: solid;
+	}
+
+	.status-pending {
+		color: #ff6034;
+		border-color: #ff6034;
+	}
+
+	.status-delivering {
+		color: #007aff;
+		border-color: #007aff;
 	}
 
 	.status-finished {

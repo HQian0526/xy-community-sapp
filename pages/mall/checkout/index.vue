@@ -88,8 +88,14 @@
 <script>
 	import { checkoutInfo, DELIVERY_FEE, getDefaultContact, formatMoney } from './mock.js'
 	import { getCartItems, getCartTotal, clearCartMap } from '../cart.js'
-	import { addStoreOrder } from '../../personalCenter/storeOrder/mock.js'
 	import { assertStoreOpenForOrder } from '@/common/api/personalCenter/store.js'
+	import { requireLogin } from '@/common/auth.js'
+	import {
+		checkoutAndPayApi,
+		mockConfirmMallPayApi,
+		requestWxPayment,
+		waitMallOrderPaid
+	} from '@/common/api/mall/order.js'
 
 	const defaultFormData = () => ({
 		contact: '',
@@ -144,8 +150,57 @@
 					...defaults
 				}
 			},
+			buildCheckoutPayload() {
+				return {
+					contact: this.formData.contact,
+					address: this.formData.address,
+					remark: this.formData.remark || '',
+					items: this.cartItems.map((item) => ({
+						productId: item.productId || item.id,
+						quantity: Number(item.count || 0)
+					}))
+				}
+			},
+			async doPayFlow() {
+				const payParams = await checkoutAndPayApi(this.buildCheckoutPayload())
+				const orderNo = payParams?.orderNo
+				if (!orderNo) {
+					throw new Error('下单失败：未返回订单号')
+				}
+
+				if (payParams.mock) {
+					await mockConfirmMallPayApi(orderNo)
+				} else {
+					try {
+						await requestWxPayment(payParams)
+					} catch (err) {
+						const msg = err?.errMsg || ''
+						if (msg.includes('cancel') || msg.includes('取消')) {
+							uni.showToast({ title: '已取消支付', icon: 'none' })
+							return false
+						}
+						throw err instanceof Error ? err : new Error(msg || '支付失败')
+					}
+					const result = await waitMallOrderPaid(orderNo)
+					if (Number(result?.order?.payStatus) !== 1) {
+						uni.showToast({
+							title: '支付结果确认中，请稍后在订单中查看',
+							icon: 'none'
+						})
+						return false
+					}
+				}
+
+				clearCartMap()
+				uni.showToast({ title: '支付成功', icon: 'success' })
+				setTimeout(() => {
+					uni.navigateBack()
+				}, 1200)
+				return true
+			},
 			async handleSubmit() {
 				if (this.submitting) return
+				if (!(await requireLogin({ force: true }))) return
 				if (!this.cartItems.length) {
 					uni.showToast({ title: '购物车是空的', icon: 'none' })
 					return
@@ -156,7 +211,6 @@
 					return
 				}
 
-				// 提交前再查一次，覆盖「进结算页后商家打烊」
 				const check = await assertStoreOpenForOrder(this.resolveCheckoutStoreId())
 				if (!check.ok) return
 
@@ -165,34 +219,14 @@
 					content: `确定支付 ¥${formatMoney(this.payTotal)} 吗？`,
 					success: async (res) => {
 						if (!res.confirm) return
-						// 确认瞬间再拦一次，尽量缩小竞态窗口
 						const recheck = await assertStoreOpenForOrder(this.resolveCheckoutStoreId())
 						if (!recheck.ok) return
 						this.submitting = true
 						try {
-							addStoreOrder({
-								address: this.formData.address,
-								contact: this.formData.contact,
-								remark: this.formData.remark,
-								goods: this.cartItems.map(item => ({
-									id: item.id,
-									name: item.name,
-									price: item.price,
-									count: item.count,
-									icon: item.icon || ''
-								})),
-								goodsTotal: this.goodsTotal,
-								deliveryFee: this.deliveryFee,
-								payTotal: this.payTotal
-							})
-							clearCartMap()
-							uni.showToast({
-								title: '下单成功',
-								icon: 'success'
-							})
-							setTimeout(() => {
-								uni.navigateBack()
-							}, 1200)
+							await this.doPayFlow()
+						} catch (e) {
+							// 业务错误由 request.js toast；取消支付已在 doPayFlow 提示
+							console.error('商城结算失败', e)
 						} finally {
 							this.submitting = false
 						}

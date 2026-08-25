@@ -13,7 +13,12 @@
 		</view>
 
 		<view v-if="displayList.length" class="order-list">
-			<view v-for="item in displayList" :key="item.id" class="order-card">
+			<view
+				v-for="item in displayList"
+				:key="item.id"
+				class="order-card"
+				@click="goDetail(item)"
+			>
 				<view class="card-header">
 					<text class="store-name">{{ item.storeName }}</text>
 					<text class="status-tag" :class="'status-' + item.statusType">{{ item.status }}</text>
@@ -37,7 +42,7 @@
 
 					<view class="card-footer">
 						<text class="order-no">订单号：{{ item.orderNo }}</text>
-						<text class="action-btn action-success" @click="handleComplete(item)">确认完成</text>
+						<text class="expand-btn" @click.stop="goDetail(item)">查看详情</text>
 					</view>
 				</template>
 
@@ -62,9 +67,10 @@
 
 					<view class="card-footer">
 						<text class="order-no">订单号：{{ item.orderNo }}</text>
-						<text class="expand-btn" @click="toggleExpand(item.id)">
+						<text class="expand-btn" @click.stop="toggleExpand(item.id)">
 							{{ isExpanded(item.id) ? '收起' : '展开' }}
 						</text>
+						<text class="expand-btn" @click.stop="goDetail(item)">详情</text>
 					</view>
 				</template>
 			</view>
@@ -78,13 +84,13 @@
 </template>
 
 <script>
+	import { formatMoney, getGoodsSummary } from './mock.js'
 	import {
-		getStoreOrders,
-		filterStoreOrders,
-		completeStoreOrder,
-		formatMoney,
-		getGoodsSummary
-	} from './mock.js'
+		findMallOrderApi,
+		mapMallOrderCard,
+		goMallOrderDetail
+	} from '@/common/api/mall/order.js'
+	import { requireLogin } from '@/common/auth.js'
 
 	export default {
 		data() {
@@ -94,10 +100,11 @@
 				currentSection: 0,
 				sectionList: [
 					{ name: '全部' },
-					{ name: '待处理' },
-					{ name: '已完成' }
+					{ name: '待支付' },
+					{ name: '已支付' }
 				],
-				filterMap: ['all', 'pending', 'finished']
+				// 对应后端 payStatus：全部 / 0 / 1
+				filterPayStatus: [null, 0, 1]
 			}
 		},
 		computed: {
@@ -105,25 +112,36 @@
 				return this.currentSection === 1
 			},
 			displayList() {
-				const filterType = this.filterMap[this.currentSection]
-				return filterStoreOrders(this.orders, filterType)
+				return this.orders
 			}
 		},
-		onShow() {
+		async onShow() {
+			if (!(await requireLogin({ force: true }))) return
 			this.loadOrders()
 		},
 		onPullDownRefresh() {
-			this.loadOrders()
-			uni.stopPullDownRefresh()
+			this.loadOrders().finally(() => uni.stopPullDownRefresh())
 		},
 		methods: {
 			formatMoney,
 			getGoodsSummary,
-			loadOrders() {
-				this.orders = getStoreOrders()
+			async loadOrders() {
+				try {
+					const payStatus = this.filterPayStatus[this.currentSection]
+					const params = { pageNum: 1, pageSize: 100 }
+					if (payStatus !== null && payStatus !== undefined) {
+						params.payStatus = payStatus
+					}
+					const data = await findMallOrderApi(params)
+					const list = data?.list || []
+					this.orders = list.map(mapMallOrderCard)
+				} catch (e) {
+					console.error('加载商城订单失败', e)
+					this.orders = []
+				}
 			},
 			getGoodsCount(goods = []) {
-				return goods.reduce((sum, item) => sum + item.count, 0)
+				return goods.reduce((sum, item) => sum + Number(item.count || 0), 0)
 			},
 			isExpanded(id) {
 				return !!this.expandedMap[id]
@@ -136,20 +154,10 @@
 			},
 			handleSectionChange(index) {
 				this.currentSection = index
+				this.loadOrders()
 			},
-			handleComplete(item) {
-				uni.showModal({
-					title: '确认完成',
-					content: '确认该订单已完成配送吗？',
-					success: (res) => {
-						if (!res.confirm) return
-						this.orders = completeStoreOrder(item.id)
-						uni.showToast({
-							title: '订单已完成',
-							icon: 'success'
-						})
-					}
-				})
+			goDetail(item) {
+				goMallOrderDetail(item?.orderNo)
 			}
 		}
 	}
@@ -344,22 +352,6 @@
 		margin-left: 16rpx;
 		font-size: 26rpx;
 		color: $primary;
-	}
-
-	.action-btn {
-		flex-shrink: 0;
-		margin-left: 16rpx;
-		font-size: 26rpx;
-		padding: 10rpx 24rpx;
-		border-radius: 30rpx;
-		border-width: 1rpx;
-		border-style: solid;
-	}
-
-	.action-success {
-		color: #fff;
-		background-color: $primary;
-		border-color: $primary;
 	}
 
 	.list-footer {

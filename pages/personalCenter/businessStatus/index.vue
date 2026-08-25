@@ -33,11 +33,8 @@
 	} from './mock.js'
 	import {
 		requireLogin,
-		getUserInfo
+		ensureUserInfo
 	} from '@/common/auth.js'
-	import {
-		getUserInfoApi
-	} from '@/common/api/personalCenter/user.js'
 	import {
 		getStoreListApi,
 		updateStoreApi,
@@ -77,11 +74,7 @@
 				if (!ok) return
 
 				try {
-					let userId = getUserInfo()?.id
-					if (!userId) {
-						const user = await getUserInfoApi()
-						userId = user?.id
-					}
+					let userId = (await ensureUserInfo())?.id
 					if (!userId) {
 						uni.showToast({
 							title: '未获取到用户信息',

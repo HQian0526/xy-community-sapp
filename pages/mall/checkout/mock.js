@@ -1,7 +1,7 @@
 export const DELIVERY_FEE = 0
 
 export const checkoutInfo = {
-	storeName: '社区便利店',
+	storeName: '小店',
 	deliveryTip: '预计 30 分钟内送达'
 }
 

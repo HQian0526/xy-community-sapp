@@ -6,60 +6,60 @@ export const financeTypeMap = {
 }
 
 export const financeRecordList = [
-	{
-		id: '1',
-		type: 'income',
-		title: '任务酬金',
-		orderNo: 'M20250902183015001',
-		amount: 2,
-		time: '2025-09-02 18:30:15',
-		status: '已到账'
-	},
-	{
-		id: '2',
-		type: 'income',
-		title: '分享赚佣',
-		orderNo: 'M20250901142008002',
-		amount: 5,
-		time: '2025-09-01 14:20:08',
-		status: '已到账'
-	},
-	{
-		id: '3',
-		type: 'expense',
-		title: '发布任务',
-		orderNo: 'M20250901101227003',
-		amount: 5,
-		time: '2025-09-01 10:12:27',
-		status: '已支付'
-	},
-	{
-		id: '4',
-		type: 'expense',
-		title: '提现',
-		orderNo: 'M20250828094533004',
-		amount: 100,
-		time: '2025-08-28 09:45:33',
-		status: '处理中'
-	},
-	{
-		id: '5',
-		type: 'income',
-		title: '任务酬金',
-		orderNo: 'M20250827160842005',
-		amount: 100,
-		time: '2025-08-27 16:08:42',
-		status: '已到账'
-	},
-	{
-		id: '6',
-		type: 'expense',
-		title: '发布任务',
-		orderNo: 'M20250826113000006',
-		amount: 398,
-		time: '2025-08-26 11:30:00',
-		status: '已支付'
-	}
+	// {
+	// 	id: '1',
+	// 	type: 'income',
+	// 	title: '任务酬金',
+	// 	orderNo: 'M20250902183015001',
+	// 	amount: 2,
+	// 	time: '2025-09-02 18:30:15',
+	// 	status: '已到账'
+	// },
+	// {
+	// 	id: '2',
+	// 	type: 'income',
+	// 	title: '分享赚佣',
+	// 	orderNo: 'M20250901142008002',
+	// 	amount: 5,
+	// 	time: '2025-09-01 14:20:08',
+	// 	status: '已到账'
+	// },
+	// {
+	// 	id: '3',
+	// 	type: 'expense',
+	// 	title: '发布任务',
+	// 	orderNo: 'M20250901101227003',
+	// 	amount: 5,
+	// 	time: '2025-09-01 10:12:27',
+	// 	status: '已支付'
+	// },
+	// {
+	// 	id: '4',
+	// 	type: 'expense',
+	// 	title: '提现',
+	// 	orderNo: 'M20250828094533004',
+	// 	amount: 100,
+	// 	time: '2025-08-28 09:45:33',
+	// 	status: '处理中'
+	// },
+	// {
+	// 	id: '5',
+	// 	type: 'income',
+	// 	title: '任务酬金',
+	// 	orderNo: 'M20250827160842005',
+	// 	amount: 100,
+	// 	time: '2025-08-27 16:08:42',
+	// 	status: '已到账'
+	// },
+	// {
+	// 	id: '6',
+	// 	type: 'expense',
+	// 	title: '发布任务',
+	// 	orderNo: 'M20250826113000006',
+	// 	amount: 398,
+	// 	time: '2025-08-26 11:30:00',
+	// 	status: '已支付'
+	// }
 ]
 
 export function getFinanceRecords() {

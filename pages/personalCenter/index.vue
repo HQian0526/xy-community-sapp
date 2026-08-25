@@ -151,12 +151,8 @@
 	} from '@/common/share/config.js'
 	import {
 		requireLogin,
-		saveLoginInfo,
-		getToken
+		ensureUserInfo
 	} from '@/common/auth.js'
-	import {
-		getUserInfoApi
-	} from '@/common/api/personalCenter/user.js'
 	import {
 		getStoreListApi,
 		getStoreStatusLabel,
@@ -262,7 +258,7 @@
 			},
 			async fetchUserInfo() {
 				try {
-					const user = await getUserInfoApi()
+					const user = await ensureUserInfo()
 					if (!user) return
 					this.userProfile = {
 						id: user.id,
@@ -271,16 +267,6 @@
 						avatar: resolveFileUrl(user.avatar || ''),
 						identityType: user.identityType == null ? IDENTITY_USER : Number(user.identityType)
 					}
-					saveLoginInfo(getToken(), {
-						id: user.id,
-						userName: user.userName,
-						realName: user.realName,
-						phone: user.phone,
-						avatar: user.avatar,
-						identityType: user.identityType,
-						openid: user.openid,
-						needBindPhone: !user.phone
-					})
 				} catch (error) {
 					console.error('获取用户信息失败', error)
 				}

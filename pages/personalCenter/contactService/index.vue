@@ -34,7 +34,7 @@
 						/>
 					</view>
 				</view>
-				<text v-if="contactInfo.servicePhone" class="phone">填写备注“{{ contactInfo.servicePhone }}”更快通过</text>
+				<text v-if="contactInfo.servicePhone" class="phone">备注来意更快通过</text>
 			</view>
 		</view>
 
