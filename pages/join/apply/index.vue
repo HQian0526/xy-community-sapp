@@ -71,7 +71,7 @@
 </template>
 
 <script>
-	import { requireLogin } from '@/common/auth.js'
+	import { requireLogin, getUserInfo } from '@/common/auth.js'
 	import { addVisitorApi } from '@/common/api/join/visitor.js'
 
 	const defaultFormData = () => ({
@@ -115,11 +115,16 @@
 				this.submitting = true
 				try {
 					const wechatId = String(this.formData.wechatId || '').trim()
-					await addVisitorApi({
+					const bindStoreId = getUserInfo()?.bindStoreId
+					const payload = {
 						visitorName: String(this.formData.name || '').trim(),
 						phone: String(this.formData.contact || '').trim(),
 						remark: wechatId ? `微信号：${wechatId}` : ''
-					})
+					}
+					if (bindStoreId !== undefined && bindStoreId !== null && String(bindStoreId).trim() !== '') {
+						payload.storeId = bindStoreId
+					}
+					await addVisitorApi(payload)
 					uni.showToast({
 						title: '申请已提交',
 						icon: 'success'

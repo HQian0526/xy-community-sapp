@@ -162,6 +162,7 @@
 		resolveFileUrl
 	} from '@/common/api/config.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
+	import BindPhonePopup from '@/components/bind-phone-popup/bind-phone-popup.vue'
 
 	const DEFAULT_AVATAR = storeInfo.avatar
 	const IDENTITY_USER = 1
@@ -169,6 +170,9 @@
 
 	export default {
 		mixins: [bindPhoneMixin],
+		components: {
+			BindPhonePopup
+		},
 		data() {
 			return {
 				storeInfo: {

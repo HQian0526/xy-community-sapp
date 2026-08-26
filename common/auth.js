@@ -3,14 +3,28 @@ import {
 	wxBindPhoneApi
 } from '@/common/api/wx.js'
 import {
-	getUserInfoApi
-} from '@/common/api/personalCenter/user.js'
+	get,
+	put
+} from '@/common/api/request.js'
+import {
+	bindStoreId as defaultBindStoreId
+} from '@/config/index.js'
+import {
+	getBindPhoneUI,
+	registerBindPhoneHandlers,
+	registerBindPhoneUI,
+	unregisterBindPhoneUI
+} from '@/common/bindPhoneUi.js'
+
+export {
+	registerBindPhoneUI,
+	unregisterBindPhoneUI
+}
 
 const TOKEN_KEY = 'token'
 const USER_INFO_KEY = 'userInfo'
 
 let loginPromise = null
-let bindPhoneUI = null
 /** 用户在启动登录弹窗中点了「暂不登录」 */
 let loginDeclined = false
 /** 本次冷启动是否已弹出过登录提示（避免重复弹窗） */
@@ -59,8 +73,45 @@ export function clearLoginInfo() {
 	userInfoPromise = null
 }
 
+function isBindStoreIdEmpty(value) {
+	return value === undefined || value === null || String(value).trim() === ''
+}
+
+function isOrdinaryUser(user) {
+	if (user == null || user.identityType == null) {
+		return true
+	}
+	return Number(user.identityType) === 1
+}
+
+/**
+ * 普通用户未绑定店铺时，用配置默认店铺回写 updateUser，并写入本地缓存
+ */
+async function persistDefaultBindStore(user) {
+	if (!user || !isOrdinaryUser(user) || !isBindStoreIdEmpty(user.bindStoreId)) {
+		return user
+	}
+	try {
+		if (user.id) {
+			await put('/user/updateUser', {
+				id: user.id,
+				bindStoreId: defaultBindStoreId
+			})
+		}
+	} catch (error) {
+		console.warn('回写默认绑定店铺失败', error)
+	}
+	const next = {
+		...user,
+		bindStoreId: defaultBindStoreId
+	}
+	saveLoginInfo(getToken(), next)
+	return next
+}
+
 /**
  * 启动后只请求一次 getUserInfo，之后各页读缓存。
+ * 若 bindStoreId 为空，会把配置的默认店铺写入后端并同步缓存。
  * @param {{ force?: boolean }} [options]
  */
 export async function ensureUserInfo(options = {}) {
@@ -81,18 +132,21 @@ export async function ensureUserInfo(options = {}) {
 
 	userInfoPromise = (async () => {
 		try {
-			const user = await getUserInfoApi()
+			const user = await get('/user/getUserInfo')
 			if (user) {
 				saveLoginInfo(getToken(), user)
 			}
+			const cached = await persistDefaultBindStore(getUserInfo() || user)
 			userInfoFetched = true
-			return getUserInfo()
+			return cached || getUserInfo()
 		} catch (error) {
 			console.error('获取用户信息失败', error)
-			if (getUserInfo()) {
+			const cached = getUserInfo()
+			if (cached) {
 				userInfoFetched = true
+				return persistDefaultBindStore(cached)
 			}
-			return getUserInfo()
+			return null
 		} finally {
 			userInfoPromise = null
 		}
@@ -105,17 +159,6 @@ export function isNeedBindPhone(userInfo = getUserInfo()) {
 	if (userInfo.needBindPhone === true) return true
 	if (userInfo.needBindPhone === false) return false
 	return !userInfo.phone
-}
-
-/** 由 bind-phone-popup 组件挂载时注册，供全局弹出 */
-export function registerBindPhoneUI(ui) {
-	bindPhoneUI = ui
-}
-
-export function unregisterBindPhoneUI(ui) {
-	if (!ui || bindPhoneUI === ui) {
-		bindPhoneUI = null
-	}
 }
 
 /**
@@ -132,10 +175,11 @@ export async function bindPhoneByCode(code) {
 	if (userInfo) {
 		userInfoFetched = true
 	}
+	const cached = await persistDefaultBindStore(getUserInfo() || userInfo)
 	return {
 		...data,
 		token,
-		userInfo: getUserInfo() || userInfo,
+		userInfo: cached || getUserInfo() || userInfo,
 		merged: !!data.merged
 	}
 }
@@ -151,6 +195,7 @@ export async function ensurePhoneBound() {
 			userInfo: getUserInfo()
 		}
 	}
+	const bindPhoneUI = getBindPhoneUI()
 	if (!bindPhoneUI || typeof bindPhoneUI.show !== 'function') {
 		console.warn('手机号绑定弹窗未挂载，跳过授权')
 		return {
@@ -371,3 +416,9 @@ export async function requireLogin(options = {}) {
 		return false
 	}
 }
+
+registerBindPhoneHandlers({
+	isNeedBindPhone,
+	bindPhoneByCode
+})
+

@@ -188,7 +188,7 @@
 		ensureUserInfo
 	} from '@/common/auth.js'
 	import {
-		resolveMallStoreId
+		bindStoreId
 	} from '@/config/index.js'
 	import {
 		getCatagoryListApi
@@ -203,7 +203,21 @@
 		resolveFileUrl
 	} from '@/common/api/config.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
+	import BindPhonePopup from '@/components/bind-phone-popup/bind-phone-popup.vue'
 
+	/** 普通用户取绑定店铺，未绑定则用配置默认店铺；商户不传默认 id */
+	function resolveMallStoreId(user) {
+		const identityType = user == null || user.identityType == null
+			? 1
+			: Number(user.identityType)
+		const bound = user?.bindStoreId
+		if (bound !== undefined && bound !== null && String(bound).trim() !== '') {
+			return bound
+		}
+		return bindStoreId
+	}
+
+	/** 把接口商品字段转成列表展示结构 */
 	function mapProductItem(item, categoryName = '', fallbackStoreId = '') {
 		return {
 			id: String(item.productId || item.id),
@@ -224,6 +238,9 @@
 
 	export default {
 		mixins: [bindPhoneMixin],
+		components: {
+			BindPhonePopup
+		},
 		data() {
 			return {
 				categoryList: [],
@@ -241,6 +258,7 @@
 				queryStoreId: ''
 			}
 		},
+		/** 进入页面：同步购物车、等登录完成后加载分类商品 */
 		async onShow() {
 			this.cartMap = getCartMap()
 			this.$nextTick(() => {
@@ -270,32 +288,40 @@
 				this.pageBootstrapping = false
 			}
 		},
+		/** 页面初次渲染完成，计算分类区高度 */
 		onReady() {
 			this.updateCateTabHeight()
 		},
 		watch: {
+			/** 切换左侧分类时按需加载该分类商品 */
 			currentCate(index) {
 				this.loadCategoryProducts(index)
 			}
 		},
 		computed: {
+			/** 是否处于搜索态（有搜索关键词） */
 			isSearching() {
 				return !!String(this.searchKeyword || '').trim()
 			},
+			/** 按关键词从已加载分类中筛出的商品 */
 			searchResults() {
 				return searchProducts(this.categoryList, this.searchKeyword)
 			},
+			/** 购物车商品总件数 */
 			cartCount() {
 				return getCartCount(this.cartMap)
 			},
+			/** 购物车明细列表（含数量、价格、图片） */
 			cartItems() {
 				return getCartItems(this.cartMap)
 			},
+			/** 购物车合计金额 */
 			cartTotal() {
 				return getCartTotal(this.cartMap)
 			}
 		},
 		methods: {
+			/** 从缓存用户信息解析本次查询用的店铺 id */
 			async ensureMallStoreId() {
 				try {
 					const user = await ensureUserInfo()
@@ -305,6 +331,7 @@
 					this.queryStoreId = resolveMallStoreId(null)
 				}
 			},
+			/** 未登录页点击「登录」，成功后加载店铺分类 */
 			async handleLogin() {
 				if (this.loginLoading) return
 				this.loginLoading = true
@@ -320,6 +347,7 @@
 					this.loginLoading = false
 				}
 			},
+			/** 拉取店铺商品分类，并加载当前选中分类下的商品 */
 			async loadCategoryList() {
 				if (this.categoryLoading) return
 				this.categoryLoading = true
@@ -353,6 +381,7 @@
 					this.categoryLoading = false
 				}
 			},
+			/** 按分类懒加载上架商品，已加载过则跳过 */
 			async loadCategoryProducts(index) {
 				const cate = this.categoryList[index]
 				if (!cate || !cate.catagoryId) return
@@ -401,9 +430,11 @@
 					})
 				}
 			},
+			/** 把当前购物车数量写入本地缓存 */
 			saveCartMap() {
 				setCartMap(this.cartMap)
 			},
+			/** 按窗口和搜索栏高度计算分类列表高度、购物车栏位置 */
 			updateCateTabHeight() {
 				const sys = uni.getSystemInfoSync()
 				// windowHeight：已扣除导航栏和原生 tabBar 后的可用高度，不要再减 tabBar/safeBottom
@@ -425,15 +456,18 @@
 						.exec()
 				})
 			},
+			/** 清空搜索关键词，回到分类浏览 */
 			handleSearchClear() {
 				this.searchKeyword = ''
 			},
+			/** 点击商品卡片（暂用 toast 展示名称） */
 			goProductDetail(product) {
 				uni.showToast({
 					title: product.name,
 					icon: 'none'
 				})
 			},
+			/** 商品加购一件并记住商品信息 */
 			handleAddCart(product) {
 				rememberCartProduct(product)
 				const count = this.cartMap[product.id] || 0
@@ -443,6 +477,7 @@
 				}
 				this.saveCartMap()
 			},
+			/** 购物车减一件，减到 0 时移除该商品 */
 			handleMinusCart(product) {
 				const count = this.cartMap[product.id] || 0
 				if (count <= 1) {
@@ -463,23 +498,28 @@
 				}
 				this.saveCartMap()
 			},
+			/** 打开底部购物车弹层 */
 			openCartPopup() {
 				this.cartShow = true
 			},
+			/** 关闭底部购物车弹层 */
 			closeCartPopup() {
 				this.cartShow = false
 			},
+			/** 清空购物车并关闭弹层 */
 			clearCart() {
 				this.cartMap = {}
 				clearCartMap()
 				this.cartShow = false
 			},
+			/** 结算前解析店铺 id：优先购物车商品，其次分类，再次当前查询店铺 */
 			resolveCheckoutStoreId() {
 				const cartItem = this.cartItems.find((item) => item.storeId)
 				if (cartItem?.storeId) return cartItem.storeId
 				const cate = this.categoryList.find((item) => item.storeId)
 				return cate?.storeId || this.queryStoreId || ''
 			},
+			/** 去结算：校验登录和店铺营业状态后进入确认页 */
 			async handleCheckout() {
 				if (!this.cartCount) {
 					uni.showToast({

@@ -1,8 +1,3 @@
-import {
-	registerBindPhoneUI,
-	unregisterBindPhoneUI
-} from '@/common/auth.js'
-
 /**
  * 页面 onShow 时重新注册手机号弹窗，避免 tab 切换后注册丢失
  * 页面需放置 <bind-phone-popup ref="bindPhonePopup" />

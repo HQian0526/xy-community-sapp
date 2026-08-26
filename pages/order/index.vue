@@ -122,9 +122,13 @@
 		requireLogin
 	} from '@/common/auth.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
+	import BindPhonePopup from '@/components/bind-phone-popup/bind-phone-popup.vue'
 
 	export default {
 		mixins: [bindPhoneMixin],
+		components: {
+			BindPhonePopup
+		},
 		data() {
 			return {
 				loginChecking: false,

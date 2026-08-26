@@ -96,19 +96,37 @@
 		getStoreListApi
 	} from '@/common/api/personalCenter/store.js'
 	import {
-		resolveMallStoreId
+		bindStoreId
 	} from '@/config/index.js'
 	import {
 		resolveFileUrl
 	} from '@/common/api/config.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
+	import BindPhonePopup from '@/components/bind-phone-popup/bind-phone-popup.vue'
 
 	const DEFAULT_AVATAR = defaultStoreInfo.avatar
 	const IDENTITY_USER = 1
 	const IDENTITY_MERCHANT = 2
 
+	function resolveMallStoreId(user) {
+		const identityType = user == null || user.identityType == null
+			? IDENTITY_USER
+			: Number(user.identityType)
+		if (identityType !== IDENTITY_USER) {
+			return ''
+		}
+		const bound = user?.bindStoreId
+		if (bound !== undefined && bound !== null && String(bound).trim() !== '') {
+			return bound
+		}
+		return bindStoreId
+	}
+
 	export default {
 		mixins: [bindPhoneMixin],
+		components: {
+			BindPhonePopup
+		},
 		data() {
 			return {
 				userProfile: {

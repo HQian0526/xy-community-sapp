@@ -27,9 +27,9 @@
 	import {
 		registerBindPhoneUI,
 		unregisterBindPhoneUI,
-		bindPhoneByCode,
-		isNeedBindPhone
-	} from '@/common/auth.js'
+		isNeedBindPhone,
+		bindPhoneByCode
+	} from '@/common/bindPhoneUi.js'
 
 	export default {
 		name: 'BindPhonePopup',
