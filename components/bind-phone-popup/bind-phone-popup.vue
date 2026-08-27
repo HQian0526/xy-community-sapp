@@ -1,8 +1,8 @@
 <template>
 	<u-popup :show="visible" mode="center" round="16" :closeOnClickOverlay="closable" @close="handleClose">
 		<view class="bind-phone-popup">
-			<text class="title">绑定手机号</text>
-			<text class="desc">授权后将自动合并后台管理端账号，便于下单与联系</text>
+			<text class="title">授权手机号</text>
+			<text class="desc">下单、订单查询、售后等服务需要手机号授权</text>
 
 			<!-- #ifdef MP-WEIXIN -->
 			<button
@@ -11,7 +11,7 @@
 				:loading="loading"
 				:disabled="loading"
 				@getphonenumber="onGetPhoneNumber"
-			>微信手机号一键绑定</button>
+			>同意授权手机号</button>
 			<!-- #endif -->
 
 			<!-- #ifndef MP-WEIXIN -->
@@ -99,7 +99,7 @@
 				const errMsg = detail.errMsg || ''
 				if (errMsg && errMsg.indexOf('ok') === -1) {
 					uni.showToast({
-						title: '需要授权手机号才能合并账号',
+						title: '未授权手机号，可稍后再试',
 						icon: 'none'
 					})
 					return

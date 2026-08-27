@@ -90,6 +90,7 @@
 	import {
 		requireLogin,
 		isLoggedIn,
+		waitBootstrapAuth,
 		ensureUserInfo
 	} from '@/common/auth.js'
 	import {
@@ -169,6 +170,7 @@
 			}
 		},
 		async onShow() {
+			await waitBootstrapAuth()
 			await this.loadHeaderProfile()
 			await this.loadBusinessList()
 			// 业务列表带回 storeId/storeName 时补全头部店铺信息
@@ -181,6 +183,7 @@
 		onPullDownRefresh() {
 			Promise.resolve()
 				.then(async () => {
+					await waitBootstrapAuth()
 					await this.loadHeaderProfile()
 					await this.loadBusinessList()
 					if (!this.storeProfile.storeName && this.businessList.length) {
@@ -196,14 +199,11 @@
 		methods: {
 			formatMoney,
 			async loadBusinessList() {
-				if (!isLoggedIn()) {
-					this.businessList = []
-					return
-				}
 				try {
 					const params = {}
-					if (this.queryStoreId) {
-						params.storeId = this.queryStoreId
+					const storeId = this.queryStoreId || bindStoreId
+					if (storeId) {
+						params.storeId = storeId
 					}
 					const data = await getOtherBusinessListApi(params)
 					const list = Array.isArray(data) ? data : (data?.list || [])
@@ -215,7 +215,6 @@
 			},
 			async loadHeaderProfile() {
 				if (this.headerLoading) return
-				// 未登录时用默认店铺头图，不强制进页登录（支付/联系仍按需登录）
 				if (!isLoggedIn()) {
 					this.userProfile = {
 						id: null,
@@ -223,13 +222,12 @@
 						phone: '',
 						avatar: '',
 						identityType: IDENTITY_USER,
-						bindStoreId: ''
+						bindStoreId: bindStoreId
 					}
-					this.queryStoreId = ''
-					this.storeProfile = {
-						storeName: '',
-						avatar: ''
-					}
+					this.queryStoreId = bindStoreId
+					await this.fetchStoreInfo({
+						storeId: bindStoreId
+					})
 					return
 				}
 				this.headerLoading = true
@@ -323,7 +321,6 @@
 				this.paying = true
 			},
 			async handleContact() {
-				if (!(await requireLogin({ force: true }))) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/contactService/index'
 				})

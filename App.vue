@@ -19,7 +19,7 @@
 				withShareTicket: true,
 				menus: ['shareAppMessage', 'shareTimeline']
 			})
-			// 启动立即提示登录；拒绝后由默认页「登录」按钮再次触发
+			// 静默换票，不弹登录/手机号授权窗
 			await bootstrapAuth()
 			// #endif
 			// #ifdef H5

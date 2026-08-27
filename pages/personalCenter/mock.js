@@ -17,7 +17,6 @@ export const businessList = [
 
 export const accountList = [
 	{ key: 'storeOrder', name: '所有订单', icon: 'bag', url: '/pages/personalCenter/storeOrder/index' },
-	// { key: 'payment', name: '提现', icon: 'rmb-circle', url: '/pages/personalCenter/withdraw/index' },
 	// { key: 'finance', name: '流水查询', icon: 'file-text', url: '/pages/personalCenter/finance/index' },
 	{ key: 'info', name: '进行中', icon: 'info-circle', url: '/pages/personalCenter/pending/index' },
 	{ key: 'agreement', name: '已完成', icon: 'checkbox-mark', url: '/pages/personalCenter/finished/index' },

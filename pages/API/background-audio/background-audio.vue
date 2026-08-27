@@ -35,7 +35,7 @@
 </template>
 <script>
 
-	import * as util from '../../../common/util.js';
+	import * as util from '../util.js';
 
 	export default {
 		data() {

@@ -54,7 +54,7 @@ describe('pages/tabBar/component/component.nvue', () => {
       const item = await page.$('.uni-navigate-item')
       await item.tap()
       await page.waitFor(500)
-      expect((await program.currentPage()).path).toBe('pages/order/index')
+      expect((await program.currentPage()).path).toBe('pages/mall/index')
       await page.waitFor(500)
       // 执行 navigateBack 验证是否返回
       expect((await program.navigateBack()).path).toBe('pages/tabBar/component/component')

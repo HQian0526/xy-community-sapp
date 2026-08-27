@@ -43,10 +43,7 @@
 		},
         data() {
             // 暂时这么写，后面看怎么优化。
-            let mediaPages = [{
-                    name: '图片',
-                    url: 'image'
-                },
+            let mediaPages = [
 				// #ifndef MP-LARK || MP-HARMONY
 				{
 				    name: '音频',
@@ -54,10 +51,6 @@
 				},
                 // #endif
                 // #ifdef APP-PLUS || MP-WEIXIN || MP-BAIDU || MP-QQ|| MP-JD || MP-HARMONY
-                {
-                    name: '录音',
-                    url: 'voice'
-                },
                 {
                     name: '背景音频',
                     url: 'background-audio'
@@ -174,14 +167,6 @@
                             name: '震动',
                             url: 'vibrate'
                         },
-                        {
-                            name: '添加手机联系人',
-                            url: 'add-phone-contact'
-                        },
-                        {
-                            name: '扫码',
-                            url: 'scan-code'
-                        },
 						//#endif
                         {
                             name: '剪贴板',
@@ -281,10 +266,7 @@
                     id: 'location',
                     name: '位置',
                     open: false,
-                    pages: [{
-                            name: '获取当前位置',
-                            url: 'get-location'
-                        },
+                    pages: [
                         {
                             name: '使用地图查看位置',
                             url: 'open-location'
@@ -383,15 +365,6 @@
                 },
                 // #endif
                 // #ifdef APP-PLUS
-                {
-                    id: 'speech',
-                    name: '语音',
-                    open: false,
-                    pages: [{
-                        name: '语音识别',
-                        url: '/platforms/app-plus/speech/speech'
-                    }]
-                },
                 {
                     id: 'push',
                     name: '推送',

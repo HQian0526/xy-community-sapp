@@ -19,7 +19,7 @@ const store = createStore({
 		colorList: ['#FF0000', '#00FF00', '#0000FF'],
 		noMatchLeftWindow: true,
 		active: 'componentPage',
-		leftWinActive: '/pages/order/index',
+		leftWinActive: '/pages/mall/index',
 		activeOpen: '',
 		menu: [],
 		univerifyErrorMsg: '',

@@ -54,18 +54,12 @@
 			},
 			switchTab() {
 				uni.switchTab({
-					url: '/pages/tabBar/template/template'
+					url: '/pages/mall/index'
 				});
 			},
 			reLaunch() {
-				if (this.hasLeftWin) {
-					uni.reLaunch({
-						url: '/pages/order/index'
-					});
-					return;
-				}
 				uni.reLaunch({
-					url: '/pages/tabBar/component/component'
+					url: '/pages/mall/index'
 				});
 			},
 			customAnimation(){

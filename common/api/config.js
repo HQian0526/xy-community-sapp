@@ -10,6 +10,7 @@
  * 业务接口路径不要再带 /api 前缀，例如：/wx/login、/product/findProduct
  */
 export const API_BASE_URL = 'https://api.gzstarfly.com/api'
+// export const API_BASE_URL = 'http://192.168.102.193:8080/api'
 
 /** 文件/图片 CDN 前缀（接口常返回相对路径） */
 export const FILE_BASE_URL = 'https://file.gzstarfly.com'

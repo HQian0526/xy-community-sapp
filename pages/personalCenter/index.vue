@@ -3,15 +3,25 @@
 		<view class="header-bg"></view>
 
 		<view class="profile-section">
-			<view class="avatar-wrap" @click="goStoreProfile">
+			<view class="avatar-wrap" @click="onHeaderTap">
 				<image class="avatar-img" :src="headerAvatar" mode="aspectFill" />
 			</view>
-			<view class="profile-info" @click="goStoreProfile">
+			<view class="profile-info" @click="onHeaderTap">
 				<text class="store-name">{{ headerName }}</text>
 				<text class="store-phone">{{ headerPhone }}</text>
 			</view>
 			<text
-				v-if="isMerchant"
+				v-if="!loggedIn"
+				class="login-entry"
+				@click="handleLogin"
+			>{{ loginLoading ? '登录中...' : '登录' }}</text>
+			<text
+				v-else-if="showBindPhoneEntry"
+				class="login-entry"
+				@click="handleBindPhone"
+			>{{ loginLoading ? '授权中...' : '授权手机号' }}</text>
+			<text
+				v-else-if="isMerchant"
 				class="store-status"
 				:class="{ 'store-status--closed': isPaused }"
 				@click="goBusinessStatus"
@@ -151,7 +161,11 @@
 	} from '@/common/share/config.js'
 	import {
 		requireLogin,
-		ensureUserInfo
+		isLoggedIn,
+		waitBootstrapAuth,
+		ensureUserInfo,
+		ensurePhoneBound,
+		isNeedBindPhone
 	} from '@/common/auth.js'
 	import {
 		getStoreListApi,
@@ -199,11 +213,19 @@
 				badgeCount: 0,
 				sharePopupShow: false,
 				userLoading: false,
+				loginLoading: false,
+				hasLogin: false,
 			}
 		},
 		computed: {
+			loggedIn() {
+				return this.hasLogin
+			},
 			isMerchant() {
 				return Number(this.userProfile.identityType) === IDENTITY_MERCHANT
+			},
+			showBindPhoneEntry() {
+				return this.loggedIn && !this.isMerchant && isNeedBindPhone(this.userProfile)
 			},
 			isPaused() {
 				if (this.storeProfile.storeStatus != null) {
@@ -212,12 +234,14 @@
 				return this.storeInfo.status === STATUS_CLOSED
 			},
 			headerName() {
+				if (!this.loggedIn) return '游客'
 				if (this.isMerchant) {
 					return this.storeProfile.storeName || this.storeInfo.storeName || '我的店铺'
 				}
 				return this.userProfile.realName || '微信用户'
 			},
 			headerPhone() {
+				if (!this.loggedIn) return '登录后查看订单与资料'
 				const phone = String(this.userProfile.phone || '').trim()
 				if (!phone) return '未绑定手机号'
 				if (phone.length < 7) return phone
@@ -231,6 +255,7 @@
 			}
 		},
 		async onShow() {
+			await waitBootstrapAuth()
 			await this.initUserProfile()
 			if (this.isMerchant) {
 				this.loadWalletBalance()
@@ -242,8 +267,11 @@
 				if (this.userLoading) return
 				this.userLoading = true
 				try {
-					const ok = await requireLogin()
-					if (!ok) return
+					if (!isLoggedIn()) {
+						this.resetGuestProfile()
+						return
+					}
+					this.hasLogin = true
 					await this.fetchUserInfo()
 					if (this.isMerchant && this.userProfile.id) {
 						await this.fetchStoreInfo(this.userProfile.id)
@@ -317,14 +345,89 @@
 			formatMoney(value) {
 				return Number(value).toFixed(2)
 			},
-			async goAccountOverview() {
-				if (!(await requireLogin({ force: true }))) return
-				uni.navigateTo({
-					url: '/pages/personalCenter/withdraw/index',
-				})
+			resetGuestProfile() {
+				this.hasLogin = false
+				this.userProfile = {
+					id: null,
+					realName: '',
+					phone: '',
+					avatar: '',
+					identityType: IDENTITY_USER
+				}
+				this.storeProfile = {
+					id: null,
+					storeId: null,
+					storeName: '',
+					avatar: '',
+					storeStatus: null
+				}
+			},
+			async handleLogin() {
+				if (this.loginLoading) return
+				this.loginLoading = true
+				try {
+					const ok = await requireLogin({ force: true })
+					if (!ok) return
+					this.hasLogin = true
+					this.userLoading = false
+					await this.initUserProfile()
+				} finally {
+					this.loginLoading = false
+				}
+			},
+			async handleBindPhone() {
+				if (this.loginLoading) return
+				this.loginLoading = true
+				try {
+					if (!(await requireLogin({ force: true }))) return
+					await ensurePhoneBound({ required: true })
+					await this.fetchUserInfo()
+				} finally {
+					this.loginLoading = false
+				}
+			},
+			async ensureOrdinaryUserPhone() {
+				if (!(await requireLogin({ force: true }))) return false
+				await this.fetchUserInfo()
+				this.hasLogin = true
+				if (Number(this.userProfile.identityType) === IDENTITY_MERCHANT) {
+					return true
+				}
+				const phoneResult = await ensurePhoneBound({ required: true })
+				if (!phoneResult.bound) {
+					uni.showToast({
+						title: '请先授权手机号',
+						icon: 'none'
+					})
+					return false
+				}
+				await this.fetchUserInfo()
+				return true
+			},
+			onHeaderTap() {
+				if (!this.loggedIn) {
+					this.handleLogin()
+					return
+				}
+				if (this.showBindPhoneEntry) {
+					this.handleBindPhone()
+					return
+				}
+				this.goStoreProfile()
+			},
+			isPublicService(item) {
+				const url = item?.url || ''
+				return url.indexOf('/personAgreement/') !== -1
+					|| url.indexOf('/businessAgreement/') !== -1
 			},
 			async handleServiceClick(item) {
-				if (!(await requireLogin({ force: true }))) return
+				if (this.isPublicService(item)) {
+					if (item.url) {
+						uni.navigateTo({ url: item.url })
+					}
+					return
+				}
+				if (!(await this.ensureOrdinaryUserPhone())) return
 				if (item.key === 'share') {
 					this.handleShareMiniProgram()
 					return
@@ -340,7 +443,8 @@
 					icon: 'none'
 				})
 			},
-			goJoinApply() {
+			async goJoinApply() {
+				if (!(await this.ensureOrdinaryUserPhone())) return
 				uni.navigateTo({
 					url: '/pages/join/index'
 				})
@@ -455,6 +559,16 @@
 		&--closed {
 			color: #999;
 		}
+	}
+
+	.login-entry {
+		flex-shrink: 0;
+		padding: 10rpx 28rpx;
+		border-radius: 28rpx;
+		background-color: $primary;
+		color: #fff;
+		font-size: 24rpx;
+		font-weight: 500;
 	}
 
 	.content-wrap {

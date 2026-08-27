@@ -41,22 +41,6 @@
 			}
 		},
 		{
-			"path": "pages/tabBar/template/template",
-			"style": {
-				"navigationBarTitleText": "我的",
-				"app-plus": {
-					"titleNView": {
-						"buttons": [{
-							"text": "\ue534",
-							"fontSrc": "/static/uni.ttf",
-							"fontSize": "22px",
-							"color": "#FFFFFF"
-						}]
-					}
-				}
-			}
-		},
-		{
 			"path": "pages/otherBusiness/index",
 			"style": {
 				"navigationBarTitleText": "其他业务",
@@ -72,42 +56,6 @@
 						}]
 					}
 				}
-			}
-		},
-		{
-			"path": "pages/order/detail",
-			"style": {
-				"navigationBarTitleText": "详情"
-			}
-		},
-		{
-			"path": "pages/order/publish/index",
-			"style": {
-				"navigationBarTitleText": "发布任务"
-			}
-		},
-		{
-			"path": "pages/order/cancel/index",
-			"style": {
-				"navigationBarTitleText": "取消工单"
-			}
-		},
-		{
-			"path": "pages/step/index",
-			"style": {
-				"navigationBarTitleText": "进度查询"
-			}
-		},
-		{
-			"path": "pages/join/index",
-			"style": {
-				"navigationBarTitleText": "加入我们"
-			}
-		},
-		{
-			"path": "pages/join/apply/index",
-			"style": {
-				"navigationBarTitleText": "来客信息"
 			}
 		},
 		{
@@ -200,12 +148,6 @@
 			}
 		},
 		{
-			"path": "pages/personalCenter/withdraw/index",
-			"style": {
-				"navigationBarTitleText": "提现"
-			}
-		},
-		{
 			"path": "pages/personalCenter/finance/index",
 			"style": {
 				"navigationBarTitleText": "流水查询"
@@ -274,245 +216,6 @@
 				"navigationBarTitleText": "订单详情",
 				"enablePullDownRefresh": true
 			}
-		},
-		// #ifndef MP-TOUTIAO
-		{
-			"path": "pages/component/cover-view/cover-view",
-			"style": {
-				"navigationBarTitleText": "cover-view"
-			}
-		},
-		{
-			"path": "pages/component/movable-view/movable-view",
-			"style": {
-				"navigationBarTitleText": "movable-view"
-			}
-		},
-		// #endif
-		{
-			"path": "pages/component/text/text",
-			"style": {
-				"navigationBarTitleText": "text"
-			}
-		},
-		{
-			"path": "pages/component/rich-text/rich-text",
-			"style": {
-				"navigationBarTitleText": "rich-text"
-			}
-		},
-		{
-			"path": "pages/component/progress/progress",
-			"style": {
-				"navigationBarTitleText": "progress"
-			}
-		},
-		{
-			"path": "pages/component/button/button",
-			"style": {
-				"navigationBarTitleText": "button"
-			}
-		},
-		{
-			"path": "pages/component/checkbox/checkbox",
-			"style": {
-				"navigationBarTitleText": "checkbox"
-			}
-		},
-		{
-			"path": "pages/component/form/form",
-			"style": {
-				"navigationBarTitleText": "form"
-			}
-		},
-		{
-			"path": "pages/component/input/input",
-			"style": {
-				"navigationBarTitleText": "input",
-				"app-plus": {
-					"softinputNavBar": "none"
-				}
-			}
-		},
-		{
-			"path": "pages/component/label/label",
-			"style": {
-				"navigationBarTitleText": "label"
-			}
-		},
-		{
-			"path": "pages/component/picker/picker",
-			"style": {
-				"navigationBarTitleText": "picker"
-			}
-		},
-		{
-			"path": "pages/component/picker-view/picker-view",
-			"style": {
-				"navigationBarTitleText": "picker-view"
-			}
-		},
-		{
-			"path": "pages/component/radio/radio",
-			"style": {
-				"navigationBarTitleText": "radio"
-			}
-		},
-		{
-			"path": "pages/component/slider/slider",
-			"style": {
-				"navigationBarTitleText": "slider"
-			}
-		},
-		{
-			"path": "pages/component/switch/switch",
-			"style": {
-				"navigationBarTitleText": "switch"
-			}
-		},
-		{
-			"path": "pages/component/textarea/textarea",
-			"style": {
-				"navigationBarTitleText": "textarea"
-			}
-		},
-		// #ifdef APP-PLUS || MP-WEIXIN || H5 || MP-BAIDU
-		{
-			"path": "pages/component/editor/editor",
-			"style": {
-				"navigationBarTitleText": "editor",
-				"app-plus": {
-					"softinputMode": "adjustResize"
-				}
-				// #ifdef MP-BAIDU
-				,"usingComponents": {
-					"editor": "dynamicLib://editorLib/editor"
-				}
-				// #endif
-			}
-		},
-		// #endif
-		{
-			"path": "pages/component/navigator/navigator",
-			"style": {
-				"navigationBarTitleText": "navigator"
-			}
-		},
-		{
-			"path": "pages/component/navigator/navigate/navigate",
-			"style": {
-				"navigationBarTitleText": "navigatePage"
-			}
-		},
-		{
-			"path": "pages/component/navigator/redirect/redirect",
-			"style": {
-				"navigationBarTitleText": "redirectPage"
-			}
-		},
-		{
-			"path": "pages/component/image/image",
-			"style": {
-				"navigationBarTitleText": "image"
-			}
-		},
-		{
-			"path": "pages/component/video/video",
-			"style": {
-				"navigationBarTitleText": "video"
-			}
-		},
-		// #ifndef MP-ALIPAY || MP-TOUTIAO || VUE3
-		// {
-		// 	"path": "pages/component/audio/audio",
-		// 	"style": {
-		// 		"navigationBarTitleText": "audio"
-		// 	}
-		// },
-		// #endif
-		// #ifndef MP-TOUTIAO
-		{
-			"path": "pages/component/map/map",
-			"style": {
-				"navigationBarTitleText": "map"
-			}
-		},
-		// #endif
-		{
-			"path": "pages/component/canvas/canvas",
-			"style": {
-				"navigationBarTitleText": "canvas"
-			}
-		},
-		{
-			"path": "pages/component/web-view/web-view",
-			"style": {
-				"navigationBarTitleText": "web-view"
-			}
-		},
-		// #ifdef APP-VUE || APP-NVUE
-		{
-			"path": "pages/component/ad/ad",
-			"style": {
-				"navigationBarTitleText": "AD"
-			}
-		},
-		// #endif
-		// #ifdef APP || H5
-		{
-			"path": "pages/component/web-view-local/web-view-local",
-			"style": {}
-		},
-		{
-			"path": "pages/component/web-view-local/issue-17581",
-			"style": {
-				"navigationBarTitleText": "issue-17581"
-			}
-		},
-		// #endif
-		{
-			"path": "platforms/app-plus/speech/speech",
-			"style": {
-				"navigationBarTitleText": "语音识别"
-			}
-		},
-		{
-			"path": "platforms/app-plus/orientation/orientation",
-			"style": {
-				"navigationBarTitleText": "方向传感器"
-			}
-		},
-		{
-			"path": "platforms/app-plus/proximity/proximity",
-			"style": {
-				"navigationBarTitleText": "距离传感器"
-			}
-		},
-		{
-			"path": "platforms/app-plus/push/push",
-			"style": {
-				"navigationBarTitleText": "推送"
-			}
-		},
-		{
-			"path": "platforms/app-plus/shake/shake",
-			"style": {
-				"navigationBarTitleText": "摇一摇"
-			}
-		},
-		// #ifdef H5 || APP-PLUS
-		{
-			"path": "pages/about/about",
-			"style": {
-				"navigationBarTitleText": "关于"
-			}
-		},
-		// #endif
-		{
-			"path": "platforms/app-plus/feedback/feedback",
-			"style": {
-				"navigationBarTitleText": "问题反馈"
-			}
 		}
 		// #ifdef H5
 		, {
@@ -541,7 +244,278 @@
 		// #endif
 
 ],
-	"subPackages": [{
+	"subPackages": [
+		{
+			"root": "pages/join",
+			"pages": [{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "加入我们"
+					}
+				},
+				{
+					"path": "apply/index",
+					"style": {
+						"navigationBarTitleText": "来客信息"
+					}
+				}
+			]
+		}
+		// #ifndef MP-WEIXIN
+		, {
+			"root": "pages/tabBar",
+			"pages": [{
+				"path": "template/template",
+				"style": {
+					"navigationBarTitleText": "模板示例",
+					"app-plus": {
+						"titleNView": {
+							"buttons": [{
+								"text": "\ue534",
+								"fontSrc": "/static/uni.ttf",
+								"fontSize": "22px",
+								"color": "#FFFFFF"
+							}]
+						}
+					}
+				}
+			}]
+		},
+		{
+			"root": "pages/component",
+			"pages": [
+				// #ifndef MP-TOUTIAO
+				{
+					"path": "cover-view/cover-view",
+					"style": {
+						"navigationBarTitleText": "cover-view"
+					}
+				},
+				{
+					"path": "movable-view/movable-view",
+					"style": {
+						"navigationBarTitleText": "movable-view"
+					}
+				},
+				// #endif
+				{
+					"path": "text/text",
+					"style": {
+						"navigationBarTitleText": "text"
+					}
+				},
+				{
+					"path": "rich-text/rich-text",
+					"style": {
+						"navigationBarTitleText": "rich-text"
+					}
+				},
+				{
+					"path": "progress/progress",
+					"style": {
+						"navigationBarTitleText": "progress"
+					}
+				},
+				{
+					"path": "button/button",
+					"style": {
+						"navigationBarTitleText": "button"
+					}
+				},
+				{
+					"path": "checkbox/checkbox",
+					"style": {
+						"navigationBarTitleText": "checkbox"
+					}
+				},
+				{
+					"path": "form/form",
+					"style": {
+						"navigationBarTitleText": "form"
+					}
+				},
+				{
+					"path": "input/input",
+					"style": {
+						"navigationBarTitleText": "input",
+						"app-plus": {
+							"softinputNavBar": "none"
+						}
+					}
+				},
+				{
+					"path": "label/label",
+					"style": {
+						"navigationBarTitleText": "label"
+					}
+				},
+				{
+					"path": "picker/picker",
+					"style": {
+						"navigationBarTitleText": "picker"
+					}
+				},
+				{
+					"path": "picker-view/picker-view",
+					"style": {
+						"navigationBarTitleText": "picker-view"
+					}
+				},
+				{
+					"path": "radio/radio",
+					"style": {
+						"navigationBarTitleText": "radio"
+					}
+				},
+				{
+					"path": "slider/slider",
+					"style": {
+						"navigationBarTitleText": "slider"
+					}
+				},
+				{
+					"path": "switch/switch",
+					"style": {
+						"navigationBarTitleText": "switch"
+					}
+				},
+				{
+					"path": "textarea/textarea",
+					"style": {
+						"navigationBarTitleText": "textarea"
+					}
+				},
+				{
+					"path": "navigator/navigator",
+					"style": {
+						"navigationBarTitleText": "navigator"
+					}
+				},
+				{
+					"path": "navigator/navigate/navigate",
+					"style": {
+						"navigationBarTitleText": "navigatePage"
+					}
+				},
+				{
+					"path": "navigator/redirect/redirect",
+					"style": {
+						"navigationBarTitleText": "redirectPage"
+					}
+				},
+				{
+					"path": "image/image",
+					"style": {
+						"navigationBarTitleText": "image"
+					}
+				},
+				{
+					"path": "video/video",
+					"style": {
+						"navigationBarTitleText": "video"
+					}
+				},
+				// #ifndef MP-ALIPAY || MP-TOUTIAO || VUE3
+				// {
+				// 	"path": "audio/audio",
+				// 	"style": {
+				// 		"navigationBarTitleText": "audio"
+				// 	}
+				// },
+				// #endif
+				// #ifndef MP-TOUTIAO
+				{
+					"path": "map/map",
+					"style": {
+						"navigationBarTitleText": "map"
+					}
+				},
+				// #endif
+				{
+					"path": "canvas/canvas",
+					"style": {
+						"navigationBarTitleText": "canvas"
+					}
+				},
+				{
+					"path": "web-view/web-view",
+					"style": {
+						"navigationBarTitleText": "web-view"
+					}
+				}
+				// #ifdef APP-VUE || APP-NVUE
+				, {
+					"path": "ad/ad",
+					"style": {
+						"navigationBarTitleText": "AD"
+					}
+				}
+				// #endif
+				// #ifdef APP || H5
+				, {
+					"path": "web-view-local/web-view-local",
+					"style": {}
+				},
+				{
+					"path": "web-view-local/issue-17581",
+					"style": {
+						"navigationBarTitleText": "issue-17581"
+					}
+				}
+				// #endif
+			]
+		}
+		// #endif
+		// #ifdef APP-PLUS
+		, {
+			"root": "platforms/app-plus",
+			"pages": [
+				{
+					"path": "orientation/orientation",
+					"style": {
+						"navigationBarTitleText": "方向传感器"
+					}
+				},
+				{
+					"path": "proximity/proximity",
+					"style": {
+						"navigationBarTitleText": "距离传感器"
+					}
+				},
+				{
+					"path": "push/push",
+					"style": {
+						"navigationBarTitleText": "推送"
+					}
+				},
+				{
+					"path": "shake/shake",
+					"style": {
+						"navigationBarTitleText": "摇一摇"
+					}
+				},
+				{
+					"path": "feedback/feedback",
+					"style": {
+						"navigationBarTitleText": "问题反馈"
+					}
+				}
+			]
+		}
+		// #endif
+		// #ifdef H5 || APP-PLUS
+		, {
+			"root": "pages/about",
+			"pages": [{
+				"path": "about",
+				"style": {
+					"navigationBarTitleText": "关于"
+				}
+			}]
+		}
+		// #endif
+		// #ifndef MP-WEIXIN
+		, {
 			"root": "pages/API",
 			"pages": [{
 					"path": "login/login",
@@ -711,12 +685,6 @@
 					}
 				},
 				{
-					"path": "add-phone-contact/add-phone-contact",
-					"style": {
-						"navigationBarTitleText": "添加手机联系人"
-					}
-				},
-				{
 					"path": "on-accelerometer-change/on-accelerometer-change",
 					"style": {
 						"navigationBarTitleText": "监听加速度计数据"
@@ -732,12 +700,6 @@
 					"path": "make-phone-call/make-phone-call",
 					"style": {
 						"navigationBarTitleText": "打电话"
-					}
-				},
-				{
-					"path": "scan-code/scan-code",
-					"style": {
-						"navigationBarTitleText": "扫码"
 					}
 				},
 				{
@@ -762,18 +724,6 @@
 					"path": "download-file/download-file",
 					"style": {
 						"navigationBarTitleText": "下载文件"
-					}
-				},
-				{
-					"path": "image/image",
-					"style": {
-						"navigationBarTitleText": "图片"
-					}
-				},
-				{
-					"path": "voice/voice",
-					"style": {
-						"navigationBarTitleText": "录音"
 					}
 				},
 				{
@@ -816,12 +766,6 @@
 					}
 				},
 				// #endif
-				{
-					"path": "get-location/get-location",
-					"style": {
-						"navigationBarTitleText": "获取位置"
-					}
-				},
 				{
 					"path": "open-location/open-location",
 					"style": {
@@ -1096,24 +1040,6 @@
 					}
 				},
 				{
-					"path": "indexed-list/indexed-list",
-					"style": {
-						"navigationBarTitleText": "IndexedList 索引列表",
-						"mp-weixin": {
-							"disableScroll": true
-						},
-						"app-plus": {
-							"bounce": "none"
-						},
-						"mp-alipay": {
-							"allowsBounceVertical": "NO"
-						},
-						"mp-baidu": {
-							"disableScroll": true
-						}
-					}
-				},
-				{
 					"path": "fab/fab",
 					"style": {
 						"navigationBarTitleText": "Fab 悬浮按钮"
@@ -1271,7 +1197,14 @@
 				}
 			]
 		}
+		// #endif
 	],
+	"preloadRule": {
+		"pages/personalCenter/index": {
+			"network": "all",
+			"packages": ["pages/join"]
+		}
+	},
 	"globalStyle": {
 		"pageOrientation": "portrait",
 		"navigationBarTitleText": "Hello uniapp",

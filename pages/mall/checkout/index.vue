@@ -89,7 +89,7 @@
 	import { checkoutInfo, DELIVERY_FEE, getDefaultContact, formatMoney } from './mock.js'
 	import { getCartItems, getCartTotal, clearCartMap } from '../cart.js'
 	import { assertStoreOpenForOrder } from '@/common/api/personalCenter/store.js'
-	import { requireLogin } from '@/common/auth.js'
+	import { requireLogin, getUserInfo } from '@/common/auth.js'
 	import {
 		checkoutAndPayApi,
 		mockConfirmMallPayApi,
@@ -145,9 +145,11 @@
 				this.cartItems = getCartItems()
 				if (!this.cartItems.length) return
 				const defaults = getDefaultContact()
+				const phone = String(getUserInfo()?.phone || '').trim()
 				this.formData = {
 					...defaultFormData(),
-					...defaults
+					...defaults,
+					contact: phone || defaults.contact || ''
 				}
 			},
 			buildCheckoutPayload() {

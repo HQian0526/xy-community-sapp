@@ -30,7 +30,7 @@
 </template>
 
 <script>
-	import { dateUtils } from  '../../../common/util.js';
+	import { dateUtils } from '../../API/util.js';
 
 	export default {
 		data() {

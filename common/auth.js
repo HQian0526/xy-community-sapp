@@ -25,11 +25,9 @@ const TOKEN_KEY = 'token'
 const USER_INFO_KEY = 'userInfo'
 
 let loginPromise = null
-/** 用户在启动登录弹窗中点了「暂不登录」 */
+/** 用户主动拒绝登录后，非 force 的闸门不再强登 */
 let loginDeclined = false
-/** 本次冷启动是否已弹出过登录提示（避免重复弹窗） */
-let loginPromptShown = false
-/** 启动登录引导完成态，供首页等待，避免与 onLaunch 弹窗竞态 */
+/** 启动静默登录完成态，供首页等待，避免业务接口抢跑 */
 let bootstrapPromise = null
 let bootstrapDone = false
 /** 本次启动是否已成功拉取过 /user/getUserInfo */
@@ -185,13 +183,15 @@ export async function bindPhoneByCode(code) {
 }
 
 /**
- * 若当前用户缺少手机号，弹出授权层等待用户操作
- * 用户点「稍后再说」时以 skipped: true 结束，不阻断主流程
+ * 若当前用户缺少手机号，弹出授权层并等待结果。
+ * @param {{ required?: boolean }} [options] required 时不可关闭，必须授权才算成功
  */
-export async function ensurePhoneBound() {
+export async function ensurePhoneBound(options = {}) {
+	const required = options.required === true
 	if (!isNeedBindPhone()) {
 		return {
 			skipped: false,
+			bound: true,
 			userInfo: getUserInfo()
 		}
 	}
@@ -200,10 +200,19 @@ export async function ensurePhoneBound() {
 		console.warn('手机号绑定弹窗未挂载，跳过授权')
 		return {
 			skipped: true,
+			bound: false,
 			userInfo: getUserInfo()
 		}
 	}
-	return bindPhoneUI.show()
+	const result = await bindPhoneUI.show({
+		required
+	})
+	const bound = !isNeedBindPhone()
+	return {
+		skipped: !!result?.skipped || !bound,
+		bound,
+		userInfo: result?.userInfo || getUserInfo()
+	}
 }
 
 function doWxLogin() {
@@ -291,28 +300,9 @@ export function clearLoginDeclined() {
 	loginDeclined = false
 }
 
-function showLoginPromptModal() {
-	return new Promise((resolve) => {
-		uni.showModal({
-			title: '登录提示',
-			content: '登录后可正常使用小程序服务',
-			confirmText: '去登录',
-			cancelText: '暂不登录',
-			success: (res) => {
-				resolve(!!res.confirm)
-			},
-			fail: () => {
-				resolve(false)
-			}
-		})
-	})
-}
-
 /**
- * 应用启动：
- * - 已有本地 token：先静默换票，避免过期 token 抢跑业务接口
- * - 无 token：弹窗引导登录
- * 用户点「暂不登录」后返回 null，由默认页展示「登录」按钮再次触发。
+ * 应用启动：只做静默 uni.login 换票，不弹登录/手机号授权窗。
+ * 失败则清本地登录态，首页按游客浏览。
  */
 export function bootstrapAuth() {
 	if (bootstrapPromise) {
@@ -320,41 +310,14 @@ export function bootstrapAuth() {
 	}
 	bootstrapPromise = (async () => {
 		try {
-			// 本地有 token 也要换票，防止真机冷启动用过期 JWT 先打业务接口
-			if (isLoggedIn()) {
-				try {
-					const result = await wxLogin()
-					loginDeclined = false
-					await ensureUserInfo()
-					return result
-				} catch (error) {
-					console.warn('启动静默换票失败，改为弹窗引导', error)
-					clearLoginInfo()
-				}
-			}
-			if (loginPromptShown) {
-				return null
-			}
-			loginPromptShown = true
-			const confirmed = await showLoginPromptModal()
-			if (!confirmed) {
-				loginDeclined = true
-				return null
-			}
-			try {
-				const result = await wxLogin()
-				loginDeclined = false
-				await ensureUserInfo()
-				return result
-			} catch (error) {
-				console.warn('启动登录失败', error)
-				loginDeclined = true
-				uni.showToast({
-					title: error?.message || '登录失败，请稍后重试',
-					icon: 'none'
-				})
-				return null
-			}
+			const result = await wxLogin()
+			loginDeclined = false
+			await ensureUserInfo()
+			return result
+		} catch (error) {
+			console.warn('启动静默登录失败，按游客浏览', error)
+			clearLoginInfo()
+			return null
 		} finally {
 			bootstrapDone = true
 		}
@@ -362,7 +325,7 @@ export function bootstrapAuth() {
 	return bootstrapPromise
 }
 
-/** 等待启动登录引导结束（已完成则立刻返回） */
+/** 等待启动静默登录结束（已完成则立刻返回） */
 export function waitBootstrapAuth() {
 	if (bootstrapDone) {
 		return Promise.resolve()
@@ -370,18 +333,17 @@ export function waitBootstrapAuth() {
 	if (bootstrapPromise) {
 		return bootstrapPromise.then(() => undefined).catch(() => undefined)
 	}
-	// App.onLaunch 尚未触发时，主动走一遍引导，避免首页抢跑
 	return bootstrapAuth().then(() => undefined).catch(() => undefined)
 }
 
 /**
- * 登录闸门：先确保已登录；手机号绑定异步引导，不阻断业务接口
+ * 登录闸门：用户主动操作时再调。默认不弹手机号授权。
  * @param {{ force?: boolean, bindPhone?: boolean }} [options]
  * @returns {Promise<boolean>}
  */
 export async function requireLogin(options = {}) {
 	const force = !!options.force
-	const bindPhone = options.bindPhone !== false
+	const bindPhone = options.bindPhone === true
 	try {
 		if (!force && isLoginDeclined()) {
 			return false

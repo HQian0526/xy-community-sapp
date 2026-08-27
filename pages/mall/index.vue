@@ -1,14 +1,6 @@
 <template>
 	<view class="mall-root">
 		<view class="mall-page">
-			<view v-if="needLogin" class="login-gate">
-				<u-empty text="登录后查看商品" mode="permission" marginTop="120"></u-empty>
-				<button class="login-btn" :loading="loginLoading" :disabled="loginLoading" @click="handleLogin">
-					登录
-				</button>
-			</view>
-
-			<template v-else>
 			<view class="search-wrap">
 				<up-search
 					v-model="searchKeyword"
@@ -116,7 +108,6 @@
 				</view>
 				<view class="cart-submit" @click.stop="handleCheckout">去结算</view>
 			</view>
-			</template>
 		</view>
 
 		<view class="cart-popup-host">
@@ -182,10 +173,9 @@
 	} from './cart.js'
 	import {
 		requireLogin,
-		isLoggedIn,
-		isLoginDeclined,
 		waitBootstrapAuth,
-		ensureUserInfo
+		ensureUserInfo,
+		ensurePhoneBound
 	} from '@/common/auth.js'
 	import {
 		bindStoreId
@@ -246,8 +236,6 @@
 				categoryList: [],
 				categoryLoading: false,
 				pageBootstrapping: false,
-				needLogin: !isLoggedIn(),
-				loginLoading: false,
 				currentCate: 0,
 				searchKeyword: '',
 				socialName: '上海-汤臣一品',
@@ -258,30 +246,17 @@
 				queryStoreId: ''
 			}
 		},
-		/** 进入页面：同步购物车、等登录完成后加载分类商品 */
+		/** 进入页面：同步购物车后加载分类商品（游客可浏览，不弹登录/手机号） */
 		async onShow() {
 			this.cartMap = getCartMap()
 			this.$nextTick(() => {
 				this.updateCateTabHeight()
 			})
-			// 等页面/弹窗组件挂载完成，避免首进时登录与请求竞态
 			await new Promise((resolve) => this.$nextTick(resolve))
 			if (this.pageBootstrapping) return
 			this.pageBootstrapping = true
 			try {
-				// 先等启动登录弹窗结束，避免与 App.onLaunch 竞态
 				await waitBootstrapAuth()
-				// 启动弹窗点了「暂不登录」：展示登录入口，不再静默登录
-				if (isLoginDeclined() || !isLoggedIn()) {
-					this.needLogin = !isLoggedIn()
-					if (this.needLogin) return
-				}
-				const ok = await requireLogin()
-				if (!ok) {
-					this.needLogin = true
-					return
-				}
-				this.needLogin = false
 				await this.ensureMallStoreId()
 				await this.loadCategoryList()
 			} finally {
@@ -321,7 +296,7 @@
 			}
 		},
 		methods: {
-			/** 从缓存用户信息解析本次查询用的店铺 id */
+			/** 未登录时用配置默认店铺，已登录则按用户身份解析 */
 			async ensureMallStoreId() {
 				try {
 					const user = await ensureUserInfo()
@@ -329,22 +304,6 @@
 				} catch (error) {
 					console.error('获取用户绑定店铺失败', error)
 					this.queryStoreId = resolveMallStoreId(null)
-				}
-			},
-			/** 未登录页点击「登录」，成功后加载店铺分类 */
-			async handleLogin() {
-				if (this.loginLoading) return
-				this.loginLoading = true
-				try {
-					const ok = await requireLogin({
-						force: true
-					})
-					if (!ok) return
-					this.needLogin = false
-					await this.ensureMallStoreId()
-					await this.loadCategoryList()
-				} finally {
-					this.loginLoading = false
 				}
 			},
 			/** 拉取店铺商品分类，并加载当前选中分类下的商品 */
@@ -519,7 +478,7 @@
 				const cate = this.categoryList.find((item) => item.storeId)
 				return cate?.storeId || this.queryStoreId || ''
 			},
-			/** 去结算：校验登录和店铺营业状态后进入确认页 */
+			/** 去结算：先登录，未授权手机号必须授权后才进入确认页 */
 			async handleCheckout() {
 				if (!this.cartCount) {
 					uni.showToast({
@@ -531,6 +490,16 @@
 				if (!(await requireLogin({
 						force: true
 					}))) return
+				const phoneResult = await ensurePhoneBound({
+					required: true
+				})
+				if (!phoneResult.bound) {
+					uni.showToast({
+						title: '请先授权手机号后再结算',
+						icon: 'none'
+					})
+					return
+				}
 				// 点结算时实时查 /store/findStore，覆盖「选购中商家突然打烊」
 				const check = await assertStoreOpenForOrder(this.resolveCheckoutStoreId())
 				if (!check.ok) return
@@ -558,38 +527,6 @@
 		background-color: #f5f5f5;
 		overflow: hidden;
 		box-sizing: border-box;
-	}
-
-	.login-gate {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 0 80rpx;
-		box-sizing: border-box;
-	}
-
-	.login-btn {
-		width: 100%;
-		max-width: 480rpx;
-		height: 88rpx;
-		line-height: 88rpx;
-		margin-top: 48rpx;
-		border-radius: 44rpx;
-		background-color: #00a896;
-		color: #fff;
-		font-size: 30rpx;
-		font-weight: 600;
-		border: none;
-		padding: 0;
-
-		&::after {
-			border: none;
-		}
-
-		&[disabled] {
-			opacity: 0.7;
-		}
 	}
 
 	.custom-title {

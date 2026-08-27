@@ -1,8 +1,8 @@
-describe('pages/order/index.vue', () => {
+describe('pages/mall/index.vue', () => {
 	let page
 	beforeAll(async () => {
 		// 重新reLaunch至首页，并获取首页page对象（其中 program 是uni-automator自动注入的全局对象）
-		page = await program.reLaunch('/pages/order/index')
+		page = await program.reLaunch('/pages/mall/index')
 		await page.waitFor(1000)
 	})
 
