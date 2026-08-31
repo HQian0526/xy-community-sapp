@@ -100,6 +100,12 @@
 		bindStoreId
 	} from '@/config/index.js'
 	import {
+		applyLaunchQuery,
+		resolveViewStoreId,
+		shouldForceOrdinaryUi,
+		setOwnMerchantStoreId
+	} from '@/common/storeVisit.js'
+	import {
 		resolveFileUrl
 	} from '@/common/api/config.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
@@ -108,20 +114,6 @@
 	const DEFAULT_AVATAR = defaultStoreInfo.avatar
 	const IDENTITY_USER = 1
 	const IDENTITY_MERCHANT = 2
-
-	function resolveMallStoreId(user) {
-		const identityType = user == null || user.identityType == null
-			? IDENTITY_USER
-			: Number(user.identityType)
-		if (identityType !== IDENTITY_USER) {
-			return ''
-		}
-		const bound = user?.bindStoreId
-		if (bound !== undefined && bound !== null && String(bound).trim() !== '') {
-			return bound
-		}
-		return bindStoreId
-	}
 
 	export default {
 		mixins: [bindPhoneMixin],
@@ -154,6 +146,7 @@
 		computed: {
 			isMerchant() {
 				return Number(this.userProfile.identityType) === IDENTITY_MERCHANT
+					&& !shouldForceOrdinaryUi(this.userProfile)
 			},
 			headerName() {
 				return this.storeProfile.storeName || '社区店铺'
@@ -168,6 +161,9 @@
 			payTotal() {
 				return this.unitPrice * this.payCount
 			}
+		},
+		onLoad(options = {}) {
+			applyLaunchQuery(options)
 		},
 		async onShow() {
 			await waitBootstrapAuth()
@@ -224,23 +220,28 @@
 						identityType: IDENTITY_USER,
 						bindStoreId: bindStoreId
 					}
-					this.queryStoreId = bindStoreId
+					this.queryStoreId = resolveViewStoreId(null)
 					await this.fetchStoreInfo({
-						storeId: bindStoreId
+						storeId: this.queryStoreId
 					})
 					return
 				}
 				this.headerLoading = true
 				try {
 					await this.fetchUserInfo()
-					if (this.isMerchant && this.userProfile.id) {
+					const identityMerchant = Number(this.userProfile.identityType) === IDENTITY_MERCHANT
+					if (identityMerchant && this.userProfile.id) {
 						await this.fetchStoreInfo({
 							userId: this.userProfile.id
 						})
-					} else if (this.queryStoreId) {
-						await this.fetchStoreInfo({
-							storeId: this.queryStoreId
-						})
+					}
+					this.queryStoreId = resolveViewStoreId(this.userProfile)
+					if (shouldForceOrdinaryUi(this.userProfile) || !identityMerchant) {
+						if (this.queryStoreId) {
+							await this.fetchStoreInfo({
+								storeId: this.queryStoreId
+							})
+						}
 					}
 				} finally {
 					this.headerLoading = false
@@ -258,10 +259,10 @@
 						identityType: user.identityType == null ? IDENTITY_USER : Number(user.identityType),
 						bindStoreId: user.bindStoreId
 					}
-					this.queryStoreId = resolveMallStoreId(this.userProfile)
+					this.queryStoreId = resolveViewStoreId(this.userProfile)
 				} catch (error) {
 					console.error('获取用户信息失败', error)
-					this.queryStoreId = resolveMallStoreId(null)
+					this.queryStoreId = resolveViewStoreId(null)
 				}
 			},
 			async fetchStoreInfo(params = {}) {
@@ -284,6 +285,9 @@
 					this.storeProfile = {
 						storeName: store.storeName || '',
 						avatar: resolveFileUrl(store.avatar || '')
+					}
+					if (params.userId && store.storeId) {
+						setOwnMerchantStoreId(store.storeId)
 					}
 				} catch (error) {
 					console.error('获取商户信息失败', error)

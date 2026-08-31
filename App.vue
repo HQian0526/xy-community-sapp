@@ -8,12 +8,16 @@
 	import {
 		bootstrapAuth
 	} from '@/common/auth.js'
+	import {
+		applyLaunchQuery
+	} from '@/common/storeVisit.js'
 	// #ifdef APP
 	import checkUpdate from '@/uni_modules/uni-upgrade-center-app/utils/check-update';
 	// #endif
 
 	export default {
-		onLaunch: async function() {
+		onLaunch: async function(options) {
+			applyLaunchQuery((options && options.query) || options || {})
 			// #ifdef MP-WEIXIN
 			uni.showShareMenu({
 				withShareTicket: true,
@@ -55,7 +59,8 @@
 			})
 			// #endif
 		},
-		onShow: function() {
+		onShow: function(options) {
+			applyLaunchQuery((options && options.query) || options || {})
 			console.log('App Show')
 		},
 		onHide: function() {

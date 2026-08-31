@@ -175,6 +175,11 @@
 	import {
 		resolveFileUrl
 	} from '@/common/api/config.js'
+	import {
+		applyLaunchQuery,
+		shouldForceOrdinaryUi,
+		setOwnMerchantStoreId
+	} from '@/common/storeVisit.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
 	import BindPhonePopup from '@/components/bind-phone-popup/bind-phone-popup.vue'
 
@@ -223,6 +228,7 @@
 			},
 			isMerchant() {
 				return Number(this.userProfile.identityType) === IDENTITY_MERCHANT
+					&& !shouldForceOrdinaryUi(this.userProfile)
 			},
 			showBindPhoneEntry() {
 				return this.loggedIn && !this.isMerchant && isNeedBindPhone(this.userProfile)
@@ -254,6 +260,9 @@
 				return this.userProfile.avatar || DEFAULT_AVATAR
 			}
 		},
+		onLoad(options = {}) {
+			applyLaunchQuery(options)
+		},
 		async onShow() {
 			await waitBootstrapAuth()
 			await this.initUserProfile()
@@ -273,7 +282,7 @@
 					}
 					this.hasLogin = true
 					await this.fetchUserInfo()
-					if (this.isMerchant && this.userProfile.id) {
+					if (Number(this.userProfile.identityType) === IDENTITY_MERCHANT && this.userProfile.id) {
 						await this.fetchStoreInfo(this.userProfile.id)
 					} else {
 						this.storeProfile = {
@@ -326,6 +335,9 @@
 						storeName: store.storeName || '',
 						avatar: resolveFileUrl(store.avatar || ''),
 						storeStatus: store.storeStatus == null ? null : Number(store.storeStatus)
+					}
+					if (store.storeId) {
+						setOwnMerchantStoreId(store.storeId)
 					}
 					this.storeInfo.storeName = this.storeProfile.storeName || this.storeInfo.storeName
 					this.storeInfo.status = getStoreStatusLabel(this.storeProfile.storeStatus)

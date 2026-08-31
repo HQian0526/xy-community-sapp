@@ -178,8 +178,9 @@
 		ensurePhoneBound
 	} from '@/common/auth.js'
 	import {
-		bindStoreId
-	} from '@/config/index.js'
+		applyLaunchQuery,
+		resolveViewStoreId
+	} from '@/common/storeVisit.js'
 	import {
 		getCatagoryListApi
 	} from '@/common/api/mall/catagory.js'
@@ -194,18 +195,6 @@
 	} from '@/common/api/config.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
 	import BindPhonePopup from '@/components/bind-phone-popup/bind-phone-popup.vue'
-
-	/** 普通用户取绑定店铺，未绑定则用配置默认店铺；商户不传默认 id */
-	function resolveMallStoreId(user) {
-		const identityType = user == null || user.identityType == null
-			? 1
-			: Number(user.identityType)
-		const bound = user?.bindStoreId
-		if (bound !== undefined && bound !== null && String(bound).trim() !== '') {
-			return bound
-		}
-		return bindStoreId
-	}
 
 	/** 把接口商品字段转成列表展示结构 */
 	function mapProductItem(item, categoryName = '', fallbackStoreId = '') {
@@ -246,6 +235,12 @@
 				queryStoreId: ''
 			}
 		},
+		onLoad(options = {}) {
+			const storeId = applyLaunchQuery(options)
+			if (storeId) {
+				this.syncCartWithStore(storeId)
+			}
+		},
 		/** 进入页面：同步购物车后加载分类商品（游客可浏览，不弹登录/手机号） */
 		async onShow() {
 			this.cartMap = getCartMap()
@@ -258,6 +253,7 @@
 			try {
 				await waitBootstrapAuth()
 				await this.ensureMallStoreId()
+				this.syncCartWithStore(this.queryStoreId)
 				await this.loadCategoryList()
 			} finally {
 				this.pageBootstrapping = false
@@ -296,14 +292,24 @@
 			}
 		},
 		methods: {
-			/** 未登录时用配置默认店铺，已登录则按用户身份解析 */
+			/** 扫码进店优先，其次用户绑定店铺，最后项目默认店铺 */
 			async ensureMallStoreId() {
 				try {
 					const user = await ensureUserInfo()
-					this.queryStoreId = resolveMallStoreId(user)
+					this.queryStoreId = resolveViewStoreId(user)
 				} catch (error) {
 					console.error('获取用户绑定店铺失败', error)
-					this.queryStoreId = resolveMallStoreId(null)
+					this.queryStoreId = resolveViewStoreId(null)
+				}
+			},
+			/** 购物车里已有其他店商品时清空，避免串店 */
+			syncCartWithStore(storeId) {
+				if (!storeId) return
+				const items = getCartItems()
+				const hasForeign = items.some((item) => item.storeId && String(item.storeId) !== String(storeId))
+				if (hasForeign) {
+					clearCartMap()
+					this.cartMap = {}
 				}
 			},
 			/** 拉取店铺商品分类，并加载当前选中分类下的商品 */
