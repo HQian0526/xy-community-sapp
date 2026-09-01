@@ -16,6 +16,11 @@
 				@click="handleLogin"
 			>{{ loginLoading ? '登录中...' : '登录' }}</text>
 			<text
+				v-else-if="showSwitchOwnStore"
+				class="login-entry switch-own-store"
+				@click.stop="handleSwitchToOwnStore"
+			>切换至我的店铺</text>
+			<text
 				v-else-if="showBindPhoneEntry"
 				class="login-entry"
 				@click="handleBindPhone"
@@ -178,7 +183,8 @@
 	import {
 		applyLaunchQuery,
 		shouldForceOrdinaryUi,
-		setOwnMerchantStoreId
+		setOwnMerchantStoreId,
+		switchToOwnStore
 	} from '@/common/storeVisit.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
 	import BindPhonePopup from '@/components/bind-phone-popup/bind-phone-popup.vue'
@@ -229,6 +235,11 @@
 			isMerchant() {
 				return Number(this.userProfile.identityType) === IDENTITY_MERCHANT
 					&& !shouldForceOrdinaryUi(this.userProfile)
+			},
+			showSwitchOwnStore() {
+				return this.loggedIn
+					&& Number(this.userProfile.identityType) === IDENTITY_MERCHANT
+					&& shouldForceOrdinaryUi(this.userProfile)
 			},
 			showBindPhoneEntry() {
 				return this.loggedIn && !this.isMerchant && isNeedBindPhone(this.userProfile)
@@ -307,7 +318,8 @@
 						realName: user.realName || '',
 						phone: user.phone || '',
 						avatar: resolveFileUrl(user.avatar || ''),
-						identityType: user.identityType == null ? IDENTITY_USER : Number(user.identityType)
+						identityType: user.identityType == null ? IDENTITY_USER : Number(user.identityType),
+						bindStoreId: user.bindStoreId
 					}
 				} catch (error) {
 					console.error('获取用户信息失败', error)
@@ -416,6 +428,19 @@
 				}
 				await this.fetchUserInfo()
 				return true
+			},
+			async handleSwitchToOwnStore() {
+				switchToOwnStore()
+				this.userLoading = false
+				await this.initUserProfile()
+				if (this.isMerchant) {
+					this.loadWalletBalance()
+				}
+				this.loadPendingCount()
+				uni.showToast({
+					title: '已切换到我的店铺',
+					icon: 'none'
+				})
 			},
 			onHeaderTap() {
 				if (!this.loggedIn) {
@@ -582,6 +607,14 @@
 		color: #fff;
 		font-size: 24rpx;
 		font-weight: 500;
+	}
+
+	.switch-own-store {
+		max-width: 220rpx;
+		padding: 10rpx 16rpx;
+		line-height: 1.3;
+		text-align: center;
+		white-space: normal;
 	}
 
 	.content-wrap {

@@ -134,6 +134,27 @@ export function collectEnterQuery() {
 	return bags
 }
 
+/** 商家主动切回自己的店后，忽略本次扫码带来的 entry，直到下一次真正扫码 */
+let lockOwnStore = false
+
+const SCAN_LAUNCH_SCENES = [1011, 1012, 1013, 1025, 1047, 1048, 1049, 1124]
+
+function parseWxLaunchScene(input) {
+	if (!input || typeof input !== 'object') return 0
+	const raw = input.scene
+	const n = Number(raw)
+	return Number.isFinite(n) ? n : 0
+}
+
+function parseIdFromInput(input) {
+	if (!input || typeof input !== 'object') return ''
+	if (input.query && typeof input.query === 'object') {
+		const fromQuery = parseStoreIdFromQuery(input.query)
+		if (fromQuery) return fromQuery
+	}
+	return parseStoreIdFromQuery(input)
+}
+
 export function getEntryStoreId() {
 	return entryStoreId
 }
@@ -142,14 +163,41 @@ export function setEntryStoreId(id) {
 	const next = normalizeStoreId(id)
 	if (next) {
 		entryStoreId = next
+		lockOwnStore = false
 	}
 	return entryStoreId
 }
 
-export function applyLaunchQuery(query) {
-	const bags = []
-	pushQueryBag(bags, query)
-	collectEnterQuery().forEach((bag) => bags.push(bag))
+export function clearEntryStoreId() {
+	entryStoreId = ''
+	return entryStoreId
+}
+
+/** 商家从别人店切回自己的店：清掉扫码进店状态 */
+export function switchToOwnStore() {
+	entryStoreId = ''
+	lockOwnStore = true
+	return getOwnMerchantStoreId()
+}
+
+export function applyLaunchQuery(query, meta = {}) {
+	const explicitId = parseIdFromInput(query)
+	if (lockOwnStore) {
+		const wxScene = parseWxLaunchScene(query)
+		const fromAppShow = meta.source === 'appShow'
+		const isScanEnter = fromAppShow && SCAN_LAUNCH_SCENES.indexOf(wxScene) !== -1
+		if (explicitId && isScanEnter) {
+			lockOwnStore = false
+			setEntryStoreId(explicitId)
+			return explicitId
+		}
+		return ''
+	}
+	if (explicitId) {
+		setEntryStoreId(explicitId)
+		return explicitId
+	}
+	const bags = collectEnterQuery()
 	for (let i = 0; i < bags.length; i++) {
 		const id = parseStoreIdFromQuery(bags[i])
 		if (id) {
@@ -175,6 +223,10 @@ export function getOwnMerchantStoreId() {
 export function resolveViewStoreId(user) {
 	const entry = getEntryStoreId()
 	if (entry) return entry
+	if (user && Number(user.identityType) === IDENTITY_MERCHANT) {
+		const own = getOwnMerchantStoreId() || normalizeStoreId(user.bindStoreId)
+		if (own) return own
+	}
 	const bound = user && user.bindStoreId
 	if (!isBlankStoreId(bound)) return normalizeStoreId(bound)
 	return String(defaultBindStoreId)

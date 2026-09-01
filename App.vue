@@ -60,7 +60,7 @@
 			// #endif
 		},
 		onShow: function(options) {
-			applyLaunchQuery(options)
+			applyLaunchQuery(options, { source: 'appShow' })
 			console.log('App Show')
 		},
 		onHide: function() {
