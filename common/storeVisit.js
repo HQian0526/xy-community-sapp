@@ -18,38 +18,61 @@ export function normalizeStoreId(value) {
 	return String(value).trim()
 }
 
-function safeDecode(value) {
+function fullyDecode(value) {
 	if (value === undefined || value === null) return ''
-	const raw = String(value)
-	try {
-		return decodeURIComponent(raw)
-	} catch (e) {
-		return raw
+	let text = String(value).replace(/\+/g, ' ')
+	for (let i = 0; i < 3; i++) {
+		try {
+			const next = decodeURIComponent(text)
+			if (next === text) break
+			text = next
+		} catch (e) {
+			break
+		}
 	}
+	return text
+}
+
+/** 微信启动 scene（1011/1047 等）是 4 位数字，不能当成店铺 id */
+function isWeChatLaunchScene(value) {
+	const text = String(value == null ? '' : value).trim()
+	return /^\d{4}$/.test(text)
+}
+
+function pickStoreIdFromText(text) {
+	const decoded = fullyDecode(text)
+	if (!decoded) return ''
+	const named = decoded.match(/[?&#]?storeId=([^&/#?]+)/i)
+	if (named) return normalizeStoreId(fullyDecode(named[1]))
+	const encoded = decoded.match(/storeId%3D([^%&#/]+)/i)
+	if (encoded) return normalizeStoreId(fullyDecode(encoded[1]))
+	return ''
 }
 
 function parseStoreIdFromUrl(url) {
 	if (!url) return ''
-	const text = String(url)
+	const fromText = pickStoreIdFromText(url)
+	if (fromText) return fromText
+	const decoded = fullyDecode(url)
 	try {
-		const parsed = new URL(text)
-		const id = parsed.searchParams.get('storeId')
-		if (id) return normalizeStoreId(id)
+		if (typeof URL === 'function') {
+			const parsed = new URL(decoded)
+			const id = parsed.searchParams.get('storeId')
+			if (id) return normalizeStoreId(id)
+		}
 	} catch (e) {
-		const matched = text.match(/[?&]storeId=([^&]+)/i)
-		if (matched) return normalizeStoreId(safeDecode(matched[1]))
+		// 小程序环境可能没有 URL，走上面的正则即可
 	}
 	return ''
 }
 
 function parseStoreIdFromScene(scene) {
-	const text = safeDecode(scene).trim()
+	const text = fullyDecode(scene).trim()
 	if (!text) return ''
-	if (/storeId=/i.test(text)) {
-		const matched = text.match(/storeId=([^&]+)/i)
-		if (matched) return normalizeStoreId(safeDecode(matched[1]))
-	}
-	if (/^\d+$/.test(text)) return text
+	if (isWeChatLaunchScene(text)) return ''
+	const named = pickStoreIdFromText(text)
+	if (named) return named
+	if (/^\d{5,}$/.test(text)) return text
 	return ''
 }
 
@@ -63,7 +86,7 @@ export function parseStoreIdFromQuery(query = {}) {
 		return normalizeStoreId(query.storeId)
 	}
 	if (query.q) {
-		const fromUrl = parseStoreIdFromUrl(safeDecode(query.q))
+		const fromUrl = parseStoreIdFromUrl(query.q)
 		if (fromUrl) return fromUrl
 	}
 	if (query.scene) {
@@ -71,6 +94,44 @@ export function parseStoreIdFromQuery(query = {}) {
 		if (fromScene) return fromScene
 	}
 	return ''
+}
+
+function pushQueryBag(bags, obj) {
+	if (!obj || typeof obj !== 'object') return
+	if (obj.query && typeof obj.query === 'object') {
+		bags.push(obj.query)
+	}
+	bags.push(obj)
+}
+
+/** 冷启动 / 热启动扫码后，从微信运行时再取一遍参数（tabBar 页 onLoad 经常拿不到） */
+export function collectEnterQuery() {
+	const bags = []
+	try {
+		if (typeof uni !== 'undefined') {
+			if (typeof uni.getEnterOptionsSync === 'function') {
+				pushQueryBag(bags, uni.getEnterOptionsSync())
+			}
+			if (typeof uni.getLaunchOptionsSync === 'function') {
+				pushQueryBag(bags, uni.getLaunchOptionsSync())
+			}
+		}
+	} catch (e) {
+		// ignore
+	}
+	try {
+		if (typeof wx !== 'undefined') {
+			if (typeof wx.getEnterOptionsSync === 'function') {
+				pushQueryBag(bags, wx.getEnterOptionsSync())
+			}
+			if (typeof wx.getLaunchOptionsSync === 'function') {
+				pushQueryBag(bags, wx.getLaunchOptionsSync())
+			}
+		}
+	} catch (e) {
+		// ignore
+	}
+	return bags
 }
 
 export function getEntryStoreId() {
@@ -86,9 +147,17 @@ export function setEntryStoreId(id) {
 }
 
 export function applyLaunchQuery(query) {
-	const id = parseStoreIdFromQuery(query || {})
-	if (id) setEntryStoreId(id)
-	return id
+	const bags = []
+	pushQueryBag(bags, query)
+	collectEnterQuery().forEach((bag) => bags.push(bag))
+	for (let i = 0; i < bags.length; i++) {
+		const id = parseStoreIdFromQuery(bags[i])
+		if (id) {
+			setEntryStoreId(id)
+			return id
+		}
+	}
+	return ''
 }
 
 export function setOwnMerchantStoreId(id) {

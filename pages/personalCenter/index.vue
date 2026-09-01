@@ -264,6 +264,7 @@
 			applyLaunchQuery(options)
 		},
 		async onShow() {
+			applyLaunchQuery()
 			await waitBootstrapAuth()
 			await this.initUserProfile()
 			if (this.isMerchant) {

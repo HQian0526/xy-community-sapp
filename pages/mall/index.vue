@@ -175,7 +175,8 @@
 		requireLogin,
 		waitBootstrapAuth,
 		ensureUserInfo,
-		ensurePhoneBound
+		ensurePhoneBound,
+		syncOrdinaryUserBindStore
 	} from '@/common/auth.js'
 	import {
 		applyLaunchQuery,
@@ -225,6 +226,7 @@
 				categoryList: [],
 				categoryLoading: false,
 				pageBootstrapping: false,
+				mallRefreshSeq: 0,
 				currentCate: 0,
 				searchKeyword: '',
 				socialName: '上海-汤臣一品',
@@ -243,20 +245,22 @@
 		},
 		/** 进入页面：同步购物车后加载分类商品（游客可浏览，不弹登录/手机号） */
 		async onShow() {
+			applyLaunchQuery()
 			this.cartMap = getCartMap()
 			this.$nextTick(() => {
 				this.updateCateTabHeight()
 			})
 			await new Promise((resolve) => this.$nextTick(resolve))
+			const seq = ++this.mallRefreshSeq
 			if (this.pageBootstrapping) return
 			this.pageBootstrapping = true
 			try {
-				await waitBootstrapAuth()
-				await this.ensureMallStoreId()
-				this.syncCartWithStore(this.queryStoreId)
-				await this.loadCategoryList()
+				await this.refreshMallCatalog(seq)
 			} finally {
 				this.pageBootstrapping = false
+				if (seq !== this.mallRefreshSeq) {
+					this.refreshMallFromShow()
+				}
 			}
 		},
 		/** 页面初次渲染完成，计算分类区高度 */
@@ -292,11 +296,38 @@
 			}
 		},
 		methods: {
+			async refreshMallFromShow() {
+				applyLaunchQuery()
+				const seq = this.mallRefreshSeq
+				this.pageBootstrapping = true
+				try {
+					await this.refreshMallCatalog(seq)
+				} finally {
+					this.pageBootstrapping = false
+					if (seq !== this.mallRefreshSeq) {
+						this.refreshMallFromShow()
+					}
+				}
+			},
+			async refreshMallCatalog(seq) {
+				await waitBootstrapAuth()
+				if (seq !== this.mallRefreshSeq) return
+				const prevStoreId = this.queryStoreId
+				await this.ensureMallStoreId()
+				if (seq !== this.mallRefreshSeq) return
+				this.syncCartWithStore(this.queryStoreId)
+				if (String(prevStoreId || '') !== String(this.queryStoreId || '')) {
+					this.currentCate = 0
+					this.categoryList = []
+				}
+				await this.loadCategoryList()
+			},
 			/** 扫码进店优先，其次用户绑定店铺，最后项目默认店铺 */
 			async ensureMallStoreId() {
 				try {
 					const user = await ensureUserInfo()
-					this.queryStoreId = resolveViewStoreId(user)
+					const nextUser = await syncOrdinaryUserBindStore(user)
+					this.queryStoreId = resolveViewStoreId(nextUser)
 				} catch (error) {
 					console.error('获取用户绑定店铺失败', error)
 					this.queryStoreId = resolveViewStoreId(null)
@@ -314,7 +345,6 @@
 			},
 			/** 拉取店铺商品分类，并加载当前选中分类下的商品 */
 			async loadCategoryList() {
-				if (this.categoryLoading) return
 				this.categoryLoading = true
 				try {
 					const params = {}

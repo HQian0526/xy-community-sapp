@@ -17,7 +17,7 @@
 
 	export default {
 		onLaunch: async function(options) {
-			applyLaunchQuery((options && options.query) || options || {})
+			applyLaunchQuery(options)
 			// #ifdef MP-WEIXIN
 			uni.showShareMenu({
 				withShareTicket: true,
@@ -60,7 +60,7 @@
 			// #endif
 		},
 		onShow: function(options) {
-			applyLaunchQuery((options && options.query) || options || {})
+			applyLaunchQuery(options)
 			console.log('App Show')
 		},
 		onHide: function() {

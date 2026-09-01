@@ -10,6 +10,9 @@ import {
 	bindStoreId as defaultBindStoreId
 } from '@/config/index.js'
 import {
+	getEntryStoreId
+} from '@/common/storeVisit.js'
+import {
 	getBindPhoneUI,
 	registerBindPhoneHandlers,
 	registerBindPhoneUI,
@@ -83,33 +86,49 @@ function isOrdinaryUser(user) {
 }
 
 /**
- * 普通用户未绑定店铺时，用配置默认店铺回写 updateUser，并写入本地缓存
+ * 普通用户绑定店铺：
+ * - 扫码带了 storeId：回写为扫到的店（换店即更新）
+ * - 从未绑定：回写项目默认店
+ * 商家身份一律不改 bindStoreId，避免扫别人店把绑定改掉。
  */
-async function persistDefaultBindStore(user) {
-	if (!user || !isOrdinaryUser(user) || !isBindStoreIdEmpty(user.bindStoreId)) {
+async function persistBindStore(user) {
+	if (!user || !isOrdinaryUser(user)) {
+		return user
+	}
+	const entry = getEntryStoreId()
+	const target = entry || (isBindStoreIdEmpty(user.bindStoreId) ? String(defaultBindStoreId) : '')
+	if (!target) {
+		return user
+	}
+	const current = isBindStoreIdEmpty(user.bindStoreId) ? '' : String(user.bindStoreId).trim()
+	if (current === String(target).trim()) {
 		return user
 	}
 	try {
 		if (user.id) {
 			await put('/user/updateUser', {
 				id: user.id,
-				bindStoreId: defaultBindStoreId
+				bindStoreId: target
 			})
 		}
 	} catch (error) {
-		console.warn('回写默认绑定店铺失败', error)
+		console.warn('回写绑定店铺失败', error)
 	}
 	const next = {
 		...user,
-		bindStoreId: defaultBindStoreId
+		bindStoreId: target
 	}
 	saveLoginInfo(getToken(), next)
 	return next
 }
 
+export async function syncOrdinaryUserBindStore(user) {
+	return persistBindStore(user || getUserInfo())
+}
+
 /**
  * 启动后只请求一次 getUserInfo，之后各页读缓存。
- * 若 bindStoreId 为空，会把配置的默认店铺写入后端并同步缓存。
+ * 普通用户：扫码店优先回写 bindStoreId；从未绑定则写默认店。商家不改绑定。
  * @param {{ force?: boolean }} [options]
  */
 export async function ensureUserInfo(options = {}) {
@@ -134,7 +153,7 @@ export async function ensureUserInfo(options = {}) {
 			if (user) {
 				saveLoginInfo(getToken(), user)
 			}
-			const cached = await persistDefaultBindStore(getUserInfo() || user)
+			const cached = await persistBindStore(getUserInfo() || user)
 			userInfoFetched = true
 			return cached || getUserInfo()
 		} catch (error) {
@@ -142,7 +161,7 @@ export async function ensureUserInfo(options = {}) {
 			const cached = getUserInfo()
 			if (cached) {
 				userInfoFetched = true
-				return persistDefaultBindStore(cached)
+				return persistBindStore(cached)
 			}
 			return null
 		} finally {
@@ -173,7 +192,7 @@ export async function bindPhoneByCode(code) {
 	if (userInfo) {
 		userInfoFetched = true
 	}
-	const cached = await persistDefaultBindStore(getUserInfo() || userInfo)
+	const cached = await persistBindStore(getUserInfo() || userInfo)
 	return {
 		...data,
 		token,

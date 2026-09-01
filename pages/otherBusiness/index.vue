@@ -166,6 +166,7 @@
 			applyLaunchQuery(options)
 		},
 		async onShow() {
+			applyLaunchQuery()
 			await waitBootstrapAuth()
 			await this.loadHeaderProfile()
 			await this.loadBusinessList()
