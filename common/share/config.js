@@ -1,7 +1,7 @@
 export const DEFAULT_SHARE = {
-	title: '星萤邻里 - 邻里互助，便民生活',
+	title: '星萤邻里 - 您的专属线上小店',
 	path: '/pages/mall/index',
-	imageUrl: 'https://www.gzstarfly.com/xy-community/banner.png'
+	imageUrl: 'https://file.gzstarfly.com/xy-community/banner.png'
 }
 
 export function buildSharePath(route, options = {}) {
