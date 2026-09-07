@@ -38,6 +38,7 @@
 
 <script>
 	import { blacklistData } from './mock.js'
+	import { getWindowLayout } from '@/common/systemInfo.js'
 
 	export default {
 		data() {
@@ -57,7 +58,7 @@
 		},
 		methods: {
 			initListHeight() {
-				const { windowHeight } = uni.getSystemInfoSync()
+				const { windowHeight } = getWindowLayout()
 				this.listHeight = `${windowHeight - 48}px`
 			},
 			loadBlacklist() {

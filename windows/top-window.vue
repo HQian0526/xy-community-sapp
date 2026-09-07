@@ -31,6 +31,8 @@
 </template>
 
 <script>
+	import { getWindowLayout } from '@/common/systemInfo.js'
+
 	export default {
 		data() {
 			return {
@@ -60,7 +62,7 @@
 			$route: {
 				immediate: true,
 				handler(newRoute) {
-					const width = uni.getSystemInfoSync().screenWidth
+					const { screenWidth: width } = getWindowLayout()
 					if (width >= 768) {
 						let path = newRoute.path
 						let comp

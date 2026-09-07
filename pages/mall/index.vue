@@ -196,6 +196,7 @@
 	} from '@/common/api/config.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
 	import BindPhonePopup from '@/components/bind-phone-popup/bind-phone-popup.vue'
+	import { getWindowLayout } from '@/common/systemInfo.js'
 
 	/** 把接口商品字段转成列表展示结构 */
 	function mapProductItem(item, categoryName = '', fallbackStoreId = '') {
@@ -431,7 +432,7 @@
 			},
 			/** 按窗口和搜索栏高度计算分类列表高度、购物车栏位置 */
 			updateCateTabHeight() {
-				const sys = uni.getSystemInfoSync()
+				const sys = getWindowLayout()
 				// windowHeight：已扣除导航栏和原生 tabBar 后的可用高度，不要再减 tabBar/safeBottom
 				const windowHeight = sys.windowHeight || sys.screenHeight || 0
 				// windowBottom：窗口底到屏幕底距离（有 tabBar 时约等于 tabBar 高度，含安全区）
