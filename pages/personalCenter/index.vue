@@ -153,9 +153,6 @@
 		businessList
 	} from './mock.js'
 	import {
-		STATUS_CLOSED
-	} from './businessStatus/mock.js'
-	import {
 		getWalletBalance
 	} from './withdraw/mock.js'
 	import {
@@ -174,8 +171,8 @@
 	} from '@/common/auth.js'
 	import {
 		getStoreListApi,
-		getStoreStatusLabel,
-		isStoreClosed
+		getStoreOpenLabel,
+		isStorePaused
 	} from '@/common/api/personalCenter/store.js'
 	import {
 		resolveFileUrl
@@ -215,7 +212,8 @@
 					storeId: null,
 					storeName: '',
 					avatar: '',
-					storeStatus: null
+					storeStatus: null,
+					acceptingOrders: true
 				},
 				accountList,
 				serviceList,
@@ -245,10 +243,7 @@
 				return this.loggedIn && !this.isMerchant && isNeedBindPhone(this.userProfile)
 			},
 			isPaused() {
-				if (this.storeProfile.storeStatus != null) {
-					return isStoreClosed(this.storeProfile.storeStatus)
-				}
-				return this.storeInfo.status === STATUS_CLOSED
+				return isStorePaused(this.storeProfile)
 			},
 			headerName() {
 				if (!this.loggedIn) return '游客'
@@ -302,7 +297,8 @@
 							storeId: null,
 							storeName: '',
 							avatar: '',
-							storeStatus: null
+							storeStatus: null,
+							acceptingOrders: true
 						}
 					}
 				} finally {
@@ -338,7 +334,8 @@
 							storeId: null,
 							storeName: '',
 							avatar: '',
-							storeStatus: null
+							storeStatus: null,
+							acceptingOrders: true
 						}
 						return
 					}
@@ -347,13 +344,14 @@
 						storeId: store.storeId || null,
 						storeName: store.storeName || '',
 						avatar: resolveFileUrl(store.avatar || ''),
-						storeStatus: store.storeStatus == null ? null : Number(store.storeStatus)
+						storeStatus: store.storeStatus == null ? null : Number(store.storeStatus),
+						acceptingOrders: store.acceptingOrders !== false
 					}
 					if (store.storeId) {
 						setOwnMerchantStoreId(store.storeId)
 					}
 					this.storeInfo.storeName = this.storeProfile.storeName || this.storeInfo.storeName
-					this.storeInfo.status = getStoreStatusLabel(this.storeProfile.storeStatus)
+					this.storeInfo.status = getStoreOpenLabel(this.storeProfile)
 					if (this.storeProfile.avatar) {
 						this.storeInfo.avatar = this.storeProfile.avatar
 					}
@@ -384,7 +382,8 @@
 					storeId: null,
 					storeName: '',
 					avatar: '',
-					storeStatus: null
+					storeStatus: null,
+					acceptingOrders: true
 				}
 			},
 			async handleLogin() {
