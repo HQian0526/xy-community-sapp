@@ -152,7 +152,7 @@
 		{
 			"path": "pages/personalCenter/storeProfile/index",
 			"style": {
-				"navigationBarTitleText": "店铺资料"
+				"navigationBarTitleText": "商家资料"
 			}
 		},
 		{

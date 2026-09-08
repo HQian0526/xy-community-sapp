@@ -231,6 +231,82 @@ export function del(url, data, options = {}) {
 	})
 }
 
+/**
+ * 上传文件（multipart），成功时返回业务 data
+ * @param {string} filePath 本地临时路径
+ * @param {Object} [options]
+ */
+export function uploadFile(filePath, options = {}) {
+	const {
+		url = '/file/upload',
+		name = 'file',
+		formData = {},
+		showError = true,
+		loading = true,
+		loadingText = '上传中...'
+	} = options
+
+	if (!filePath) {
+		const message = '请选择要上传的文件'
+		if (showError) toastError(message)
+		return Promise.reject(new Error(message))
+	}
+
+	const header = {}
+	const token = getAuthToken()
+	if (token) {
+		header.Authorization = `Bearer ${token}`
+	}
+
+	if (loading) {
+		uni.showLoading({
+			title: loadingText,
+			mask: true
+		})
+	}
+
+	return new Promise((resolve, reject) => {
+		uni.uploadFile({
+			url: buildUrl(url),
+			filePath,
+			name,
+			formData,
+			header,
+			success: (res) => {
+				let body = res.data
+				if (typeof body === 'string') {
+					try {
+						body = JSON.parse(body)
+					} catch (e) {
+						body = {
+							msg: body
+						}
+					}
+				}
+				body = body || {}
+				const statusCode = res.statusCode
+				if (statusCode === 401 || statusCode >= 400 || (body.code !== undefined && body.code !== 200)) {
+					const message = getErrorMessage(body, statusCode)
+					if (showError) toastError(message)
+					reject(new Error(message))
+					return
+				}
+				resolve(body.data !== undefined ? body.data : body)
+			},
+			fail: (err) => {
+				const message = err?.errMsg || '上传失败，请稍后重试'
+				if (showError) toastError(message)
+				reject(err instanceof Error ? err : new Error(message))
+			},
+			complete: () => {
+				if (loading) {
+					uni.hideLoading()
+				}
+			}
+		})
+	})
+}
+
 export const http = {
 	request,
 	get,
