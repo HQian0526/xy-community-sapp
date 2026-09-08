@@ -458,8 +458,19 @@
 				return url.indexOf('/personAgreement/') !== -1
 					|| url.indexOf('/businessAgreement/') !== -1
 			},
+			isProfileService(item) {
+				return item?.key === 'profile'
+					|| (item?.url || '').indexOf('/personInfo/') !== -1
+			},
 			async handleServiceClick(item) {
 				if (this.isPublicService(item)) {
+					if (item.url) {
+						uni.navigateTo({ url: item.url })
+					}
+					return
+				}
+				if (this.isProfileService(item)) {
+					if (!(await requireLogin({ force: true }))) return
 					if (item.url) {
 						uni.navigateTo({ url: item.url })
 					}

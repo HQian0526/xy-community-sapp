@@ -78,7 +78,7 @@
 		{
 			"path": "pages/personalCenter/personInfo/index",
 			"style": {
-				"navigationBarTitleText": "资料完善"
+				"navigationBarTitleText": "资料设置"
 			}
 		},
 		{
@@ -120,7 +120,15 @@
 		{
 			"path": "pages/personalCenter/blacklist/index",
 			"style": {
-				"navigationBarTitleText": "黑名单"
+				"navigationBarTitleText": "黑名单",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/personalCenter/customerlist/index",
+			"style": {
+				"navigationBarTitleText": "顾客列表",
+				"enablePullDownRefresh": true
 			}
 		},
 		{

@@ -24,7 +24,7 @@ export const accountList = [
 ]
 
 export const serviceList = [
-	// { key: 'info', name: '资料完善', icon: 'order', url: '/pages/personalCenter/personInfo/index' },
+	{ key: 'profile', name: '资料设置', icon: 'edit-pen', url: '/pages/personalCenter/personInfo/index' },
 	// { key: 'identity', name: '实名认证', icon: 'account', url: '/pages/personalCenter/identity/index' },
 	{ key: 'agreement', name: '隐私协议', icon: 'question-circle', url: '/pages/personalCenter/personAgreement/index' },
 	{ key: 'share', name: '分享小程序', icon: 'share' },
@@ -33,7 +33,8 @@ export const serviceList = [
 export const ownerList = [
 	// { key: 'businessInfo', name: '商家资料', icon: 'integral', url: '/pages/personalCenter/businessInfo/index' },
 	{ key: 'status', name: '营业状态', icon: 'star', url: '/pages/personalCenter/businessStatus/index' },
-	{ key: 'otherBusiness', name: '更多业务', icon: 'more-circle', url: '/pages/personalCenter/otherBusinessSetting/index' },
+	{ key: 'otherBusiness', name: '其他业务', icon: 'more-circle', url: '/pages/personalCenter/otherBusinessSetting/index' },
+	{ key: 'customerlist', name: '顾客列表', icon: 'man-add', url: '/pages/personalCenter/customerlist/index' },
 	{ key: 'blacklist', name: '黑名单', icon: 'close-circle', url: '/pages/personalCenter/blacklist/index' },
 	{ key: 'agreement', name: '服务协议', icon: 'question-circle', url: '/pages/personalCenter/businessAgreement/index' },
 	// { key: 'change', name: '店铺转让', icon: 'pushpin', url: '/pages/personalCenter/transfer/index' },

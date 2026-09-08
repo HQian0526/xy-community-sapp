@@ -1,17 +1,17 @@
 <template>
-	<view class="blacklist-page">
-		<view v-if="loading && !blacklist.length" class="empty-wrap">
+	<view class="customer-page">
+		<view v-if="loading && !customerList.length" class="empty-wrap">
 			<up-loading-icon color="#00a896"></up-loading-icon>
 			<text class="loading-text">加载中...</text>
 		</view>
 
-		<view v-else-if="!blacklist.length" class="empty-wrap">
-			<u-empty text="暂无黑名单用户" mode="list"></u-empty>
+		<view v-else-if="!customerList.length" class="empty-wrap">
+			<u-empty text="暂无顾客" mode="list"></u-empty>
 		</view>
 
 		<view v-else class="list-card">
 			<u-list :height="listHeight">
-				<u-list-item v-for="item in blacklist" :key="item.id">
+				<u-list-item v-for="item in customerList" :key="item.id">
 					<u-cell
 						:title="item.nickname"
 						:label="item.label"
@@ -22,7 +22,7 @@
 					>
 						<template #icon>
 							<view class="avatar-wrap">
-								<u-avatar :src="defaultAvatar" size="40"></u-avatar>
+								<u-avatar :src="item.avatar || defaultAvatar" size="40"></u-avatar>
 							</view>
 						</template>
 					</u-cell>
@@ -45,24 +45,25 @@
 	import { storeInfo } from '../mock.js'
 	import { getWindowLayout } from '@/common/systemInfo.js'
 	import { requireLogin } from '@/common/auth.js'
+	import { resolveFileUrl } from '@/common/api/config.js'
 	import {
-		getStoreBlacklistApi,
-		deleteStoreBlacklistApi,
-		mapBlacklistItem
-	} from '@/common/api/personalCenter/blacklist.js'
+		getCustomerListApi,
+		mapCustomerItem
+	} from '@/common/api/personalCenter/user.js'
+	import { addStoreBlacklistApi } from '@/common/api/personalCenter/blacklist.js'
 
 	export default {
 		data() {
 			return {
-				blacklist: [],
+				customerList: [],
 				listHeight: '0',
 				loading: false,
-				unblocking: false,
+				blocking: false,
 				actionSheetShow: false,
 				currentItem: null,
 				defaultAvatar: storeInfo.avatar,
 				actionList: [
-					{ name: '解除拉黑', color: '#00a896' }
+					{ name: '拉黑', color: '#fa3534' }
 				]
 			}
 		},
@@ -71,28 +72,32 @@
 		},
 		async onShow() {
 			if (!(await requireLogin({ force: true }))) return
-			this.loadBlacklist()
+			this.loadCustomerList()
 		},
 		onPullDownRefresh() {
-			this.loadBlacklist().finally(() => uni.stopPullDownRefresh())
+			this.loadCustomerList().finally(() => uni.stopPullDownRefresh())
 		},
 		methods: {
 			initListHeight() {
 				const { windowHeight } = getWindowLayout()
 				this.listHeight = `${windowHeight - 48}px`
 			},
-			async loadBlacklist() {
+			async loadCustomerList() {
 				this.loading = true
 				try {
-					const data = await getStoreBlacklistApi({
+					const data = await getCustomerListApi({
 						pageNum: 1,
 						pageSize: 100
 					})
 					const list = Array.isArray(data) ? data : (data?.list || [])
-					this.blacklist = list.map(mapBlacklistItem)
+					this.customerList = list.map((item) => {
+						const mapped = mapCustomerItem(item)
+						mapped.avatar = resolveFileUrl(mapped.avatar)
+						return mapped
+					})
 				} catch (error) {
-					console.error('加载黑名单失败', error)
-					this.blacklist = []
+					console.error('加载顾客列表失败', error)
+					this.customerList = []
 				} finally {
 					this.loading = false
 				}
@@ -106,33 +111,37 @@
 				this.currentItem = null
 			},
 			handleActionSelect() {
-				if (!this.currentItem || this.unblocking) return
+				if (!this.currentItem || this.blocking) return
 				const target = this.currentItem
 				this.closeActionSheet()
 				uni.showModal({
-					title: '解除拉黑',
-					content: `确定将「${target.nickname}」从黑名单中移除？`,
+					title: '拉黑',
+					content: `确定将「${target.nickname}」加入黑名单？拉黑后将无法在本店下单。`,
 					confirmText: '确定',
 					cancelText: '取消',
 					success: (res) => {
-						if (res.confirm) this.unblockUser(target)
+						if (res.confirm) this.blockUser(target)
 					}
 				})
 			},
-			async unblockUser(target) {
-				if (!target?.id || this.unblocking) return
-				this.unblocking = true
+			async blockUser(target) {
+				if ((!target?.userId && !target?.phone) || this.blocking) return
+				this.blocking = true
 				try {
-					await deleteStoreBlacklistApi([target.id])
-					this.blacklist = this.blacklist.filter((item) => item.id !== target.id)
+					const payload = {}
+					if (target.userId) payload.userId = target.userId
+					if (target.phone) payload.phone = target.phone
+					if (target.realName) payload.realName = target.realName
+					await addStoreBlacklistApi(payload)
+					this.customerList = this.customerList.filter((item) => item.id !== target.id)
 					uni.showToast({
-						title: '已解除拉黑',
+						title: '已拉黑',
 						icon: 'success'
 					})
 				} catch (error) {
-					console.error('解除拉黑失败', error)
+					console.error('拉黑失败', error)
 				} finally {
-					this.unblocking = false
+					this.blocking = false
 				}
 			}
 		}
@@ -140,7 +149,7 @@
 </script>
 
 <style lang="scss" scoped>
-	.blacklist-page {
+	.customer-page {
 		min-height: 100vh;
 		background-color: #f5f5f5;
 		padding: 24rpx;

@@ -106,7 +106,7 @@
             }
         },
         "uniStatistics" : {
-            "enable" : true
+            "enable" : false
         },
         "mergeVirtualHostAttributes" : true
     },
@@ -188,6 +188,6 @@
     },
     "uniStatistics" : {
         "version" : "2",
-        "enable" : true
+        "enable" : false
     }
 }
