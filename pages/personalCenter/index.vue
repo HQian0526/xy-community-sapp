@@ -111,22 +111,22 @@
 						</up-grid-item>
 					</up-grid>
 				</view>
-
-				<view class="service-card">
-					<text class="section-title">基础服务</text>
-					<up-grid :col="4" :border="false">
-						<up-grid-item v-for="item in serviceList" :key="item.key" :name="item.key"
-							@click="handleServiceClick(item)">
-							<view class="service-item">
-								<view class="service-icon-wrap">
-									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
-								</view>
-								<text class="service-name">{{ item.name }}</text>
-							</view>
-						</up-grid-item>
-					</up-grid>
-				</view>
 			</template>
+
+			<view class="service-card">
+				<text class="section-title">基础服务</text>
+				<up-grid :col="4" :border="false">
+					<up-grid-item v-for="item in serviceList" :key="item.key" :name="item.key"
+						@click="handleServiceClick(item)">
+						<view class="service-item">
+							<view class="service-icon-wrap">
+								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+							</view>
+							<text class="service-name">{{ item.name }}</text>
+						</view>
+					</up-grid-item>
+				</up-grid>
+			</view>
 		</view>
 
 		<view class="flex-center invite" @click="goJoinApply">想在您的区域引入并经营此小程序？点此申请</view>
