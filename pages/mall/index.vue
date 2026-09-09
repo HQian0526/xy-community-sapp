@@ -37,14 +37,12 @@
 							/>
 							<view class="product-info">
 								<text class="product-name">{{ product.name }}</text>
-								<text class="product-sales">{{ product.categoryName }} · 库存 {{ product.has }}{{ product.unit }}</text>
+								<text class="product-desc">{{ product.remark || '' }}</text>
 								<view class="product-bottom">
 									<view class="product-price">
 										<text class="price-symbol">¥</text>
 										<text class="price-value">{{ product.price }}</text>
-										<text v-if="product.originalPrice > product.price" class="price-original">
-											¥{{ product.originalPrice }}
-										</text>
+										<text class="price-stock">库存 {{ product.has }}{{ product.unit }}</text>
 									</view>
 									<view class="add-btn" @click.stop="handleAddCart(product)">
 										<up-icon name="plus" size="14" color="#fff"></up-icon>
@@ -76,13 +74,12 @@
 									mode="aspectFill" />
 								<view class="product-info">
 									<text class="product-name">{{ product.name }}</text>
-									<text class="product-sales">库存 {{ product.has }}{{ product.unit }}</text>
+									<text class="product-desc">{{ product.remark || '' }}</text>
 									<view class="product-bottom">
 										<view class="product-price">
 											<text class="price-symbol">¥</text>
 											<text class="price-value">{{ product.price }}</text>
-											<text v-if="product.originalPrice > product.price"
-												class="price-original">¥{{ product.originalPrice }}</text>
+											<text class="price-stock">库存 {{ product.has }}{{ product.unit }}</text>
 										</view>
 										<view class="add-btn" @click.stop="handleAddCart(product)">
 											<up-icon name="plus" size="14" color="#fff"></up-icon>
@@ -103,7 +100,7 @@
 					</view>
 					<view class="cart-info">
 						<text class="cart-total">¥{{ cartTotal.toFixed(2) }}</text>
-						<text class="cart-tip">另需配送费 ¥0</text>
+						<text class="cart-tip">另需配送费 ¥{{ deliveryFee.toFixed(2) }}</text>
 					</view>
 				</view>
 				<view class="cart-submit" @click.stop="handleCheckout">去结算</view>
@@ -189,7 +186,9 @@
 		getProductListApi
 	} from '@/common/api/mall/product.js'
 	import {
-		assertStoreOpenForOrder
+		assertStoreOpenForOrder,
+		getStoreListApi,
+		parseDeliveryFee
 	} from '@/common/api/personalCenter/store.js'
 	import {
 		resolveFileUrl
@@ -235,7 +234,8 @@
 				cartShow: false,
 				contentHeight: '100%',
 				cartBarBottom: '66px',
-				queryStoreId: ''
+				queryStoreId: '',
+				deliveryFee: 0
 			}
 		},
 		onLoad(options = {}) {
@@ -321,7 +321,10 @@
 					this.currentCate = 0
 					this.categoryList = []
 				}
-				await this.loadCategoryList()
+				await Promise.all([
+					this.loadCategoryList(),
+					this.loadStoreDeliveryFee()
+				])
 			},
 			/** 扫码进店优先，其次用户绑定店铺，最后项目默认店铺 */
 			async ensureMallStoreId() {
@@ -344,7 +347,26 @@
 					this.cartMap = {}
 				}
 			},
-			/** 拉取店铺商品分类，并加载当前选中分类下的商品 */
+			/** 拉取当前店铺配送费，用于购物车栏展示 */
+			async loadStoreDeliveryFee() {
+				const storeId = this.queryStoreId
+				if (!storeId) {
+					this.deliveryFee = 0
+					return
+				}
+				try {
+					const data = await getStoreListApi({
+						storeId,
+						pageNum: 1,
+						pageSize: 1
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					this.deliveryFee = parseDeliveryFee(list[0])
+				} catch (error) {
+					console.error('获取店铺配送费失败', error)
+					this.deliveryFee = 0
+				}
+			},
 			async loadCategoryList() {
 				this.categoryLoading = true
 				try {
@@ -456,11 +478,18 @@
 			handleSearchClear() {
 				this.searchKeyword = ''
 			},
-			/** 点击商品卡片（暂用 toast 展示名称） */
+			/** 点击商品卡片进入详情 */
 			goProductDetail(product) {
-				uni.showToast({
-					title: product.name,
-					icon: 'none'
+				if (!product) return
+				const productId = encodeURIComponent(product.productId || product.id || '')
+				const storeId = encodeURIComponent(product.storeId || this.queryStoreId || '')
+				uni.navigateTo({
+					url: `/pages/mall/productDetail/index?productId=${productId}&storeId=${storeId}`,
+					success(res) {
+						if (res.eventChannel) {
+							res.eventChannel.emit('product', product)
+						}
+					}
 				})
 			},
 			/** 商品加购一件并记住商品信息 */
@@ -683,10 +712,16 @@
 		overflow: hidden;
 	}
 
-	.product-sales {
+	.product-desc {
+		min-height: 32rpx;
 		font-size: 22rpx;
 		color: #999;
 		margin-top: 8rpx;
+		line-height: 1.4;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 1;
+		overflow: hidden;
 	}
 
 	.product-bottom {
@@ -711,6 +746,13 @@
 		font-size: 32rpx;
 		color: #ff6034;
 		font-weight: 700;
+	}
+
+	.price-stock {
+		margin-left: 12rpx;
+		font-size: 22rpx;
+		color: #999;
+		font-weight: 400;
 	}
 
 	.price-original {

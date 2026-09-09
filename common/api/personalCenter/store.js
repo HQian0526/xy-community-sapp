@@ -4,7 +4,7 @@ import {
 	uploadFile
 } from '../request.js'
 
-/** 商户状态：1 营业中，2 打烊 */
+/** 商户状态：1 营业中，2 打烊（库字段；展示请用 getStoreOpenLabel） */
 export const STORE_STATUS_OPEN = 1
 export const STORE_STATUS_CLOSED = 2
 
@@ -18,17 +18,24 @@ export function isStoreClosed(storeStatus) {
 	return Number(storeStatus) === STORE_STATUS_CLOSED
 }
 
+export function isManuallyClosed(store) {
+	if (!store) return false
+	if (store.manuallyClosed === true || store.openStatus === 'closed') return true
+	if (store.manuallyClosed === false) return false
+	return Number(store.storeStatus) === STORE_STATUS_CLOSED
+}
+
 /** 营业中 / 休息中 / 打烊 */
 export function getStoreOpenLabel(store) {
 	if (!store) return '营业中'
-	if (isStoreClosed(store.storeStatus)) return '打烊'
-	if (store.acceptingOrders === false) return '休息中'
+	if (store.openStatus === 'closed' || isManuallyClosed(store)) return '打烊'
+	if (store.openStatus === 'rest' || store.acceptingOrders === false) return '休息中'
 	return '营业中'
 }
 
 export function isStorePaused(store) {
 	if (!store) return false
-	if (isStoreClosed(store.storeStatus)) return true
+	if (isManuallyClosed(store)) return true
 	return store.acceptingOrders === false
 }
 
@@ -85,6 +92,12 @@ export function getStoreListApi(params) {
 	return get('/store/findStore', params)
 }
 
+export function parseDeliveryFee(store) {
+	const n = Number(store?.deliveryFee)
+	if (!Number.isFinite(n) || n < 0) return 0
+	return Math.round(n * 100) / 100
+}
+
 /**
  * 修改商户信息（含营业状态 storeStatus）
  * @param {Object} data 至少包含 id；改状态时传 storeStatus
@@ -133,9 +146,10 @@ export async function assertStoreOpenForOrder(storeId) {
 		const store = storeId
 			? (list.find((item) => String(item.storeId) === String(storeId)) || list[0])
 			: list[0]
-		if (isStoreClosed(store?.storeStatus)) {
+		if (isManuallyClosed(store)) {
+			const until = store.closedUntilText
 			uni.showToast({
-				title: '店铺已打烊，请于营业时间下单',
+				title: until ? `店铺已打烊，将于 ${until} 开始营业` : '店铺已打烊',
 				icon: 'none'
 			})
 			return {

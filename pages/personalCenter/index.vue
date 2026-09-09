@@ -129,7 +129,7 @@
 			</view>
 		</view>
 
-		<view class="flex-center invite" @click="goJoinApply">想在您的区域引入并经营此小程序？点此申请</view>
+		<view class="flex-center invite" @click="goJoinApply">想为您的店铺引入小程序？点此申请</view>
 
 		<!-- #ifdef MP-WEIXIN -->
 		<u-popup :show="sharePopupShow" mode="center" round="16" closeOnClickOverlay @close="closeSharePopup">
@@ -140,6 +140,21 @@
 			</view>
 		</u-popup>
 		<!-- #endif -->
+		<u-popup
+			:show="contactStoreShow"
+			mode="bottom"
+			round="16"
+			closeOnClickOverlay
+			@close="closeContactStore"
+		>
+			<view class="contact-store-popup">
+				<view class="contact-store-handle"></view>
+				<text class="contact-store-title">联系店家</text>
+				<text class="contact-store-name">{{ contactStoreName || '店铺' }}</text>
+				<text class="contact-store-phone">{{ contactStorePhone }}</text>
+				<view class="contact-store-btn" @click="handleCallStore">拨打电话</view>
+			</view>
+		</u-popup>
 		<bind-phone-popup ref="bindPhonePopup" />
 	</view>
 </template>
@@ -156,8 +171,8 @@
 		getWalletBalance
 	} from './withdraw/mock.js'
 	import {
-		getPendingCount
-	} from './pending/mock.js'
+		getMallPendingCountApi
+	} from '@/common/api/mall/order.js'
 	import {
 		DEFAULT_SHARE
 	} from '@/common/share/config.js'
@@ -179,6 +194,7 @@
 	} from '@/common/api/config.js'
 	import {
 		applyLaunchQuery,
+		resolveViewStoreId,
 		shouldForceOrdinaryUi,
 		setOwnMerchantStoreId,
 		switchToOwnStore
@@ -213,7 +229,9 @@
 					storeName: '',
 					avatar: '',
 					storeStatus: null,
-					acceptingOrders: true
+					acceptingOrders: true,
+					manuallyClosed: false,
+					openStatus: 'open'
 				},
 				accountList,
 				serviceList,
@@ -221,6 +239,10 @@
 				businessList,
 				badgeCount: 0,
 				sharePopupShow: false,
+				contactStoreShow: false,
+				contactStoreName: '',
+				contactStorePhone: '',
+				contactStoreLoading: false,
 				userLoading: false,
 				loginLoading: false,
 				hasLogin: false,
@@ -276,7 +298,7 @@
 			if (this.isMerchant) {
 				this.loadWalletBalance()
 			}
-			this.loadPendingCount()
+			await this.loadPendingCount()
 		},
 		methods: {
 			async initUserProfile() {
@@ -298,7 +320,9 @@
 							storeName: '',
 							avatar: '',
 							storeStatus: null,
-							acceptingOrders: true
+							acceptingOrders: true,
+							manuallyClosed: false,
+							openStatus: 'open'
 						}
 					}
 				} finally {
@@ -335,7 +359,9 @@
 							storeName: '',
 							avatar: '',
 							storeStatus: null,
-							acceptingOrders: true
+							acceptingOrders: true,
+							manuallyClosed: false,
+							openStatus: 'open'
 						}
 						return
 					}
@@ -345,7 +371,9 @@
 						storeName: store.storeName || '',
 						avatar: resolveFileUrl(store.avatar || ''),
 						storeStatus: store.storeStatus == null ? null : Number(store.storeStatus),
-						acceptingOrders: store.acceptingOrders !== false
+						acceptingOrders: store.acceptingOrders !== false,
+						manuallyClosed: store.manuallyClosed === true,
+						openStatus: store.openStatus || null
 					}
 					if (store.storeId) {
 						setOwnMerchantStoreId(store.storeId)
@@ -362,14 +390,24 @@
 			loadWalletBalance() {
 				this.storeInfo.totalAssets = getWalletBalance()
 			},
-			loadPendingCount() {
-				this.badgeCount = getPendingCount()
+			async loadPendingCount() {
+				if (!this.loggedIn) {
+					this.badgeCount = 0
+					return
+				}
+				try {
+					this.badgeCount = await getMallPendingCountApi()
+				} catch (error) {
+					console.error('获取进行中订单数量失败', error)
+					this.badgeCount = 0
+				}
 			},
 			formatMoney(value) {
 				return Number(value).toFixed(2)
 			},
 			resetGuestProfile() {
 				this.hasLogin = false
+				this.badgeCount = 0
 				this.userProfile = {
 					id: null,
 					realName: '',
@@ -383,7 +421,9 @@
 					storeName: '',
 					avatar: '',
 					storeStatus: null,
-					acceptingOrders: true
+					acceptingOrders: true,
+					manuallyClosed: false,
+					openStatus: 'open'
 				}
 			},
 			async handleLogin() {
@@ -395,6 +435,10 @@
 					this.hasLogin = true
 					this.userLoading = false
 					await this.initUserProfile()
+					if (this.isMerchant) {
+						this.loadWalletBalance()
+					}
+					await this.loadPendingCount()
 				} finally {
 					this.loginLoading = false
 				}
@@ -435,7 +479,7 @@
 				if (this.isMerchant) {
 					this.loadWalletBalance()
 				}
-				this.loadPendingCount()
+				await this.loadPendingCount()
 				uni.showToast({
 					title: '已切换到我的店铺',
 					icon: 'none'
@@ -454,7 +498,9 @@
 			},
 			isPublicService(item) {
 				const url = item?.url || ''
-				return url.indexOf('/personAgreement/') !== -1
+				return item?.key === 'cart'
+					|| url.indexOf('/mall/cart/') !== -1
+					|| url.indexOf('/personAgreement/') !== -1
 					|| url.indexOf('/businessAgreement/') !== -1
 			},
 			isProfileService(item) {
@@ -473,6 +519,10 @@
 					if (item.url) {
 						uni.navigateTo({ url: item.url })
 					}
+					return
+				}
+				if (item.key === 'phone' && !this.isMerchant) {
+					this.openContactStore()
 					return
 				}
 				if (!(await this.ensureOrdinaryUserPhone())) return
@@ -528,6 +578,68 @@
 			},
 			closeSharePopup() {
 				this.sharePopupShow = false
+			},
+			normalizePhone(value) {
+				return String(value || '').replace(/\s+/g, '').trim()
+			},
+			async openContactStore() {
+				if (this.contactStoreLoading) return
+				this.contactStoreLoading = true
+				uni.showLoading({ title: '加载中', mask: true })
+				try {
+					const storeId = resolveViewStoreId(this.loggedIn ? this.userProfile : null)
+					const data = await getStoreListApi({
+						storeId,
+						pageNum: 1,
+						pageSize: 1
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					const store = list[0]
+					const phone = this.normalizePhone(store?.identityPhone)
+					if (!store || !phone) {
+						uni.showToast({
+							title: '暂未提供联系电话',
+							icon: 'none'
+						})
+						return
+					}
+					this.contactStoreName = store.storeName || '店铺'
+					this.contactStorePhone = phone
+					this.contactStoreShow = true
+				} catch (error) {
+					console.error('获取店家电话失败', error)
+					uni.showToast({
+						title: '暂时无法联系店家',
+						icon: 'none'
+					})
+				} finally {
+					this.contactStoreLoading = false
+					uni.hideLoading()
+				}
+			},
+			closeContactStore() {
+				this.contactStoreShow = false
+			},
+			handleCallStore() {
+				const phone = this.normalizePhone(this.contactStorePhone)
+				if (!phone) {
+					uni.showToast({
+						title: '暂未提供联系电话',
+						icon: 'none'
+					})
+					return
+				}
+				uni.makePhoneCall({
+					phoneNumber: phone,
+					fail: (err) => {
+						const msg = String(err?.errMsg || '')
+						if (msg.includes('cancel') || msg.includes('取消')) return
+						uni.showToast({
+							title: '拨打失败',
+							icon: 'none'
+						})
+					}
+				})
 			}
 		}
 	}
@@ -800,5 +912,53 @@
 
 	.share-popup-btn::after {
 		border: none;
+	}
+
+	.contact-store-popup {
+		padding: 16rpx 40rpx calc(40rpx + env(safe-area-inset-bottom));
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.contact-store-handle {
+		width: 64rpx;
+		height: 8rpx;
+		border-radius: 4rpx;
+		background-color: #ddd;
+		margin-bottom: 24rpx;
+	}
+
+	.contact-store-title {
+		font-size: 32rpx;
+		font-weight: 600;
+		color: #333;
+	}
+
+	.contact-store-name {
+		margin-top: 20rpx;
+		font-size: 28rpx;
+		color: #666;
+	}
+
+	.contact-store-phone {
+		margin-top: 12rpx;
+		font-size: 40rpx;
+		font-weight: 700;
+		color: #333;
+		letter-spacing: 2rpx;
+	}
+
+	.contact-store-btn {
+		margin-top: 40rpx;
+		width: 100%;
+		height: 88rpx;
+		line-height: 88rpx;
+		text-align: center;
+		background-color: #00a896;
+		color: #fff;
+		font-size: 30rpx;
+		font-weight: 600;
+		border-radius: 44rpx;
 	}
 </style>

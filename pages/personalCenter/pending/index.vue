@@ -48,7 +48,8 @@
 		mapMallOrderCard,
 		goMallOrderDetail
 	} from '@/common/api/mall/order.js'
-	import { requireLogin } from '@/common/auth.js'
+	import { requireLogin, getUserInfo } from '@/common/auth.js'
+	import { shouldForceOrdinaryUi } from '@/common/storeVisit.js'
 
 	export default {
 		data() {
@@ -63,6 +64,9 @@
 		},
 		async onShow() {
 			if (!(await requireLogin({ force: true }))) return
+			const user = getUserInfo()
+			const merchantUi = Number(user?.identityType) === 2 && !shouldForceOrdinaryUi(user)
+			uni.setNavigationBarTitle({ title: merchantUi ? '待处理' : '进行中' })
 			this.loadOrders()
 		},
 		onPullDownRefresh() {

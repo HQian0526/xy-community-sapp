@@ -158,7 +158,8 @@
 		{
 			"path": "pages/personalCenter/finance/index",
 			"style": {
-				"navigationBarTitleText": "流水查询"
+				"navigationBarTitleText": "流水查询",
+				"onReachBottomDistance": 80
 			}
 		},
 		{
@@ -170,7 +171,7 @@
 		{
 			"path": "pages/personalCenter/storeOrder/index",
 			"style": {
-				"navigationBarTitleText": "商店订单",
+				"navigationBarTitleText": "全部订单",
 				"enablePullDownRefresh": true
 			}
 		},
@@ -216,6 +217,18 @@
 			"path": "pages/mall/checkout/index",
 			"style": {
 				"navigationBarTitleText": "确认订单"
+			}
+		},
+		{
+			"path": "pages/mall/productDetail/index",
+			"style": {
+				"navigationBarTitleText": "商品详情"
+			}
+		},
+		{
+			"path": "pages/mall/cart/index",
+			"style": {
+				"navigationBarTitleText": "购物车"
 			}
 		},
 		{

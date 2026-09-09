@@ -3,8 +3,8 @@
 		<view class="status-card">
 			<text class="status-label">当前状态</text>
 			<view class="status-value-wrap">
-				<view class="status-dot" :class="isOpenNow ? 'status-dot--open' : 'status-dot--closed'"></view>
-				<text class="status-value" :class="isOpenNow ? 'status-value--open' : 'status-value--closed'">
+				<view class="status-dot" :class="statusDotClass"></view>
+				<text class="status-value" :class="statusValueClass">
 					{{ displayStatus }}
 				</text>
 			</view>
@@ -83,8 +83,7 @@
 		STATUS_OPEN,
 		STATUS_CLOSED,
 		STATUS_CODE_OPEN,
-		STATUS_CODE_CLOSED,
-		statusCodeToLabel
+		STATUS_CODE_CLOSED
 	} from './mock.js'
 	import {
 		requireLogin,
@@ -94,10 +93,10 @@
 		getStoreListApi,
 		updateStoreApi,
 		updateBusinessHoursApi,
-		STORE_STATUS_CLOSED,
 		getStoreOpenLabel,
 		parseBusinessHours,
-		formatBusinessHoursText
+		formatBusinessHoursText,
+		isManuallyClosed
 	} from '@/common/api/personalCenter/store.js'
 
 	const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7]
@@ -114,6 +113,12 @@
 			return {
 				currentStatus: STATUS_OPEN,
 				acceptingOrders: true,
+				manuallyClosed: false,
+				openStatus: 'open',
+				statusHint: '',
+				nextOpenText: '',
+				nextCloseText: '',
+				closedUntilText: '',
 				storeId: null,
 				storeRecordId: null,
 				submitting: false,
@@ -135,14 +140,15 @@
 		},
 		computed: {
 			isManualOpen() {
-				return this.currentStatus === STATUS_OPEN
+				return !this.manuallyClosed
 			},
 			isOpenNow() {
-				return this.isManualOpen && this.acceptingOrders !== false
+				return this.openStatus === 'open'
 			},
 			displayStatus() {
 				return getStoreOpenLabel({
-					storeStatus: this.isManualOpen ? STATUS_CODE_OPEN : STATUS_CODE_CLOSED,
+					openStatus: this.openStatus,
+					manuallyClosed: this.manuallyClosed,
 					acceptingOrders: this.acceptingOrders
 				})
 			},
@@ -150,13 +156,31 @@
 				return this.isManualOpen ? '打烊' : '开始营业'
 			},
 			statusTip() {
-				if (!this.isManualOpen) {
-					return '已打烊，用户暂时无法下单'
+				if (this.statusHint) return this.statusHint
+				if (this.manuallyClosed) {
+					return this.closedUntilText
+						? `已打烊，将于 ${this.closedUntilText} 自动开始营业`
+						: '已打烊，未设置营业时间将一直保持，直到点击开始营业'
 				}
 				if (this.acceptingOrders === false) {
-					return '当前不在营业时间内，用户暂时无法下单'
+					return this.nextOpenText
+						? `当前不在营业时间内，将于 ${this.nextOpenText} 开始营业`
+						: '当前不在营业时间内，用户暂时无法下单'
+				}
+				if (this.nextCloseText) {
+					return `营业中，将于 ${this.nextCloseText} 自动休息`
 				}
 				return '营业中，用户可正常下单'
+			},
+			statusDotClass() {
+				if (this.openStatus === 'open') return 'status-dot--open'
+				if (this.openStatus === 'rest') return 'status-dot--rest'
+				return 'status-dot--closed'
+			},
+			statusValueClass() {
+				if (this.openStatus === 'open') return 'status-value--open'
+				if (this.openStatus === 'rest') return 'status-value--rest'
+				return 'status-value--closed'
 			},
 			isEveryDay() {
 				return sameDays(this.selectedDays, ALL_DAYS)
@@ -215,12 +239,24 @@
 
 					this.storeRecordId = store.id
 					this.storeId = store.storeId
-					this.currentStatus = statusCodeToLabel(store.storeStatus)
-					this.acceptingOrders = store.acceptingOrders !== false
+					this.applyOpenFields(store)
 					this.applyHoursFromStore(store)
 				} catch (error) {
 					console.error('获取营业状态失败', error)
 				}
+			},
+			applyOpenFields(store) {
+				if (!store) return
+				this.manuallyClosed = isManuallyClosed(store)
+				this.acceptingOrders = store.acceptingOrders !== false
+				this.openStatus = store.openStatus || (this.manuallyClosed
+					? 'closed'
+					: (this.acceptingOrders ? 'open' : 'rest'))
+				this.statusHint = store.statusHint || ''
+				this.nextOpenText = store.nextOpenText || ''
+				this.nextCloseText = store.nextCloseText || ''
+				this.closedUntilText = store.closedUntilText || ''
+				this.currentStatus = this.manuallyClosed ? STATUS_CLOSED : STATUS_OPEN
 			},
 			applyHoursFromStore(store) {
 				const hours = parseBusinessHours(store.businessHours)
@@ -301,9 +337,7 @@
 				this.hoursSubmitting = true
 				try {
 					const saved = await updateBusinessHoursApi(payload)
-					if (saved && saved.acceptingOrders != null) {
-						this.acceptingOrders = saved.acceptingOrders !== false
-					}
+					this.applyOpenFields(saved)
 					this.applyHoursFromStore(saved || payload)
 					uni.showToast({
 						title: '营业时间已保存',
@@ -326,10 +360,16 @@
 				}
 
 				const nextCode = this.isManualOpen ? STATUS_CODE_CLOSED : STATUS_CODE_OPEN
-				const nextLabel = nextCode === STORE_STATUS_CLOSED ? STATUS_CLOSED : STATUS_OPEN
-				const content = this.isManualOpen
-					? '确定要打烊吗？打烊后用户将无法下单'
-					: '确定要开始营业吗？'
+				let content
+				if (this.isManualOpen) {
+					content = this.nextOpenText
+						? `确定要打烊吗？将关至 ${this.nextOpenText} 自动开始营业`
+						: '确定要打烊吗？未设置营业时间将一直打烊，直到点击开始营业'
+				} else {
+					content = this.nextCloseText
+						? `确定要开始营业吗？将营业至 ${this.nextCloseText}，之后按营业时间自动休息`
+						: '确定要开始营业吗？未设置营业时间将一直营业，直到点击打烊'
+				}
 
 				uni.showModal({
 					title: '提示',
@@ -338,11 +378,11 @@
 						if (!res.confirm) return
 						this.submitting = true
 						try {
-							await updateStoreApi({
+							const saved = await updateStoreApi({
 								id: this.storeRecordId,
 								storeStatus: nextCode
 							})
-							this.currentStatus = nextLabel
+							this.applyOpenFields(saved)
 							await this.loadStatus()
 							uni.showToast({
 								title: this.isManualOpen ? '已开始营业' : '已打烊',
@@ -408,6 +448,10 @@
 		background-color: $primary;
 	}
 
+	.status-dot--rest {
+		background-color: #e6a23c;
+	}
+
 	.status-dot--closed {
 		background-color: #999;
 	}
@@ -419,6 +463,10 @@
 
 	.status-value--open {
 		color: $primary;
+	}
+
+	.status-value--rest {
+		color: #e6a23c;
 	}
 
 	.status-value--closed {

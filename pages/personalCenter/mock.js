@@ -9,14 +9,14 @@ export const storeInfo = {
 
 // 商家端
 export const businessList = [
-	{ key: 'storeOrder', name: '所有订单', icon: 'bag', url: '/pages/personalCenter/storeOrder/index' },
+	{ key: 'storeOrder', name: '全部订单', icon: 'bag', url: '/pages/personalCenter/storeOrder/index' },
 	{ key: 'info', name: '待处理', icon: 'info-circle', url: '/pages/personalCenter/pending/index' },
 	{ key: 'finance', name: '流水查询', icon: 'file-text', url: '/pages/personalCenter/finance/index' },
 	{ key: 'chart', name: '月度报表', icon: 'calendar', url: '/pages/personalCenter/monthlyReport/index' },
 ]
 
 export const accountList = [
-	{ key: 'storeOrder', name: '所有订单', icon: 'bag', url: '/pages/personalCenter/storeOrder/index' },
+	{ key: 'storeOrder', name: '全部订单', icon: 'bag', url: '/pages/personalCenter/storeOrder/index' },
 	// { key: 'finance', name: '流水查询', icon: 'file-text', url: '/pages/personalCenter/finance/index' },
 	{ key: 'info', name: '进行中', icon: 'info-circle', url: '/pages/personalCenter/pending/index' },
 	{ key: 'agreement', name: '已完成', icon: 'checkbox-mark', url: '/pages/personalCenter/finished/index' },
@@ -31,7 +31,7 @@ export const serviceList = [
 ]
 
 export const ownerList = [
-	{ key: 'storeProfile', name: '商家资料', icon: 'integral', url: '/pages/personalCenter/storeProfile/index' },
+	// { key: 'businessInfo', name: '商家资料', icon: 'integral', url: '/pages/personalCenter/businessInfo/index' },
 	{ key: 'status', name: '营业状态', icon: 'star', url: '/pages/personalCenter/businessStatus/index' },
 	{ key: 'otherBusiness', name: '其他业务', icon: 'more-circle', url: '/pages/personalCenter/otherBusinessSetting/index' },
 	{ key: 'customerlist', name: '顾客列表', icon: 'man-add', url: '/pages/personalCenter/customerlist/index' },

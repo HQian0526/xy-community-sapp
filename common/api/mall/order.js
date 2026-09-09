@@ -25,11 +25,40 @@ export function queryMallOrderApi(orderNo) {
 }
 
 /**
- * 商城订单列表
- * @param {Object} [params] payStatus、pageNum、pageSize
+ * 店铺资金明细：每笔已支付订单记收入，有退款再记一笔退款
  */
-export function findMallOrderApi(params) {
-	return get('/mallOrder/findMallOrder', params || {})
+export function getMallFinanceLedgerApi(params) {
+	return get('/mallOrder/financeLedger', params || {})
+}
+
+/**
+ * 店铺订单金额流水（年/季/月/日）
+ * 商家查本店；管理员须传 storeId
+ */
+export function getMallIncomeFlowApi(params) {
+	return get('/mallOrder/incomeFlow', params || {})
+}
+
+/**
+ * 商城订单列表
+ * @param {Object} [params] payStatus、payStatuses、pageNum、pageSize
+ * @param {Object} [options]
+ */
+export function findMallOrderApi(params, options = {}) {
+	return get('/mallOrder/findMallOrder', params || {}, options)
+}
+
+/**
+ * 进行中 / 待处理数量：待支付订单
+ */
+export function getMallPendingCountApi() {
+	return findMallOrderApi({
+		payStatus: 0,
+		pageNum: 1,
+		pageSize: 1
+	}, {
+		showError: false
+	}).then((data) => Number(data?.total || 0))
 }
 
 /**
@@ -40,7 +69,10 @@ export function mapMallOrderCard(order) {
 	const statusMeta = {
 		0: { status: '待支付', statusType: 'pending' },
 		1: { status: '已支付', statusType: 'delivering' },
-		2: { status: '已关闭', statusType: 'cancelled' }
+		2: { status: '已关闭', statusType: 'cancelled' },
+		3: { status: '退款中', statusType: 'refunding' },
+		4: { status: '部分退款', statusType: 'partialRefund' },
+		5: { status: '已全额退款', statusType: 'fullRefund' }
 	}[payStatus] || { status: '未知', statusType: 'cancelled' }
 
 	const goods = (order?.items || []).map((item) => ({
@@ -126,7 +158,7 @@ export async function waitMallOrderPaid(orderNo, {
 	for (let i = 0; i < times; i++) {
 		last = await queryMallOrderApi(orderNo)
 		const status = Number(last?.order?.payStatus)
-		if (status === 1) {
+		if (status === 1 || status === 2) {
 			return last
 		}
 		if (i < times - 1) {

@@ -78,7 +78,7 @@
 		</view>
 
 		<view v-else class="empty-wrap">
-			<u-empty text="暂无商店订单" mode="order"></u-empty>
+			<u-empty text="暂无订单" mode="order"></u-empty>
 		</view>
 	</view>
 </template>
@@ -102,9 +102,7 @@
 					{ name: '全部' },
 					{ name: '待支付' },
 					{ name: '已支付' }
-				],
-				// 对应后端 payStatus：全部 / 0 / 1
-				filterPayStatus: [null, 0, 1]
+				]
 			}
 		},
 		computed: {
@@ -117,6 +115,7 @@
 		},
 		async onShow() {
 			if (!(await requireLogin({ force: true }))) return
+			uni.setNavigationBarTitle({ title: '全部订单' })
 			this.loadOrders()
 		},
 		onPullDownRefresh() {
@@ -127,10 +126,12 @@
 			getGoodsSummary,
 			async loadOrders() {
 				try {
-					const payStatus = this.filterPayStatus[this.currentSection]
 					const params = { pageNum: 1, pageSize: 100 }
-					if (payStatus !== null && payStatus !== undefined) {
-						params.payStatus = payStatus
+					if (this.currentSection === 1) {
+						params.payStatus = 0
+					} else if (this.currentSection === 2) {
+						// 已支付含退款中 / 部分退款 / 已全额退款
+						params.payStatuses = '1,3,4,5'
 					}
 					const data = await findMallOrderApi(params)
 					const list = data?.list || []
@@ -232,6 +233,22 @@
 	.status-cancelled {
 		color: #e64340;
 		border-color: #e64340;
+	}
+
+	.status-refunding {
+		color: #ff8f1f;
+		border-color: #ff8f1f;
+	}
+
+	.status-partialRefund {
+		color: #9b59b6;
+		border-color: #9b59b6;
+	}
+
+	.status-fullRefund {
+		color: #999;
+		border-color: #ccc;
+		background-color: #f5f5f5;
 	}
 
 	.order-summary {

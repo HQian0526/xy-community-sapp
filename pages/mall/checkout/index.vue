@@ -86,9 +86,9 @@
 </template>
 
 <script>
-	import { checkoutInfo, DELIVERY_FEE, getDefaultContact, formatMoney } from './mock.js'
+	import { checkoutInfo, getDefaultContact, formatMoney } from './mock.js'
 	import { getCartItems, getCartTotal, clearCartMap } from '../cart.js'
-	import { assertStoreOpenForOrder } from '@/common/api/personalCenter/store.js'
+	import { assertStoreOpenForOrder, getStoreListApi, parseDeliveryFee } from '@/common/api/personalCenter/store.js'
 	import { requireLogin, getUserInfo } from '@/common/auth.js'
 	import {
 		checkoutAndPayApi,
@@ -107,7 +107,7 @@
 		data() {
 			return {
 				checkoutInfo,
-				deliveryFee: DELIVERY_FEE,
+				deliveryFee: 0,
 				cartItems: [],
 				submitting: false,
 				formData: defaultFormData(),
@@ -150,6 +150,26 @@
 					...defaultFormData(),
 					...defaults,
 					contact: phone || defaults.contact || ''
+				}
+				this.loadDeliveryFee()
+			},
+			async loadDeliveryFee() {
+				const storeId = this.resolveCheckoutStoreId()
+				if (!storeId) {
+					this.deliveryFee = 0
+					return
+				}
+				try {
+					const data = await getStoreListApi({
+						storeId,
+						pageNum: 1,
+						pageSize: 1
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					this.deliveryFee = parseDeliveryFee(list[0])
+				} catch (error) {
+					console.error('获取店铺配送费失败', error)
+					this.deliveryFee = 0
 				}
 			},
 			buildCheckoutPayload() {
