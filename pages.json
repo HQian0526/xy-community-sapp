@@ -27,6 +27,7 @@
 			"path": "pages/mall/index",
 			"style": {
 				"navigationBarTitleText": "逛店",
+				"disableScroll": true,
 				"app-plus": {
 					"bounce": "vertical",
 					"titleNView": {

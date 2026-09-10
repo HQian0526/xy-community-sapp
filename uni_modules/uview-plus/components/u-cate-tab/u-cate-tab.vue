@@ -1,18 +1,29 @@
 <template>
 	<view class="u-cate-tab" :style="{ height: addUnit(height) }">
 		<view class="u-cate-tab__wrap">
-			<scroll-view class="u-cate-tab__view u-cate-tab__menu-scroll-view"
-                scroll-y scroll-with-animation :scroll-top="scrollTop"
-			    :scroll-into-view="itemId">
-				<view v-for="(item, index) in tabList" :key="index" class="u-cate-tab__item"
-                    :class="[innerCurrent == index ? 'u-cate-tab__item-active' : '']"
-				 @tap.stop="swichMenu(index)">
-					<slot name="tabItem" :item="item">
-                    </slot>
-                    <text v-if="!$slots['tabItem']" class="u-line-1">{{item[tabKeyName]}}</text>
+			<scroll-view
+				class="u-cate-tab__view u-cate-tab__menu-scroll-view"
+				scroll-y
+				:show-scrollbar="false"
+				:enable-flex="true"
+				style="background-color: #f6f6f6;"
+			>
+				<view class="u-cate-tab__menu-inner">
+					<view
+						v-for="(item, index) in tabList"
+						:id="'menu' + index"
+						:key="item.id || item.catagoryId || index"
+						class="u-cate-tab__item"
+						:class="[innerCurrent == index ? 'u-cate-tab__item-active' : '']"
+						@tap.stop="swichMenu(index)"
+					>
+						<slot name="tabItem" :item="item">
+						</slot>
+						<text v-if="!$slots['tabItem']" class="u-line-1">{{item[tabKeyName]}}</text>
+					</view>
 				</view>
 			</scroll-view>
-			<scroll-view :scroll-top="scrollRightTop" scroll-with-animation :scroll-into-view="scrollIntoView"
+			<scroll-view :scroll-into-view="scrollIntoView"
 				scroll-y class="u-cate-tab__right-box" @scroll="rightScroll">
 				<view class="u-cate-tab__right-top">
 					<slot name="rightTop" :tabList="tabList">
@@ -81,15 +92,14 @@
         watch: {
 			tabList: {
 				deep: true,
-				handler(newVal, oldVal) {
-					// this.observer();
+				handler() {
 					sleep(30).then(() => {
 						this.getMenuItemTop();
-						this.leftMenuStatus(this.innerCurrent);
 					})
 				}
 			},
 			current(nval) {
+				if (nval === this.innerCurrent) return
 				this.innerCurrent = nval;
 				this.leftMenuStatus(this.innerCurrent);
 				sleep(30).then(() => {
@@ -97,9 +107,7 @@
 				})
 			},
 			height() {
-				// console.log('height change');
 				this.getMenuItemTop();
-				this.leftMenuStatus(this.innerCurrent);
 			}
         },
 		emits: ['update:current'],
@@ -111,42 +119,45 @@
 				innerCurrent: 0, // 预设当前项的值
 				menuHeight: 0, // 左边菜单的高度
 				menuItemHeight: 0, // 左边菜单item的高度
-				itemId: '', // 栏目右边scroll-view用于滚动的id
+				itemId: '',
 				menuItemPos: [],
                 rects: [],
 				arr: [],
-				scrollRightTop: 0, // 右边栏目scroll-view的滚动条高度
-				timer: null, // 定时器
+				scrollRightTop: 0,
+				timer: null,
+				menuLock: false,
+				menuLockTimer: null,
 			}
 		},
 		mounted() {
-			// this.observer();
 			this.innerCurrent = this.current;
-			this.leftMenuStatus(this.innerCurrent);
 			this.getMenuItemTop()
-			// 设置默认index
-			sleep(50).then(() => {
-				this.swichMenu(this.innerCurrent)
-			})
 		},
 		methods: {
 			addUnit,
 			// 点击左边的栏目切换
 			async swichMenu(index) {
+				this.menuLock = true
+				if (this.menuLockTimer) {
+					clearTimeout(this.menuLockTimer)
+				}
+				this.menuLockTimer = setTimeout(() => {
+					this.menuLock = false
+					this.menuLockTimer = null
+				}, 500)
 				if (this.mode == 'follow') {
 					if(this.arr.length == 0) {
 						await this.getMenuItemTop();
 					}
-					if (this.scrollIntoView != 'item' + index) {
-						this.scrollIntoView = 'item' + index;
-					}
+					this.scrollIntoView = ''
+					this.$nextTick(() => {
+						this.scrollIntoView = 'item' + index
+					})
 				}
 
 				if (index == this.innerCurrent) return;
-				this.$nextTick(function(){
-					this.innerCurrent = index;
-					this.$emit('update:current', index);
-				})
+				this.innerCurrent = index;
+				this.$emit('update:current', index);
 			},
 			// 获取一个目标元素的高度
 			getElRect(elClass, dataVal) {
@@ -196,16 +207,10 @@
 			},
 			// 设置左边菜单的滚动状态
 			async leftMenuStatus(index) {
-				this.innerCurrent = index;
-				this.$emit('update:current', index);
-				// 如果为0，意味着尚未初始化
-				if (this.menuHeight == 0 || this.menuItemHeight == 0) {
-					await this.getElRect('u-cate-tab__menu-scroll-view', 'menuHeight');
-					await this.getElRect('u-cate-tab__item', 'menuItemHeight');
+				if (this.innerCurrent !== index) {
+					this.innerCurrent = index;
+					this.$emit('update:current', index);
 				}
-				// console.log(this.menuHeight, this.menuItemHeight)
-				// 将菜单活动item垂直居中
-				this.scrollTop = index * this.menuItemHeight + this.menuItemHeight / 2 - this.menuHeight / 2;
 			},
 			// 获取右边菜单每个item到顶部的距离
 			async getMenuItemTop() {
@@ -235,7 +240,7 @@
 			},
 			// 右边菜单滚动
 			async rightScroll(e) {
-				if (this.mode !== 'follow') return;
+				if (this.mode !== 'follow' || this.menuLock) return;
 				this.oldScrollTop = e.detail.scrollTop;
                 // console.log(e.detail.scrollTop)
                 // console.log(JSON.stringify(this.arr))
@@ -246,9 +251,8 @@
 				if(!this.menuHeight) {
 					await this.getElRect('u-cate-tab__menu-scroll-view', 'menuHeight');
 				}
-				setTimeout(() => { // 节流
+				this.timer = setTimeout(() => {
 					this.timer = null;
-					// scrollHeight为右边菜单垂直中点位置
 					let scrollHeight = e.detail.scrollTop + 1;
                     // console.log(e.detail.scrollTop)
 					for (let i = 0; i < this.arr.length; i++) {
@@ -276,6 +280,7 @@
 	.u-cate-tab {
 		display: flex;
 		flex-direction: column;
+		background-color: #f6f6f6;
 	}
 
 	.u-cate-tab__wrap {
@@ -283,6 +288,7 @@
 		display: flex;
 		flex-direction: row;
 		overflow: hidden;
+		background-color: #f6f6f6;
 	}
 
 	.u-search-inner {
@@ -302,11 +308,18 @@
 	.u-cate-tab__view {
 		width: 200rpx;
 		height: 100%;
+		background-color: #f6f6f6;
+	}
+
+	.u-cate-tab__menu-inner {
+		min-height: 100%;
+		background-color: #f6f6f6;
 	}
 
 	.u-cate-tab__item {
+		width: 100%;
 		height: 110rpx;
-		background: var(--up-bg-color, #f6f6f6);
+		background: #f6f6f6;
 		box-sizing: border-box;
 		display: flex;
 		align-items: center;
@@ -334,12 +347,9 @@
 		top: 39rpx;
 	}
 
-	.u-cate-tab__view {
-		height: 100%;
-	}
-
 	.u-cate-tab__right-box {
 		flex: 1;
+		height: 100%;
 		background-color: var(--up-page-bg-color, var(--up-bg-color, rgb(250, 250, 250)));
 	}
 

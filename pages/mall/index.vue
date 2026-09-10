@@ -62,15 +62,24 @@
 			</view>
 
 			<view v-else class="cate-tab-wrap">
-				<up-cate-tab mode="tab" :height="contentHeight" :tabList="categoryList" v-model:current="currentCate">
+				<up-cate-tab mode="follow" :height="contentHeight" :tabList="categoryList" @update:current="onCateChange">
 					<template #itemList="{ item }">
-						<view class="cate-header">
-							<text class="cate-name">{{ item.name }}</text>
-							<text class="cate-count">共 {{ (item.children || []).length }} 件商品</text>
-						</view>
-						<view class="product-list" :class="{ 'product-list--with-cart': cartCount > 0 }">
+						<view
+							class="product-list"
+							:class="{
+								'product-list--with-cart':
+									cartCount > 0 &&
+									item.id === categoryList[categoryList.length - 1]?.id
+							}"
+						>
 							<u-empty
-								v-if="!(item.children && item.children.length)"
+								v-if="item.productsLoading && !(item.children && item.children.length)"
+								text="商品加载中"
+								mode="list"
+								marginTop="60"
+							></u-empty>
+							<u-empty
+								v-else-if="item.productsLoaded && !(item.children && item.children.length)"
 								text="该分类暂无商品"
 								mode="list"
 								marginTop="60"
@@ -316,11 +325,8 @@
 		onReady() {
 			this.updateCateTabHeight()
 		},
-		watch: {
-			/** 切换左侧分类时按需加载该分类商品 */
-			currentCate(index) {
-				this.loadCategoryProducts(index)
-			}
+		onResize() {
+			this.updateCateTabHeight()
 		},
 		computed: {
 			/** 是否处于搜索态（有搜索关键词） */
@@ -517,6 +523,11 @@
 						this.currentCate = 0
 					}
 					await this.loadCategoryProducts(this.currentCate)
+					this.categoryList.forEach((_, index) => {
+						if (index !== this.currentCate) {
+							this.loadCategoryProducts(index)
+						}
+					})
 				} catch (error) {
 					console.error('获取商品分类失败', error)
 					this.categoryList = []
@@ -524,19 +535,18 @@
 					this.categoryLoading = false
 				}
 			},
+			/** 分类切换只预加载商品，避免 v-model 回写导致左侧菜单整列重绘闪白 */
+			onCateChange(index) {
+				this.loadCategoryProducts(index)
+				this.loadCategoryProducts(index + 1)
+			},
 			/** 按分类懒加载上架商品，已加载过则跳过 */
 			async loadCategoryProducts(index) {
 				const cate = this.categoryList[index]
 				if (!cate || !cate.catagoryId) return
 				if (cate.productsLoaded || cate.productsLoading) return
 
-				this.categoryList = this.categoryList.map((item, i) => {
-					if (i !== index) return item
-					return {
-						...item,
-						productsLoading: true
-					}
-				})
+				this.$set(cate, 'productsLoading', true)
 
 				try {
 					const data = await getProductListApi({
@@ -551,52 +561,51 @@
 						.filter((item) => item.productStatus !== 0)
 						.map((item) => mapProductItem(item, cate.name, cate.storeId))
 
-					this.categoryList = this.categoryList.map((item, i) => {
-						if (i !== index) return item
-						return {
-							...item,
-							children,
-							productsLoaded: true,
-							productsLoading: false
-						}
-					})
+					this.$set(cate, 'children', children)
+					this.$set(cate, 'productsLoaded', true)
+					this.$set(cate, 'productsLoading', false)
 				} catch (error) {
 					console.error('获取分类商品失败', error)
-					this.categoryList = this.categoryList.map((item, i) => {
-						if (i !== index) return item
-						return {
-							...item,
-							children: [],
-							productsLoaded: false,
-							productsLoading: false
-						}
-					})
+					this.$set(cate, 'children', [])
+					this.$set(cate, 'productsLoaded', false)
+					this.$set(cate, 'productsLoading', false)
 				}
 			},
 			/** 把当前购物车数量写入本地缓存 */
 			saveCartMap() {
 				setCartMap(this.cartMap)
 			},
-			/** 按窗口和搜索栏高度计算分类列表高度、购物车栏位置 */
-			updateCateTabHeight() {
+			/** 按搜索栏下方实际剩余高度计算分类列表，避免模拟器里 windowHeight 偏小只占上半屏 */
+			updateCateTabHeight(retry = 0) {
 				const sys = getWindowLayout()
-				// windowHeight：已扣除导航栏和原生 tabBar 后的可用高度，不要再减 tabBar/safeBottom
-				const windowHeight = sys.windowHeight || sys.screenHeight || 0
-				// windowBottom：窗口底到屏幕底距离（有 tabBar 时约等于 tabBar 高度，含安全区）
 				const windowBottom = typeof sys.windowBottom === 'number' ? sys.windowBottom : 50
 				const gap = uni.upx2px(16)
 				this.cartBarBottom = `${windowBottom + gap}px`
 
 				this.$nextTick(() => {
-					uni.createSelectorQuery()
-						.in(this)
-						.select('.search-wrap')
-						.boundingClientRect((rect) => {
-							const searchHeight = rect && rect.height ? rect.height : uni.upx2px(96)
-							const height = windowHeight - searchHeight
-							this.contentHeight = `${Math.max(height, 200)}px`
-						})
-						.exec()
+					const query = uni.createSelectorQuery().in(this)
+					query.select('.cate-tab-wrap').boundingClientRect()
+					query.select('.search-result-wrap').boundingClientRect()
+					query.select('.search-wrap').boundingClientRect()
+					query.selectViewport().boundingClientRect()
+					query.exec((res) => {
+						const wrapRect = (res && (res[0] || res[1])) || null
+						const searchRect = (res && res[2]) || null
+						const viewportRect = (res && res[3]) || null
+						let height = 0
+						if (wrapRect && wrapRect.height > 80) {
+							height = wrapRect.height
+						} else if (viewportRect && searchRect) {
+							height = viewportRect.height - searchRect.bottom
+						}
+						if (height > 80) {
+							this.contentHeight = `${Math.floor(height)}px`
+							return
+						}
+						if (retry < 8) {
+							setTimeout(() => this.updateCateTabHeight(retry + 1), 50)
+						}
+					})
 				})
 			},
 			/** 清空搜索关键词，回到分类浏览 */
@@ -706,8 +715,11 @@
 
 <style lang="scss" scoped>
 	.mall-root {
-		height: 100%;
-		min-height: 100%;
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		left: 0;
 		overflow: hidden;
 	}
 
@@ -906,33 +918,54 @@
 		overflow: hidden;
 	}
 
+	.cate-tab-wrap ::v-deep .u-cate-tab__wrap {
+		background-color: #f5f5f5;
+	}
+
+	.cate-tab-wrap ::v-deep .u-cate-tab__right-box {
+		margin-left: 16rpx;
+		margin-right: 16rpx;
+		border-radius: 16rpx;
+		overflow: hidden;
+		background-color: #fff;
+	}
+
+	.cate-tab-wrap ::v-deep .u-cate-tab__page-view {
+		padding: 0 24rpx;
+		box-sizing: border-box;
+		background-color: #fff;
+	}
+
+	.cate-tab-wrap ::v-deep .u-cate-tab__page-item {
+		margin-bottom: 0;
+		padding: 0;
+		border: none;
+		border-radius: 0;
+		background-color: #fff;
+	}
+
+	.cate-tab-wrap ::v-deep .u-cate-tab__page-item:last-child {
+		min-height: 0;
+	}
+
 	.product-list {
 		display: flex;
 		flex-direction: column;
-		gap: 20rpx;
-		padding-bottom: 24rpx;
+		gap: 0;
+		padding: 0;
 	}
 
 	.product-list--with-cart {
 		padding-bottom: 140rpx;
 	}
 
-	.cate-header {
+	.product-card {
 		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		margin-bottom: 16rpx;
-	}
-
-	.cate-name {
-		font-size: 30rpx;
-		font-weight: 600;
-		color: #333;
-	}
-
-	.cate-count {
-		font-size: 22rpx;
-		color: #999;
+		align-items: flex-start;
+		padding: 20rpx 0;
+		background-color: #fff;
+		border-radius: 0;
+		border-bottom: 1rpx solid #f0f0f0;
 	}
 
 	.cart-popup-host {
@@ -943,14 +976,6 @@
 		height: 0;
 		overflow: visible;
 		z-index: 1000;
-	}
-
-	.product-card {
-		display: flex;
-		align-items: flex-start;
-		padding: 16rpx;
-		background-color: #fff;
-		border-radius: 12rpx;
 	}
 
 	.product-img {

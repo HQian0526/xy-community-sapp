@@ -1,28 +1,26 @@
 <template>
 	<view class="join-page">
-		<scroll-view scroll-y class="poster-scroll">
-			<view class="preview-wrap">
-				<!-- 图片始终正常布局显示；iOS 上 lazy-load + opacity:0 等 load 容易一直空白 -->
-				<image
-					v-if="!loadError"
-					class="poster-img"
-					:src="posterSrc"
-					mode="widthFix"
-					show-menu-by-longpress
-					@load="onImageLoad"
-					@error="onImageError"
-				/>
+		<!-- iOS 小程序不要用 flex+height:0 的 scroll-view，内容高度会被裁成 0 -->
+		<view class="preview-wrap">
+			<image
+				v-if="!loadError"
+				class="poster-img"
+				:src="posterSrc"
+				mode="widthFix"
+				show-menu-by-longpress
+				@load="onImageLoad"
+				@error="onImageError"
+			/>
 
-				<view v-if="!imageLoaded && !loadError" class="loading-box loading-overlay">
-					<up-loading-icon color="#00a896"></up-loading-icon>
-					<text class="loading-text">图片加载中...</text>
-				</view>
-
-				<view v-if="loadError" class="loading-box error-box" @click="retryLoad">
-					<text class="error-text">加载失败，点击重试</text>
-				</view>
+			<view v-if="!imageLoaded && !loadError" class="loading-box loading-overlay">
+				<up-loading-icon color="#00a896"></up-loading-icon>
+				<text class="loading-text">图片加载中...</text>
 			</view>
-		</scroll-view>
+
+			<view v-if="loadError" class="loading-box error-box" @click="retryLoad">
+				<text class="error-text">加载失败，点击重试</text>
+			</view>
+		</view>
 
 		<view class="submit-wrap">
 			<view class="btn-success submit-btn" @click="handleApply">进一步了解</view>
@@ -95,23 +93,17 @@
 
 <style lang="scss" scoped>
 	.join-page {
-		min-height: 100vh;
+		min-height: 100%;
 		background-color: #f5f5f5;
-		display: flex;
-		flex-direction: column;
-	}
-
-	.poster-scroll {
-		flex: 1;
-		height: 0;
 	}
 
 	.preview-wrap {
 		position: relative;
 		padding: 24rpx;
+		padding-bottom: calc(160rpx + constant(safe-area-inset-bottom));
 		padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
 		box-sizing: border-box;
-		min-height: 1200rpx;
+		min-height: 70vh;
 	}
 
 	.loading-box {
@@ -152,6 +144,8 @@
 
 	.poster-img {
 		width: 100%;
+		height: auto;
+		min-height: 400rpx;
 		border-radius: 16rpx;
 		box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
 		display: block;
@@ -163,6 +157,8 @@
 		left: 0;
 		right: 0;
 		bottom: 0;
+		z-index: 10;
+		padding: 24rpx 48rpx calc(24rpx + constant(safe-area-inset-bottom));
 		padding: 24rpx 48rpx calc(24rpx + env(safe-area-inset-bottom));
 		background-color: #fff;
 		box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
