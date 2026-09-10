@@ -69,7 +69,7 @@
 		<view class="submit-wrap">
 			<view
 				class="submit-btn"
-				:class="[isManualOpen ? 'btn-gray-solid' : 'btn-success', { 'is-loading': submitting }]"
+				:class="[isOpenNow ? 'btn-gray-solid' : 'btn-success', { 'is-loading': submitting }]"
 				@click="handleToggle"
 			>
 				{{ submitting ? '提交中...' : actionText }}
@@ -139,11 +139,11 @@
 			}
 		},
 		computed: {
-			isManualOpen() {
-				return !this.manuallyClosed
-			},
 			isOpenNow() {
 				return this.openStatus === 'open'
+			},
+			actionText() {
+				return this.isOpenNow ? '打烊' : '开始营业'
 			},
 			displayStatus() {
 				return getStoreOpenLabel({
@@ -151,9 +151,6 @@
 					manuallyClosed: this.manuallyClosed,
 					acceptingOrders: this.acceptingOrders
 				})
-			},
-			actionText() {
-				return this.isManualOpen ? '打烊' : '开始营业'
 			},
 			statusTip() {
 				if (this.statusHint) return this.statusHint
@@ -359,15 +356,16 @@
 					return
 				}
 
-				const nextCode = this.isManualOpen ? STATUS_CODE_CLOSED : STATUS_CODE_OPEN
+				const nextCode = this.isOpenNow ? STATUS_CODE_CLOSED : STATUS_CODE_OPEN
+				const opening = nextCode === STATUS_CODE_OPEN
 				let content
-				if (this.isManualOpen) {
+				if (!opening) {
 					content = this.nextOpenText
 						? `确定要打烊吗？将关至 ${this.nextOpenText} 自动开始营业`
 						: '确定要打烊吗？未设置营业时间将一直打烊，直到点击开始营业'
 				} else {
 					content = this.nextCloseText
-						? `确定要开始营业吗？将营业至 ${this.nextCloseText}，之后按营业时间自动休息`
+						? `确定要开始营业吗？将立即营业至 ${this.nextCloseText}，之后按营业时间自动休息`
 						: '确定要开始营业吗？未设置营业时间将一直营业，直到点击打烊'
 				}
 
@@ -385,7 +383,7 @@
 							this.applyOpenFields(saved)
 							await this.loadStatus()
 							uni.showToast({
-								title: this.isManualOpen ? '已开始营业' : '已打烊',
+								title: opening ? '已开始营业' : '已打烊',
 								icon: 'success'
 							})
 						} catch (error) {

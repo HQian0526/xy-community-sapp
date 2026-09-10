@@ -52,7 +52,7 @@
 						<text class="sum-label">合计</text>
 						<text class="sum-value">¥{{ formatMoney(goodsTotal) }}</text>
 					</view>
-					<text class="sum-tip">另需配送费 ¥{{ formatMoney(deliveryFee) }}</text>
+					<text class="sum-tip">{{ cartFeeTip }}</text>
 				</view>
 				<view class="action-btn" @click="handleCheckout">去结算</view>
 			</view>
@@ -74,6 +74,7 @@
 	} from '@/common/api/personalCenter/store.js'
 	import { resolveFileUrl } from '@/common/api/config.js'
 	import { formatMoney } from '../checkout/mock.js'
+	import { getActivePromoApi, pickPromoDiscount } from '@/common/api/mall/promo.js'
 	import {
 		getCartMap,
 		getCartItems,
@@ -98,7 +99,8 @@
 		data() {
 			return {
 				cartMap: {},
-				deliveryFee: 0
+				deliveryFee: 0,
+				activePromo: null
 			}
 		},
 		computed: {
@@ -110,12 +112,23 @@
 			},
 			goodsTotal() {
 				return getCartTotal(this.cartMap)
+			},
+			promoDiscount() {
+				return pickPromoDiscount(this.activePromo, this.goodsTotal)
+			},
+			cartFeeTip() {
+				const fee = `另需配送费 ¥${formatMoney(this.deliveryFee)}`
+				if (this.promoDiscount > 0) {
+					return `${fee} · 满减已减¥${formatMoney(this.promoDiscount)}`
+				}
+				return fee
 			}
 		},
 		onShow() {
 			this.reloadCart()
 			this.refreshCartProducts()
 			this.loadDeliveryFee()
+			this.loadActivePromo()
 		},
 		methods: {
 			formatMoney,
@@ -143,6 +156,19 @@
 				} catch (error) {
 					console.error('获取店铺配送费失败', error)
 					this.deliveryFee = 0
+				}
+			},
+			async loadActivePromo() {
+				const storeId = this.resolveStoreId()
+				if (!storeId) {
+					this.activePromo = null
+					return
+				}
+				try {
+					this.activePromo = await getActivePromoApi(storeId) || null
+				} catch (error) {
+					console.error('获取店铺满减失败', error)
+					this.activePromo = null
 				}
 			},
 			async refreshCartProducts() {
@@ -230,6 +256,7 @@
 						clearCartMap()
 						this.reloadCart()
 						this.deliveryFee = 0
+						this.activePromo = null
 					}
 				})
 			},

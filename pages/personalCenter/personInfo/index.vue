@@ -13,8 +13,8 @@
 
 				<uni-forms-item label="性别" name="sex">
 					<up-radio-group v-model="formData.sex" placement="row" activeColor="#00a896">
-						<up-radio name="1" label="男"></up-radio>
-						<up-radio name="0" label="女"></up-radio>
+						<up-radio :name="1" label="男"></up-radio>
+						<up-radio :name="0" label="女"></up-radio>
 					</up-radio-group>
 				</uni-forms-item>
 
@@ -76,15 +76,15 @@
 	const defaultFormData = () => ({
 		id: '',
 		realName: '',
-		sex: '',
+		sex: null,
 		phone: '',
 		address: ''
 	})
 
 	function mapSex(value) {
-		if (value === 0 || value === '0') return '0'
-		if (value === 1 || value === '1') return '1'
-		return ''
+		if (value === 0 || value === '0') return 0
+		if (value === 1 || value === '1') return 1
+		return null
 	}
 
 	export default {
@@ -191,8 +191,8 @@
 						realName,
 						address: String(this.formData.address || '').trim()
 					}
-					if (this.formData.sex === '0' || this.formData.sex === '1') {
-						payload.sex = Number(this.formData.sex)
+					if (this.formData.sex === 0 || this.formData.sex === 1) {
+						payload.sex = this.formData.sex
 					}
 					const saved = await updateProfileApi(payload)
 					if (saved) {

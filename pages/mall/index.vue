@@ -10,6 +10,13 @@
 					:showAction="false"
 					@clear="handleSearchClear"
 				></up-search>
+				<view v-if="showPromoBar" class="promo-bar">
+					<view class="promo-bar-main">
+						<up-icon name="volume" size="16" color="#00a896"></up-icon>
+						<text class="promo-bar-text">{{ promoBarLabel }}</text>
+					</view>
+					<text v-if="couponTemplates.length" class="promo-bar-action" @click="openCouponPopup">领券</text>
+				</view>
 			</view>
 
 			<view v-if="isSearching" class="search-result-wrap">
@@ -100,7 +107,7 @@
 					</view>
 					<view class="cart-info">
 						<text class="cart-total">¥{{ cartTotal.toFixed(2) }}</text>
-						<text class="cart-tip">另需配送费 ¥{{ deliveryFee.toFixed(2) }}</text>
+						<text class="cart-tip">{{ cartFeeTip }}</text>
 					</view>
 				</view>
 				<view class="cart-submit" @click.stop="handleCheckout">去结算</view>
@@ -151,6 +158,33 @@
 				</view>
 			</u-popup>
 		</view>
+		<u-popup :show="couponShow" mode="bottom" round="16" closeOnClickOverlay @close="closeCouponPopup">
+			<view class="coupon-popup">
+				<view class="coupon-popup-header">
+					<text class="coupon-popup-title">店铺优惠券</text>
+					<text class="coupon-popup-close" @click="closeCouponPopup">关闭</text>
+				</view>
+				<scroll-view scroll-y class="coupon-popup-list">
+					<view v-if="!couponTemplates.length" class="coupon-empty">暂无可领优惠券</view>
+					<view v-for="item in couponTemplates" :key="item.id" class="coupon-card">
+						<view class="coupon-amount">
+							<text class="coupon-unit">¥</text>
+							<text class="coupon-value">{{ formatCouponAmount(item.discountAmount) }}</text>
+						</view>
+						<view class="coupon-info">
+							<text class="coupon-name">{{ item.name }}</text>
+							<text class="coupon-limit">{{ couponThresholdText(item.thresholdAmount) }}</text>
+							<text class="coupon-time">{{ item.expireText || '永久有效' }}</text>
+						</view>
+						<view
+							class="coupon-btn"
+							:class="{ disabled: couponBtnDisabled(item) }"
+							@click="handleReceiveCoupon(item)"
+						>{{ couponBtnText(item) }}</view>
+					</view>
+				</scroll-view>
+			</view>
+		</u-popup>
 		<bind-phone-popup ref="bindPhonePopup" />
 	</view>
 </template>
@@ -196,6 +230,16 @@
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
 	import BindPhonePopup from '@/components/bind-phone-popup/bind-phone-popup.vue'
 	import { getWindowLayout } from '@/common/systemInfo.js'
+	import {
+		getActivePromoApi,
+		pickPromoDiscount,
+		promoBarText,
+		couponThresholdText
+	} from '@/common/api/mall/promo.js'
+	import {
+		getStoreCouponTemplatesApi,
+		receiveCouponApi
+	} from '@/common/api/mall/coupon.js'
 
 	/** 把接口商品字段转成列表展示结构 */
 	function mapProductItem(item, categoryName = '', fallbackStoreId = '') {
@@ -235,7 +279,11 @@
 				contentHeight: '100%',
 				cartBarBottom: '66px',
 				queryStoreId: '',
-				deliveryFee: 0
+				deliveryFee: 0,
+				activePromo: null,
+				couponTemplates: [],
+				couponShow: false,
+				receivingCouponId: ''
 			}
 		},
 		onLoad(options = {}) {
@@ -294,6 +342,26 @@
 			/** 购物车合计金额 */
 			cartTotal() {
 				return getCartTotal(this.cartMap)
+			},
+			showPromoBar() {
+				return !!this.promoBarLabel
+			},
+			promoBarLabel() {
+				const promoText = promoBarText(this.activePromo)
+				if (promoText) {
+					return `店铺专属活动：${promoText}`
+				}
+				return this.couponTemplates.length ? '店铺优惠券' : ''
+			},
+			promoDiscount() {
+				return pickPromoDiscount(this.activePromo, this.cartTotal)
+			},
+			cartFeeTip() {
+				const fee = `另需配送费 ¥${this.deliveryFee.toFixed(2)}`
+				if (this.promoDiscount > 0) {
+					return `${fee} · 满减已减¥${this.promoDiscount.toFixed(2)}`
+				}
+				return fee
 			}
 		},
 		methods: {
@@ -323,8 +391,11 @@
 				}
 				await Promise.all([
 					this.loadCategoryList(),
-					this.loadStoreDeliveryFee()
+					this.loadStoreDeliveryFee(),
+					this.loadPromoAndCoupons()
 				])
+				if (seq !== this.mallRefreshSeq) return
+				this.$nextTick(() => this.updateCateTabHeight())
 			},
 			/** 扫码进店优先，其次用户绑定店铺，最后项目默认店铺 */
 			async ensureMallStoreId() {
@@ -365,6 +436,60 @@
 				} catch (error) {
 					console.error('获取店铺配送费失败', error)
 					this.deliveryFee = 0
+				}
+			},
+			async loadPromoAndCoupons() {
+				const storeId = this.queryStoreId
+				if (!storeId) {
+					this.activePromo = null
+					this.couponTemplates = []
+					return
+				}
+				try {
+					const [promo, coupons] = await Promise.all([
+						getActivePromoApi(storeId),
+						getStoreCouponTemplatesApi(storeId)
+					])
+					this.activePromo = promo || null
+					this.couponTemplates = Array.isArray(coupons) ? coupons : []
+				} catch (error) {
+					console.error('获取店铺营销失败', error)
+					this.activePromo = null
+					this.couponTemplates = []
+				}
+			},
+			couponThresholdText,
+			formatCouponAmount(value) {
+				const n = Number(value || 0)
+				return Number.isFinite(n) ? String(n) : '0'
+			},
+			couponBtnText(item) {
+				if (item?.claimed) return '已领取'
+				if (item?.remainCount === 0) return '已抢光'
+				return '领取'
+			},
+			couponBtnDisabled(item) {
+				return !!item?.claimed || item?.remainCount === 0 || String(this.receivingCouponId) === String(item?.id)
+			},
+			async openCouponPopup() {
+				this.couponShow = true
+				await this.loadPromoAndCoupons()
+			},
+			closeCouponPopup() {
+				this.couponShow = false
+			},
+			async handleReceiveCoupon(item) {
+				if (!item || this.couponBtnDisabled(item)) return
+				if (!(await requireLogin({ force: true }))) return
+				this.receivingCouponId = String(item.id)
+				try {
+					await receiveCouponApi(item.id)
+					uni.showToast({ title: '领取成功', icon: 'success' })
+					await this.loadPromoAndCoupons()
+				} catch (error) {
+					console.error('领取优惠券失败', error)
+				} finally {
+					this.receivingCouponId = ''
 				}
 			},
 			async loadCategoryList() {
@@ -604,6 +729,151 @@
 	.search-wrap {
 		flex-shrink: 0;
 		padding: 0 24rpx 16rpx;
+	}
+
+	.promo-bar {
+		margin-top: 16rpx;
+		padding: 16rpx 20rpx;
+		background: linear-gradient(90deg, #e8f8f5 0%, #fff 100%);
+		border-radius: 12rpx;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16rpx;
+	}
+
+	.promo-bar-main {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		align-items: center;
+		gap: 8rpx;
+	}
+
+	.promo-bar-text {
+		flex: 1;
+		min-width: 0;
+		font-size: 24rpx;
+		color: #00a896;
+		font-weight: 600;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.promo-bar-action {
+		flex-shrink: 0;
+		padding: 6rpx 18rpx;
+		border-radius: 24rpx;
+		background-color: #00a896;
+		color: #fff;
+		font-size: 22rpx;
+		font-weight: 600;
+	}
+
+	.coupon-popup {
+		background-color: #fff;
+		border-radius: 16rpx 16rpx 0 0;
+		max-height: 70vh;
+		display: flex;
+		flex-direction: column;
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+
+	.coupon-popup-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 28rpx 32rpx 20rpx;
+		border-bottom: 1rpx solid #f0f0f0;
+	}
+
+	.coupon-popup-title {
+		font-size: 32rpx;
+		font-weight: 600;
+		color: #333;
+	}
+
+	.coupon-popup-close {
+		font-size: 26rpx;
+		color: #999;
+	}
+
+	.coupon-popup-list {
+		max-height: 50vh;
+		padding: 16rpx 32rpx 24rpx;
+		box-sizing: border-box;
+	}
+
+	.coupon-empty {
+		padding: 80rpx 0;
+		text-align: center;
+		font-size: 26rpx;
+		color: #999;
+	}
+
+	.coupon-card {
+		display: flex;
+		align-items: center;
+		padding: 24rpx 20rpx;
+		margin-bottom: 16rpx;
+		background-color: #fff7f5;
+		border-radius: 12rpx;
+		border: 1rpx dashed #ffd0c4;
+	}
+
+	.coupon-amount {
+		flex-shrink: 0;
+		width: 140rpx;
+		display: flex;
+		align-items: baseline;
+		justify-content: center;
+		color: #ff6034;
+	}
+
+	.coupon-unit {
+		font-size: 24rpx;
+		font-weight: 600;
+	}
+
+	.coupon-value {
+		font-size: 44rpx;
+		font-weight: 700;
+	}
+
+	.coupon-info {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 6rpx;
+		padding: 0 16rpx;
+	}
+
+	.coupon-name {
+		font-size: 28rpx;
+		font-weight: 600;
+		color: #333;
+	}
+
+	.coupon-limit,
+	.coupon-time {
+		font-size: 22rpx;
+		color: #999;
+	}
+
+	.coupon-btn {
+		flex-shrink: 0;
+		padding: 10rpx 22rpx;
+		border-radius: 28rpx;
+		background-color: #00a896;
+		color: #fff;
+		font-size: 24rpx;
+		font-weight: 600;
+	}
+
+	.coupon-btn.disabled {
+		background-color: #ccc;
 	}
 
 	.search-result-wrap {

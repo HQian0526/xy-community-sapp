@@ -19,12 +19,14 @@ export const accountList = [
 	{ key: 'storeOrder', name: '全部订单', icon: 'bag', url: '/pages/personalCenter/storeOrder/index' },
 	// { key: 'finance', name: '流水查询', icon: 'file-text', url: '/pages/personalCenter/finance/index' },
 	{ key: 'info', name: '进行中', icon: 'info-circle', url: '/pages/personalCenter/pending/index' },
-	{ key: 'agreement', name: '已完成', icon: 'checkbox-mark', url: '/pages/personalCenter/finished/index' },
+	{ key: 'cart', name: '购物车', icon: 'shopping-cart', url: '/pages/mall/cart/index' },
+	// { key: 'agreement', name: '已完成', icon: 'checkbox-mark', url: '/pages/personalCenter/finished/index' },
 	{ key: 'phone', name: '联系店家', icon: 'chat', url: '/pages/personalCenter/contactService/index' },
 ]
 
 export const serviceList = [
 	{ key: 'profile', name: '资料设置', icon: 'edit-pen', url: '/pages/personalCenter/personInfo/index' },
+	{ key: 'coupon', name: '优惠券', icon: 'coupon', url: '/pages/mall/coupon/index' },
 	// { key: 'identity', name: '实名认证', icon: 'account', url: '/pages/personalCenter/identity/index' },
 	{ key: 'agreement', name: '隐私协议', icon: 'question-circle', url: '/pages/personalCenter/personAgreement/index' },
 	{ key: 'share', name: '分享小程序', icon: 'share' },

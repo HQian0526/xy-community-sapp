@@ -116,7 +116,7 @@
 			<view class="service-card">
 				<text class="section-title">基础服务</text>
 				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in serviceList" :key="item.key" :name="item.key"
+					<up-grid-item v-for="item in displayServiceList" :key="item.key" :name="item.key"
 						@click="handleServiceClick(item)">
 						<view class="service-item">
 							<view class="service-icon-wrap">
@@ -286,6 +286,12 @@
 					return this.storeProfile.avatar || this.storeInfo.avatar || DEFAULT_AVATAR
 				}
 				return this.userProfile.avatar || DEFAULT_AVATAR
+			},
+			displayServiceList() {
+				if (this.isMerchant) {
+					return (this.serviceList || []).filter((item) => item.key !== 'coupon')
+				}
+				return this.serviceList
 			}
 		},
 		onLoad(options = {}) {

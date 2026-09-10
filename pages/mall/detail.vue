@@ -60,6 +60,18 @@
 					<text class="summary-label">配送费</text>
 					<text class="summary-value">¥{{ formatMoney(order.deliveryFee) }}</text>
 				</view>
+				<view v-if="promoDiscount > 0" class="summary-row">
+					<text class="summary-label">满减</text>
+					<text class="summary-value summary-discount">-¥{{ formatMoney(promoDiscount) }}</text>
+				</view>
+				<view v-if="couponDiscount > 0" class="summary-row">
+					<text class="summary-label">优惠券</text>
+					<text class="summary-value summary-discount">-¥{{ formatMoney(couponDiscount) }}</text>
+				</view>
+				<view v-if="discountDesc" class="summary-row">
+					<text class="summary-label">优惠说明</text>
+					<text class="summary-value">{{ discountDesc }}</text>
+				</view>
 				<view class="summary-row summary-row-total">
 					<text class="summary-label">实付</text>
 					<text class="summary-total">¥{{ formatMoney(order.payAmount) }}</text>
@@ -106,6 +118,15 @@
 			payStatusLabel() {
 				const status = Number(this.order?.payStatus)
 				return PAY_STATUS_MAP[status] || '未知状态'
+			},
+			promoDiscount() {
+				return Number(this.order?.promoDiscount || 0)
+			},
+			couponDiscount() {
+				return Number(this.order?.couponDiscount || 0)
+			},
+			discountDesc() {
+				return String(this.order?.discountDesc || '').trim()
 			}
 		},
 		async onLoad(options = {}) {
@@ -323,6 +344,13 @@
 
 	.summary-value {
 		color: #333;
+		text-align: right;
+		flex: 1;
+		margin-left: 24rpx;
+	}
+
+	.summary-discount {
+		color: #ff6034;
 	}
 
 	.summary-total {

@@ -237,6 +237,13 @@
 				"navigationBarTitleText": "订单详情",
 				"enablePullDownRefresh": true
 			}
+		},
+		{
+			"path": "pages/mall/coupon/index",
+			"style": {
+				"navigationBarTitleText": "我的优惠券",
+				"enablePullDownRefresh": true
+			}
 		}
 		// #ifdef H5
 		, {

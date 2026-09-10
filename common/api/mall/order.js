@@ -4,8 +4,18 @@ import {
 } from '../request.js'
 
 /**
+ * 结算预览：与下单同一计价，不建单
+ * @param {Object} data { items:[{ productId, quantity }], userCouponId? }
+ */
+export function previewCheckoutApi(data) {
+	return post('/mallOrder/previewCheckout', data, {
+		showError: true
+	})
+}
+
+/**
  * 商城下单并获取微信支付调起参数
- * @param {Object} data { contact, address, remark, items:[{ productId, quantity }] }
+ * @param {Object} data { contact, address, remark, items:[{ productId, quantity }], userCouponId? }
  */
 export function checkoutAndPayApi(data) {
 	return post('/mallOrder/checkoutAndPay', data, {
@@ -97,6 +107,10 @@ export function mapMallOrderCard(order) {
 		goods,
 		goodsTotal: order.goodsAmount,
 		deliveryFee: order.deliveryFee,
+		promoDiscount: order.promoDiscount,
+		couponDiscount: order.couponDiscount,
+		discountAmount: order.discountAmount,
+		discountDesc: order.discountDesc,
 		payTotal: order.payAmount
 	}
 }
