@@ -36,6 +36,11 @@
 				:class="{ 'store-status--closed': isPaused }"
 				@click="goBusinessStatus"
 			>{{ storeInfo.status }}</text>
+			<text
+				v-else
+				class="member-entry"
+				@click="goRecharge"
+			>{{ memberEntryText }}</text>
 		</view>
 
 		<view class="content-wrap">
@@ -47,17 +52,22 @@
 					</view>
 					<view class="account-row">
 						<view class="account-item">
-							<text class="account-label">待结算金额</text>
+							<view class="account-label-row">
+								<text class="account-label">待结算金额</text>
+								<view class="settle-help" @click.stop="openSettleTip">
+									<text class="settle-help-mark">?</text>
+								</view>
+							</view>
 							<view class="account-value">
 								<text class="currency">¥</text>
-								<text class="amount">{{ formatMoney(storeInfo.totalAssets) }}</text>
+								<text class="amount">{{ formatMoney(storeInfo.pendingAmount) }}</text>
 							</view>
 						</view>
 						<view class="account-item account-item-right">
 							<text class="account-label">今日收入</text>
 							<view class="account-value">
 								<text class="currency">¥</text>
-								<text class="amount">{{ formatMoney(storeInfo.yesterdayIncome) }}</text>
+								<text class="amount">{{ formatMoney(storeInfo.todayIncome) }}</text>
 							</view>
 						</view>
 					</view>
@@ -161,6 +171,19 @@
 				<view class="contact-store-btn" @click="handleCallStore">拨打电话</view>
 			</view>
 		</u-popup>
+		<u-popup
+			:show="settleTipShow"
+			mode="center"
+			round="16"
+			closeOnClickOverlay
+			@close="closeSettleTip"
+		>
+			<view class="settle-tip-popup">
+				<text class="settle-tip-title">待结算金额</text>
+				<text class="settle-tip-text">每月1日和15日自动结算</text>
+				<view class="settle-tip-btn" @click="closeSettleTip">知道了</view>
+			</view>
+		</u-popup>
 		<bind-phone-popup ref="bindPhonePopup" />
 	</view>
 </template>
@@ -174,11 +197,13 @@
 		businessList
 	} from './mock.js'
 	import {
-		getWalletBalance
-	} from './withdraw/mock.js'
-	import {
-		getMallPendingCountApi
+		getMallPendingCountApi,
+		getMallSettlementSummaryApi
 	} from '@/common/api/mall/order.js'
+	import {
+		formatMemberBalance,
+		getStoreMemberMineApi
+	} from '@/common/api/mall/member.js'
 	import {
 		DEFAULT_SHARE
 	} from '@/common/share/config.js'
@@ -245,6 +270,7 @@
 				businessList,
 				badgeCount: 0,
 				sharePopupShow: false,
+				settleTipShow: false,
 				contactStoreShow: false,
 				contactStoreName: '',
 				contactStorePhone: '',
@@ -253,6 +279,10 @@
 				pageLoading: true,
 				loginLoading: false,
 				hasLogin: false,
+				memberInfo: {
+					member: false,
+					balance: 0
+				}
 			}
 		},
 		computed: {
@@ -299,6 +329,12 @@
 					return (this.serviceList || []).filter((item) => item.key !== 'coupon')
 				}
 				return this.serviceList
+			},
+			memberEntryText() {
+				if (this.memberInfo.member) {
+					return `会员余额：¥${formatMemberBalance(this.memberInfo.balance)}`
+				}
+				return '储值享会员价'
 			}
 		},
 		onLoad(options = {}) {
@@ -310,9 +346,12 @@
 				await waitBootstrapAuth()
 				await this.initUserProfile()
 				if (this.isMerchant) {
-					this.loadWalletBalance()
+					await this.loadSettlementSummary()
 				}
 				await this.loadPendingCount()
+				if (!this.isMerchant && this.loggedIn) {
+					await this.loadMemberInfo()
+				}
 			} finally {
 				this.pageLoading = false
 			}
@@ -404,8 +443,22 @@
 					console.error('获取商户信息失败', error)
 				}
 			},
-			loadWalletBalance() {
-				this.storeInfo.totalAssets = getWalletBalance()
+			async loadSettlementSummary() {
+				try {
+					const data = await getMallSettlementSummaryApi()
+					this.storeInfo.pendingAmount = Number(data?.pendingAmount || 0)
+					this.storeInfo.todayIncome = Number(data?.todayIncome || 0)
+				} catch (error) {
+					console.error('获取结算汇总失败', error)
+					this.storeInfo.pendingAmount = 0
+					this.storeInfo.todayIncome = 0
+				}
+			},
+			openSettleTip() {
+				this.settleTipShow = true
+			},
+			closeSettleTip() {
+				this.settleTipShow = false
 			},
 			async loadPendingCount() {
 				if (!this.loggedIn) {
@@ -419,12 +472,36 @@
 					this.badgeCount = 0
 				}
 			},
+			async loadMemberInfo() {
+				if (!this.loggedIn || this.isMerchant) {
+					this.memberInfo = { member: false, balance: 0 }
+					return
+				}
+				try {
+					const storeId = resolveViewStoreId(this.userProfile)
+					const data = await getStoreMemberMineApi(storeId)
+					this.memberInfo = {
+						member: !!data?.member,
+						balance: Number(data?.balance || 0)
+					}
+				} catch (error) {
+					console.error('获取会员信息失败', error)
+					this.memberInfo = { member: false, balance: 0 }
+				}
+			},
+			async goRecharge() {
+				if (!(await this.ensureOrdinaryUserPhone())) return
+				uni.navigateTo({
+					url: '/pages/personalCenter/recharge/index'
+				})
+			},
 			formatMoney(value) {
-				return Number(value).toFixed(2)
+				return Number(value || 0).toFixed(2)
 			},
 			resetGuestProfile() {
 				this.hasLogin = false
 				this.badgeCount = 0
+				this.memberInfo = { member: false, balance: 0 }
 				this.userProfile = {
 					id: null,
 					realName: '',
@@ -442,6 +519,8 @@
 					manuallyClosed: false,
 					openStatus: 'open'
 				}
+				this.storeInfo.pendingAmount = 0
+				this.storeInfo.todayIncome = 0
 			},
 			async handleLogin() {
 				if (this.loginLoading) return
@@ -453,7 +532,9 @@
 					this.userLoading = false
 					await this.initUserProfile()
 					if (this.isMerchant) {
-						this.loadWalletBalance()
+						await this.loadSettlementSummary()
+					} else {
+						await this.loadMemberInfo()
 					}
 					await this.loadPendingCount()
 				} finally {
@@ -494,7 +575,7 @@
 				this.userLoading = false
 				await this.initUserProfile()
 				if (this.isMerchant) {
-					this.loadWalletBalance()
+					await this.loadSettlementSummary()
 				}
 				await this.loadPendingCount()
 				uni.showToast({
@@ -798,6 +879,19 @@
 		border-left: 6rpx solid $primary;
 	}
 
+	.member-entry {
+		flex-shrink: 0;
+		max-width: 240rpx;
+		padding: 10rpx 20rpx;
+		border-radius: 28rpx;
+		background: rgba(0, 168, 150, 0.12);
+		color: #00a896;
+		font-size: 22rpx;
+		font-weight: 600;
+		line-height: 1.3;
+		text-align: center;
+	}
+
 	.account-row {
 		display: flex;
 		align-items: flex-start;
@@ -815,9 +909,34 @@
 		// padding-left: 40rpx;
 	}
 
+	.account-label-row {
+		display: flex;
+		align-items: center;
+		gap: 8rpx;
+	}
+
 	.account-label {
 		font-size: 24rpx;
 		color: #999;
+	}
+
+	.settle-help {
+		flex-shrink: 0;
+		width: 28rpx;
+		height: 28rpx;
+		border-radius: 50%;
+		border: 2rpx solid #c0c0c0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+	}
+
+	.settle-help-mark {
+		font-size: 18rpx;
+		color: #999;
+		line-height: 1;
+		font-weight: 600;
 	}
 
 	.account-value {
@@ -990,5 +1109,41 @@
 		font-size: 30rpx;
 		font-weight: 600;
 		border-radius: 44rpx;
+	}
+
+	.settle-tip-popup {
+		width: 520rpx;
+		padding: 48rpx 40rpx 40rpx;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.settle-tip-title {
+		font-size: 32rpx;
+		font-weight: 600;
+		color: #333;
+	}
+
+	.settle-tip-text {
+		margin-top: 24rpx;
+		font-size: 28rpx;
+		color: #666;
+		text-align: center;
+		line-height: 1.6;
+	}
+
+	.settle-tip-btn {
+		margin-top: 40rpx;
+		width: 100%;
+		height: 80rpx;
+		line-height: 80rpx;
+		text-align: center;
+		background-color: #00a896;
+		color: #fff;
+		font-size: 28rpx;
+		font-weight: 600;
+		border-radius: 40rpx;
 	}
 </style>

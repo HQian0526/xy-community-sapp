@@ -24,8 +24,10 @@
 
 			<view class="info-card">
 				<view class="price-row">
-					<text class="price-symbol">¥</text>
-					<text class="price-value">{{ formatMoney(product.price) }}</text>
+					<text v-if="product.hasMemberPrice" class="price-label">会员价：</text>
+					<text class="price-symbol" :class="{ 'price-symbol--member': product.hasMemberPrice }">¥</text>
+					<text class="price-value" :class="{ 'price-value--member': product.hasMemberPrice }">{{ formatMoney(product.price) }}</text>
+					<text v-if="product.hasMemberPrice" class="price-original">¥{{ formatMoney(product.originalPrice) }}</text>
 				</view>
 				<text class="product-name">{{ product.name }}</text>
 				<view class="meta-row">
@@ -82,6 +84,7 @@
 	import { resolveFileUrl } from '@/common/api/config.js'
 	import { addCartQuantity } from '../cart.js'
 	import { formatMoney } from '../checkout/mock.js'
+	import { pickDisplayPrice } from '@/common/api/mall/member.js'
 
 	function splitImages(raw) {
 		return String(raw || '')
@@ -93,6 +96,7 @@
 	function mapProduct(item, fallbackStoreId = '') {
 		if (!item) return null
 		const images = splitImages(item.productImg || item.icon)
+		const priced = pickDisplayPrice(item)
 		return {
 			id: String(item.productId || item.id),
 			productId: item.productId || item.id,
@@ -101,7 +105,10 @@
 			name: item.productName || item.name || '',
 			icon: images[0] || resolveFileUrl(item.icon || ''),
 			images: images.length ? images : ['/static/image-wrong.png'],
-			price: Number(item.price || 0),
+			price: priced.price,
+			originalPrice: priced.originalPrice,
+			memberPrice: priced.memberPrice,
+			hasMemberPrice: priced.hasMemberPrice,
 			has: item.productNum == null
 				? (item.has == null ? 0 : Number(item.has))
 				: Number(item.productNum),
@@ -296,6 +303,13 @@
 		align-items: baseline;
 	}
 
+	.price-label {
+		font-size: 26rpx;
+		color: #00a896;
+		font-weight: 600;
+		margin-right: 6rpx;
+	}
+
 	.price-symbol {
 		font-size: 28rpx;
 		font-weight: 600;
@@ -307,6 +321,18 @@
 		font-weight: 700;
 		color: #ff6034;
 		line-height: 1.1;
+	}
+
+	.price-symbol--member,
+	.price-value--member {
+		color: #00a896;
+	}
+
+	.price-original {
+		margin-left: 12rpx;
+		font-size: 26rpx;
+		color: #bbb;
+		text-decoration: line-through;
 	}
 
 	.product-name {

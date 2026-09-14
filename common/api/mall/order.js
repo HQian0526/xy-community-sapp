@@ -42,6 +42,15 @@ export function getMallFinanceLedgerApi(params) {
 }
 
 /**
+ * 商家待结算金额、今日收入
+ */
+export function getMallSettlementSummaryApi(params) {
+	return get('/mallOrder/settlementSummary', params || {}, {
+		showError: false
+	})
+}
+
+/**
  * 店铺订单金额流水（年/季/月/日）
  * 商家查本店；管理员须传 storeId
  */

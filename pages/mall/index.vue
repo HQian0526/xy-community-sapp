@@ -50,11 +50,13 @@
 							<view class="product-info">
 								<text class="product-name">{{ product.name }}</text>
 								<text class="product-desc">{{ product.remark || '' }}</text>
+								<text class="product-stock">库存 {{ product.has }}{{ product.unit }}</text>
 								<view class="product-bottom">
 									<view class="product-price">
-										<text class="price-symbol">¥</text>
-										<text class="price-value">{{ product.price }}</text>
-										<text class="price-stock">库存 {{ product.has }}{{ product.unit }}</text>
+										<text v-if="product.hasMemberPrice" class="price-label">会员价：</text>
+										<text class="price-symbol" :class="{ 'price-symbol--member': product.hasMemberPrice }">¥</text>
+										<text class="price-value" :class="{ 'price-value--member': product.hasMemberPrice }">{{ product.price }}</text>
+										<text v-if="product.hasMemberPrice" class="price-original">¥{{ product.originalPrice }}</text>
 									</view>
 									<view class="add-btn" @click.stop="handleAddCart(product)">
 										<up-icon name="plus" size="14" color="#fff"></up-icon>
@@ -107,11 +109,13 @@
 								<view class="product-info">
 									<text class="product-name">{{ product.name }}</text>
 									<text class="product-desc">{{ product.remark || '' }}</text>
+									<text class="product-stock">库存 {{ product.has }}{{ product.unit }}</text>
 									<view class="product-bottom">
 										<view class="product-price">
-											<text class="price-symbol">¥</text>
-											<text class="price-value">{{ product.price }}</text>
-											<text class="price-stock">库存 {{ product.has }}{{ product.unit }}</text>
+											<text v-if="product.hasMemberPrice" class="price-label">会员价：</text>
+											<text class="price-symbol" :class="{ 'price-symbol--member': product.hasMemberPrice }">¥</text>
+											<text class="price-value" :class="{ 'price-value--member': product.hasMemberPrice }">{{ product.price }}</text>
+											<text v-if="product.hasMemberPrice" class="price-original">¥{{ product.originalPrice }}</text>
 										</view>
 										<view class="add-btn" @click.stop="handleAddCart(product)">
 											<up-icon name="plus" size="14" color="#fff"></up-icon>
@@ -156,8 +160,10 @@
 								<text class="cart-item-name">{{ item.name }}</text>
 								<view class="cart-item-bottom">
 									<view class="cart-item-price">
-										<text class="price-symbol">¥</text>
-										<text class="price-value">{{ item.price }}</text>
+										<text v-if="item.hasMemberPrice" class="price-label">会员价：</text>
+										<text class="price-symbol" :class="{ 'price-symbol--member': item.hasMemberPrice }">¥</text>
+										<text class="price-value" :class="{ 'price-value--member': item.hasMemberPrice }">{{ item.price }}</text>
+										<text v-if="item.hasMemberPrice" class="price-original">¥{{ item.originalPrice }}</text>
 									</view>
 									<view class="cart-item-stepper">
 										<view class="stepper-btn" @click="handleMinusCart(item)">
@@ -265,9 +271,13 @@
 		getStoreCouponTemplatesApi,
 		receiveCouponApi
 	} from '@/common/api/mall/coupon.js'
+	import {
+		pickDisplayPrice
+	} from '@/common/api/mall/member.js'
 
 	/** 把接口商品字段转成列表展示结构 */
 	function mapProductItem(item, categoryName = '', fallbackStoreId = '') {
+		const priced = pickDisplayPrice(item)
 		return {
 			id: String(item.productId || item.id),
 			productId: item.productId || item.id,
@@ -275,8 +285,10 @@
 			storeId: item.storeId || fallbackStoreId || '',
 			name: item.productName || '',
 			icon: resolveFileUrl(item.productImg || ''),
-			price: Number(item.price || 0),
-			originalPrice: Number(item.price || 0),
+			price: priced.price,
+			originalPrice: priced.originalPrice,
+			memberPrice: priced.memberPrice,
+			hasMemberPrice: priced.hasMemberPrice,
 			has: item.productNum == null ? 0 : Number(item.productNum),
 			unit: '件',
 			saleNum: item.saleNum == null ? 0 : Number(item.saleNum),
@@ -1061,6 +1073,13 @@
 		overflow: hidden;
 	}
 
+	.product-stock {
+		margin-top: 6rpx;
+		font-size: 22rpx;
+		color: #999;
+		line-height: 1.4;
+	}
+
 	.product-bottom {
 		display: flex;
 		align-items: center;
@@ -1071,6 +1090,17 @@
 	.product-price {
 		display: flex;
 		align-items: baseline;
+		min-width: 0;
+		flex: 1;
+		margin-right: 12rpx;
+	}
+
+	.price-label {
+		font-size: 22rpx;
+		color: #00a896;
+		font-weight: 600;
+		margin-right: 4rpx;
+		flex-shrink: 0;
 	}
 
 	.price-symbol {
@@ -1085,11 +1115,9 @@
 		font-weight: 700;
 	}
 
-	.price-stock {
-		margin-left: 12rpx;
-		font-size: 22rpx;
-		color: #999;
-		font-weight: 400;
+	.price-symbol--member,
+	.price-value--member {
+		color: #00a896;
 	}
 
 	.price-original {

@@ -50,8 +50,9 @@
 						<text class="goods-name">{{ item.name }}</text>
 						<view class="goods-bottom">
 							<view class="goods-price">
-								<text class="price-symbol">¥</text>
-								<text class="price-value">{{ formatMoney(item.price) }}</text>
+								<text v-if="preview?.memberPriced && item.hasMemberPrice" class="price-label">会员价:</text>
+								<text class="price-symbol" :class="{ 'price-symbol--member': preview?.memberPriced && item.hasMemberPrice }">¥</text>
+								<text class="price-value" :class="{ 'price-value--member': preview?.memberPriced && item.hasMemberPrice }">{{ formatMoney(itemDisplayPrice(item)) }}</text>
 							</view>
 							<text class="goods-count">x{{ item.count }}</text>
 						</view>
@@ -83,6 +84,11 @@
 					<text class="summary-label">合计</text>
 					<text class="summary-total">¥{{ formatMoney(payTotal) }}</text>
 				</view>
+				<view v-if="preview?.memberPriced" class="member-tip member-tip--ok">本单已按会员价，将从余额全额扣除</view>
+				<view v-else-if="preview?.memberPriceUnavailable" class="member-tip">
+					<text>余额不足，本单将按原价微信支付。储值满额后可享会员价。</text>
+					<text class="member-tip-link" @click="goRecharge">去储值</text>
+				</view>
 			</view>
 
 			<view class="submit-bar">
@@ -90,7 +96,11 @@
 					<text class="submit-label">应付</text>
 					<text class="submit-amount">¥{{ formatMoney(payTotal) }}</text>
 				</view>
-				<view class="btn-success submit-btn" @click="handleSubmit">提交订单</view>
+				<view
+					class="btn-success submit-btn"
+					:class="{ disabled: !canSubmit }"
+					@click="handleSubmit"
+				>{{ submitBtnText }}</view>
 			</view>
 		</template>
 		<u-popup :show="couponShow" mode="bottom" round="16" closeOnClickOverlay @close="closeCouponPicker">
@@ -158,6 +168,8 @@
 				cartItems: [],
 				submitting: false,
 				preview: null,
+				previewLoading: true,
+				previewSeq: 0,
 				userCouponId: '',
 				couponCleared: false,
 				couponShow: false,
@@ -209,6 +221,14 @@
 					return Number(this.preview.payAmount)
 				}
 				return this.goodsTotal + this.deliveryFee
+			},
+			canSubmit() {
+				return !this.previewLoading && !!this.preview && !this.submitting
+			},
+			submitBtnText() {
+				if (this.submitting) return '提交中...'
+				if (this.previewLoading || !this.preview) return '计算中...'
+				return '提交订单'
 			}
 		},
 		async onLoad() {
@@ -217,6 +237,17 @@
 		},
 		methods: {
 			formatMoney,
+			itemDisplayPrice(item) {
+				if (this.preview?.memberPriced) {
+					return item?.price
+				}
+				return item?.originalPrice != null ? item.originalPrice : item?.price
+			},
+			goRecharge() {
+				uni.navigateTo({
+					url: '/pages/personalCenter/recharge/index'
+				})
+			},
 			resolveCheckoutStoreId() {
 				const item = this.cartItems.find((row) => row.storeId)
 				return item?.storeId || ''
@@ -277,6 +308,10 @@
 				return Number.isFinite(n) ? String(n) : '0'
 			},
 			openCouponPicker() {
+				if (this.previewLoading || !this.preview) {
+					uni.showToast({ title: '优惠计算中，请稍候', icon: 'none' })
+					return
+				}
 				this.couponShow = true
 			},
 			closeCouponPicker() {
@@ -295,12 +330,15 @@
 			},
 			async refreshPreview({ autoPick = false } = {}) {
 				if (!this.cartItems.length) return
+				const seq = ++this.previewSeq
+				this.previewLoading = true
 				try {
 					const payload = { items: this.buildCheckoutItems() }
 					if (this.userCouponId) {
 						payload.userCouponId = this.userCouponId
 					}
 					const data = await previewCheckoutApi(payload)
+					if (seq !== this.previewSeq) return
 					this.preview = data || null
 					if (data?.deliveryFee != null) {
 						this.deliveryFee = Number(data.deliveryFee)
@@ -316,10 +354,17 @@
 						if (best?.id) {
 							this.userCouponId = String(best.id)
 							await this.refreshPreview()
+							return
 						}
 					}
 				} catch (error) {
+					if (seq !== this.previewSeq) return
 					console.error('结算预览失败', error)
+					this.preview = null
+				} finally {
+					if (seq === this.previewSeq) {
+						this.previewLoading = false
+					}
 				}
 			},
 			async doPayFlow() {
@@ -329,7 +374,10 @@
 					throw new Error('下单失败：未返回订单号')
 				}
 
-				if (payParams.mock) {
+				const alreadyPaid = Number(payParams?.payStatus) === 1 || Number(payParams?.payChannel) === 2
+				if (alreadyPaid) {
+					// 余额全额支付，无需微信
+				} else if (payParams.mock) {
 					await mockConfirmMallPayApi(orderNo)
 				} else {
 					try {
@@ -361,6 +409,10 @@
 			},
 			async handleSubmit() {
 				if (this.submitting) return
+				if (!this.canSubmit) {
+					uni.showToast({ title: '优惠计算中，请稍候', icon: 'none' })
+					return
+				}
 				if (!(await requireLogin({ force: true }))) return
 				if (!this.cartItems.length) {
 					uni.showToast({ title: '购物车是空的', icon: 'none' })
@@ -497,6 +549,13 @@
 		align-items: baseline;
 	}
 
+	.price-label {
+		font-size: 22rpx;
+		color: #00a896;
+		font-weight: 600;
+		margin-right: 4rpx;
+	}
+
 	.price-symbol {
 		font-size: 22rpx;
 		color: #ff6034;
@@ -507,6 +566,32 @@
 		font-size: 30rpx;
 		color: #ff6034;
 		font-weight: 700;
+	}
+
+	.price-symbol--member,
+	.price-value--member {
+		color: #00a896;
+	}
+
+	.member-tip {
+		margin-top: 16rpx;
+		padding: 16rpx 18rpx;
+		border-radius: 12rpx;
+		background: #fff7e8;
+		color: #b26a00;
+		font-size: 24rpx;
+		line-height: 1.5;
+	}
+
+	.member-tip--ok {
+		background: rgba(0, 168, 150, 0.08);
+		color: #00a896;
+	}
+
+	.member-tip-link {
+		margin-left: 12rpx;
+		color: #00a896;
+		font-weight: 600;
 	}
 
 	.goods-count {
@@ -596,6 +681,10 @@
 		padding: 0 48rpx;
 		font-size: 30rpx;
 		font-weight: 600;
+	}
+
+	.submit-btn.disabled {
+		opacity: 0.45;
 	}
 
 	.coupon-popup {

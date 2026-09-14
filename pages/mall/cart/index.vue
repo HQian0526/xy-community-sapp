@@ -24,8 +24,10 @@
 						<text v-if="item.offShelf" class="cart-invalid">已下架</text>
 						<view class="cart-bottom">
 							<view class="cart-price">
-								<text class="price-symbol">¥</text>
-								<text class="price-value">{{ formatMoney(item.price) }}</text>
+								<text v-if="item.hasMemberPrice" class="price-label">会员价:</text>
+								<text class="price-symbol" :class="{ 'price-symbol--member': item.hasMemberPrice }">¥</text>
+								<text class="price-value" :class="{ 'price-value--member': item.hasMemberPrice }">{{ formatMoney(item.price) }}</text>
+								<text v-if="item.hasMemberPrice" class="price-original">¥{{ formatMoney(item.originalPrice) }}</text>
 							</view>
 							<view class="stepper" @click.stop>
 								<view class="stepper-btn" @click="handleMinus(item)">
@@ -74,6 +76,7 @@
 	} from '@/common/api/personalCenter/store.js'
 	import { resolveFileUrl } from '@/common/api/config.js'
 	import { formatMoney } from '../checkout/mock.js'
+	import { pickDisplayPrice } from '@/common/api/mall/member.js'
 	import { getActivePromoApi, pickPromoDiscount } from '@/common/api/mall/promo.js'
 	import {
 		getCartMap,
@@ -215,7 +218,7 @@
 					rememberCartProduct({
 						...item,
 						name: remote?.productName || item.name,
-						price: remote ? Number(remote.price || 0) : item.price,
+						...pickDisplayPrice(remote || item),
 						icon: remote ? firstImage(remote.productImg) || item.icon : item.icon,
 						has,
 						offShelf,
@@ -407,6 +410,13 @@
 		align-items: baseline;
 	}
 
+	.price-label {
+		font-size: 22rpx;
+		color: #00a896;
+		font-weight: 600;
+		margin-right: 4rpx;
+	}
+
 	.price-symbol {
 		font-size: 22rpx;
 		color: #ff6034;
@@ -417,6 +427,18 @@
 		font-size: 32rpx;
 		color: #ff6034;
 		font-weight: 700;
+	}
+
+	.price-symbol--member,
+	.price-value--member {
+		color: #00a896;
+	}
+
+	.price-original {
+		margin-left: 8rpx;
+		font-size: 22rpx;
+		color: #bbb;
+		text-decoration: line-through;
 	}
 
 	.stepper {
