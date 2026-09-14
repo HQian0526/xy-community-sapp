@@ -2,6 +2,11 @@
 	<view class="personal-page">
 		<view class="header-bg"></view>
 
+		<view v-if="pageLoading" class="page-loading">
+			<up-loading-icon color="#00a896"></up-loading-icon>
+			<text class="loading-text">加载中...</text>
+		</view>
+		<template v-else>
 		<view class="profile-section">
 			<view class="avatar-wrap" @click="onHeaderTap">
 				<image class="avatar-img" :src="headerAvatar" mode="aspectFill" />
@@ -130,6 +135,7 @@
 		</view>
 
 		<view class="flex-center invite" @click="goJoinApply">想为您的店铺引入小程序？点此申请</view>
+		</template>
 
 		<!-- #ifdef MP-WEIXIN -->
 		<u-popup :show="sharePopupShow" mode="center" round="16" closeOnClickOverlay @close="closeSharePopup">
@@ -244,6 +250,7 @@
 				contactStorePhone: '',
 				contactStoreLoading: false,
 				userLoading: false,
+				pageLoading: true,
 				loginLoading: false,
 				hasLogin: false,
 			}
@@ -299,12 +306,16 @@
 		},
 		async onShow() {
 			applyLaunchQuery()
-			await waitBootstrapAuth()
-			await this.initUserProfile()
-			if (this.isMerchant) {
-				this.loadWalletBalance()
+			try {
+				await waitBootstrapAuth()
+				await this.initUserProfile()
+				if (this.isMerchant) {
+					this.loadWalletBalance()
+				}
+				await this.loadPendingCount()
+			} finally {
+				this.pageLoading = false
 			}
-			await this.loadPendingCount()
 		},
 		methods: {
 			async initUserProfile() {
@@ -658,6 +669,19 @@
 		min-height: 100vh;
 		background-color: #f5f5f5;
 		padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
+	}
+
+	.page-loading {
+		padding-top: 240rpx;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 16rpx;
+	}
+
+	.loading-text {
+		font-size: 26rpx;
+		color: #999;
 	}
 
 	.header-bg {

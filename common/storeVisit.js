@@ -1,5 +1,6 @@
 import {
-	bindStoreId as defaultBindStoreId
+	bindStoreId as defaultBindStoreId,
+	lockStoreId
 } from '@/config/index.js'
 
 const IDENTITY_MERCHANT = 2
@@ -181,6 +182,9 @@ export function switchToOwnStore() {
 }
 
 export function applyLaunchQuery(query, meta = {}) {
+	if (lockStoreId) {
+		return ''
+	}
 	const explicitId = parseIdFromInput(query)
 	if (lockOwnStore) {
 		const wxScene = parseWxLaunchScene(query)
@@ -219,8 +223,12 @@ export function getOwnMerchantStoreId() {
 
 /**
  * 逛店 / 其他业务用的店铺：扫码入参 > 用户 bindStoreId > 项目默认店铺
+ * 买断包 lockStoreId=true 时固定本包店铺。
  */
 export function resolveViewStoreId(user) {
+	if (lockStoreId) {
+		return String(defaultBindStoreId)
+	}
 	const entry = getEntryStoreId()
 	if (entry) return entry
 	if (user && Number(user.identityType) === IDENTITY_MERCHANT) {
@@ -236,6 +244,9 @@ export function resolveViewStoreId(user) {
  * 商家扫了别人店的码：其他业务、我的按普通用户界面展示
  */
 export function shouldForceOrdinaryUi(user) {
+	if (lockStoreId) {
+		return false
+	}
 	if (!user || Number(user.identityType) !== IDENTITY_MERCHANT) {
 		return false
 	}

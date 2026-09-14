@@ -2,14 +2,33 @@ import {
 	post
 } from './request.js'
 
+function getMiniProgramAppId() {
+	try {
+		const account =
+			typeof wx !== 'undefined' && typeof wx.getAccountInfoSync === 'function'
+				? wx.getAccountInfoSync()
+				: typeof uni !== 'undefined' && typeof uni.getAccountInfoSync === 'function'
+					? uni.getAccountInfoSync()
+					: null
+		return account?.miniProgram?.appId || ''
+	} catch (e) {
+		return ''
+	}
+}
+
 /**
  * 微信小程序登录：用 uni.login 拿到的 code 换系统 JWT
  * @param {string} code
  */
 export function wxLoginApi(code) {
-	return post('/wx/login', {
+	const appId = getMiniProgramAppId()
+	const payload = {
 		code
-	}, {
+	}
+	if (appId) {
+		payload.appId = appId
+	}
+	return post('/wx/login', payload, {
 		auth: false,
 		showError: false
 	})

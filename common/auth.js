@@ -7,7 +7,8 @@ import {
 	put
 } from '@/common/api/request.js'
 import {
-	bindStoreId as defaultBindStoreId
+	bindStoreId as defaultBindStoreId,
+	lockStoreId
 } from '@/config/index.js'
 import {
 	getEntryStoreId
@@ -95,8 +96,10 @@ async function persistBindStore(user) {
 	if (!user || !isOrdinaryUser(user)) {
 		return user
 	}
-	const entry = getEntryStoreId()
-	const target = entry || (isBindStoreIdEmpty(user.bindStoreId) ? String(defaultBindStoreId) : '')
+	const entry = lockStoreId ? '' : getEntryStoreId()
+	const target = lockStoreId
+		? String(defaultBindStoreId)
+		: entry || (isBindStoreIdEmpty(user.bindStoreId) ? String(defaultBindStoreId) : '')
 	if (!target) {
 		return user
 	}

@@ -1,6 +1,13 @@
 <template>
 	<view class="mall-root">
 		<view class="mall-page">
+			<view v-if="showPromoBar" class="promo-bar">
+				<view class="promo-bar-main">
+					<up-icon name="volume" size="16" color="#00a896"></up-icon>
+					<text class="promo-bar-text">{{ promoBarLabel }}</text>
+				</view>
+				<text v-if="couponTemplates.length" class="promo-bar-action" @click="openCouponPopup">领券</text>
+			</view>
 			<view class="search-wrap">
 				<up-search
 					v-model="searchKeyword"
@@ -10,17 +17,15 @@
 					:showAction="false"
 					@clear="handleSearchClear"
 				></up-search>
-				<view v-if="showPromoBar" class="promo-bar">
-					<view class="promo-bar-main">
-						<up-icon name="volume" size="16" color="#00a896"></up-icon>
-						<text class="promo-bar-text">{{ promoBarLabel }}</text>
-					</view>
-					<text v-if="couponTemplates.length" class="promo-bar-action" @click="openCouponPopup">领券</text>
-				</view>
 			</view>
 
 			<view v-if="isSearching" class="search-result-wrap">
 				<scroll-view scroll-y class="search-result-scroll" :style="{ height: contentHeight }">
+					<view v-if="searchPending" class="page-loading">
+						<up-loading-icon color="#00a896"></up-loading-icon>
+						<text class="loading-text">加载中...</text>
+					</view>
+					<template v-else>
 					<view class="search-result-header">
 						<text class="search-result-tip">找到 {{ searchResults.length }} 件相关商品</text>
 					</view>
@@ -58,7 +63,17 @@
 							</view>
 						</view>
 					</view>
+					</template>
 				</scroll-view>
+			</view>
+
+			<view v-else-if="mallPageLoading" class="page-loading">
+				<up-loading-icon color="#00a896"></up-loading-icon>
+				<text class="loading-text">加载中...</text>
+			</view>
+
+			<view v-else-if="!categoryList.length" class="page-loading">
+				<u-empty text="店家暂未上架商品" mode="list" marginTop="60"></u-empty>
 			</view>
 
 			<view v-else class="cate-tab-wrap">
@@ -72,12 +87,13 @@
 									item.id === categoryList[categoryList.length - 1]?.id
 							}"
 						>
-							<u-empty
-								v-if="item.productsLoading && !(item.children && item.children.length)"
-								text="商品加载中"
-								mode="list"
-								marginTop="60"
-							></u-empty>
+							<view
+								v-if="!item.productsLoaded && !(item.children && item.children.length)"
+								class="cate-loading"
+							>
+								<up-loading-icon color="#00a896"></up-loading-icon>
+								<text class="loading-text">加载中...</text>
+							</view>
 							<u-empty
 								v-else-if="item.productsLoaded && !(item.children && item.children.length)"
 								text="该分类暂无商品"
@@ -277,7 +293,7 @@
 		data() {
 			return {
 				categoryList: [],
-				categoryLoading: false,
+				categoryLoading: true,
 				pageBootstrapping: false,
 				mallRefreshSeq: 0,
 				currentCate: 0,
@@ -332,6 +348,16 @@
 			/** 是否处于搜索态（有搜索关键词） */
 			isSearching() {
 				return !!String(this.searchKeyword || '').trim()
+			},
+			/** 分类列表尚未返回，避免空态闪一下 */
+			mallPageLoading() {
+				return !this.categoryList.length && (this.categoryLoading || this.pageBootstrapping)
+			},
+			/** 搜索时尚有分类商品未拉完，且还没有匹配结果 */
+			searchPending() {
+				if (this.searchResults.length) return false
+				if (this.categoryLoading || this.pageBootstrapping) return true
+				return this.categoryList.some((item) => !item.productsLoaded)
 			},
 			/** 按关键词从已加载分类中筛出的商品 */
 			searchResults() {
@@ -740,14 +766,30 @@
 
 	.search-wrap {
 		flex-shrink: 0;
-		padding: 0 24rpx 16rpx;
+		padding: 0 16rpx 16rpx;
+	}
+
+	.page-loading,
+	.cate-loading {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: flex-start;
+		padding-top: 160rpx;
+		gap: 16rpx;
+	}
+
+	.loading-text {
+		font-size: 26rpx;
+		color: #999;
 	}
 
 	.promo-bar {
-		margin-top: 16rpx;
-		padding: 16rpx 20rpx;
+		flex-shrink: 0;
+		margin-bottom: 16rpx;
+		padding: 16rpx 24rpx;
 		background: linear-gradient(90deg, #e8f8f5 0%, #fff 100%);
-		border-radius: 12rpx;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -1098,7 +1140,6 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		margin-top: -20rpx;
 	}
 
 	.cart-badge {

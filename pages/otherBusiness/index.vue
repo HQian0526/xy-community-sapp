@@ -13,7 +13,11 @@
 		</view>
 
 		<view class="content-wrap">
-			<view v-if="businessList.length" class="business-list">
+			<view v-if="listLoading && !businessList.length" class="empty-wrap">
+				<up-loading-icon color="#00a896"></up-loading-icon>
+				<text class="loading-text">加载中...</text>
+			</view>
+			<view v-else-if="businessList.length" class="business-list">
 				<view v-for="item in businessList" :key="item.id" class="business-card">
 					<view class="card-main">
 						<view class="business-icon">
@@ -76,6 +80,21 @@
 				</view>
 			</u-popup>
 		</view>
+		<u-popup
+			:show="contactStoreShow"
+			mode="bottom"
+			round="16"
+			closeOnClickOverlay
+			@close="closeContactStore"
+		>
+			<view class="contact-store-popup">
+				<view class="contact-store-handle"></view>
+				<text class="contact-store-title">联系店家</text>
+				<text class="contact-store-name">{{ contactStoreName || '店铺' }}</text>
+				<text class="contact-store-phone">{{ contactStorePhone }}</text>
+				<view class="contact-store-btn" @click="handleCallStore">拨打电话</view>
+			</view>
+		</u-popup>
 		<bind-phone-popup ref="bindPhonePopup" />
 	</view>
 </template>
@@ -136,11 +155,16 @@
 					avatar: ''
 				},
 				headerLoading: false,
+				listLoading: true,
 				businessList: [],
 				payPopupShow: false,
 				currentItem: null,
 				payCount: 1,
-				paying: false
+				paying: false,
+				contactStoreShow: false,
+				contactStoreName: '',
+				contactStorePhone: '',
+				contactStoreLoading: false
 			}
 		},
 		computed: {
@@ -196,6 +220,7 @@
 		methods: {
 			formatMoney,
 			async loadBusinessList() {
+				if (!this.businessList.length) this.listLoading = true
 				try {
 					const params = {}
 					const storeId = this.queryStoreId || bindStoreId
@@ -208,6 +233,8 @@
 				} catch (error) {
 					console.error('获取其他业务列表失败', error)
 					this.businessList = []
+				} finally {
+					this.listLoading = false
 				}
 			},
 			async loadHeaderProfile() {
@@ -325,9 +352,66 @@
 
 				this.paying = true
 			},
+			normalizePhone(value) {
+				return String(value || '').replace(/\s+/g, '').trim()
+			},
 			async handleContact() {
-				uni.navigateTo({
-					url: '/pages/personalCenter/contactService/index'
+				if (this.contactStoreLoading) return
+				this.contactStoreLoading = true
+				uni.showLoading({ title: '加载中', mask: true })
+				try {
+					const storeId = resolveViewStoreId(isLoggedIn() ? this.userProfile : null)
+					const data = await getStoreListApi({
+						storeId,
+						pageNum: 1,
+						pageSize: 1
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					const store = list[0]
+					const phone = this.normalizePhone(store?.identityPhone)
+					if (!store || !phone) {
+						uni.showToast({
+							title: '暂未提供联系电话',
+							icon: 'none'
+						})
+						return
+					}
+					this.contactStoreName = store.storeName || this.storeProfile.storeName || '店铺'
+					this.contactStorePhone = phone
+					this.contactStoreShow = true
+				} catch (error) {
+					console.error('获取店家电话失败', error)
+					uni.showToast({
+						title: '暂时无法联系店家',
+						icon: 'none'
+					})
+				} finally {
+					this.contactStoreLoading = false
+					uni.hideLoading()
+				}
+			},
+			closeContactStore() {
+				this.contactStoreShow = false
+			},
+			handleCallStore() {
+				const phone = this.normalizePhone(this.contactStorePhone)
+				if (!phone) {
+					uni.showToast({
+						title: '暂未提供联系电话',
+						icon: 'none'
+					})
+					return
+				}
+				uni.makePhoneCall({
+					phoneNumber: phone,
+					fail: (err) => {
+						const msg = String(err?.errMsg || '')
+						if (msg.includes('cancel') || msg.includes('取消')) return
+						uni.showToast({
+							title: '拨打失败',
+							icon: 'none'
+						})
+					}
 				})
 			}
 		}
@@ -613,5 +697,62 @@
 
 	.empty-wrap {
 		padding-top: 160rpx;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 16rpx;
+	}
+
+	.loading-text {
+		font-size: 26rpx;
+		color: #999;
+	}
+
+	.contact-store-popup {
+		padding: 16rpx 40rpx calc(40rpx + env(safe-area-inset-bottom));
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.contact-store-handle {
+		width: 64rpx;
+		height: 8rpx;
+		border-radius: 4rpx;
+		background-color: #ddd;
+		margin-bottom: 24rpx;
+	}
+
+	.contact-store-title {
+		font-size: 32rpx;
+		font-weight: 600;
+		color: #333;
+	}
+
+	.contact-store-name {
+		margin-top: 20rpx;
+		font-size: 28rpx;
+		color: #666;
+	}
+
+	.contact-store-phone {
+		margin-top: 12rpx;
+		font-size: 40rpx;
+		font-weight: 700;
+		color: #333;
+		letter-spacing: 2rpx;
+	}
+
+	.contact-store-btn {
+		margin-top: 40rpx;
+		width: 100%;
+		height: 88rpx;
+		line-height: 88rpx;
+		text-align: center;
+		background-color: #00a896;
+		color: #fff;
+		font-size: 30rpx;
+		font-weight: 600;
+		border-radius: 44rpx;
 	}
 </style>
