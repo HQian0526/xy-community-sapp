@@ -11,7 +11,9 @@ import {
 	lockStoreId
 } from '@/config/index.js'
 import {
-	getEntryStoreId
+	getEntryStoreId,
+	getRememberedStoreId,
+	rememberViewStoreId
 } from '@/common/storeVisit.js'
 import {
 	getBindPhoneUI,
@@ -89,7 +91,7 @@ function isOrdinaryUser(user) {
 /**
  * 普通用户绑定店铺：
  * - 扫码带了 storeId：回写为扫到的店（换店即更新）
- * - 从未绑定：回写项目默认店
+ * - 从未绑定：优先用本地记住的扫码店，否则项目默认店
  * 商家身份一律不改 bindStoreId，避免扫别人店把绑定改掉。
  */
 async function persistBindStore(user) {
@@ -97,12 +99,16 @@ async function persistBindStore(user) {
 		return user
 	}
 	const entry = lockStoreId ? '' : getEntryStoreId()
+	const remembered = lockStoreId ? '' : getRememberedStoreId()
 	const target = lockStoreId
 		? String(defaultBindStoreId)
-		: entry || (isBindStoreIdEmpty(user.bindStoreId) ? String(defaultBindStoreId) : '')
+		: entry || (isBindStoreIdEmpty(user.bindStoreId)
+			? (remembered || String(defaultBindStoreId))
+			: '')
 	if (!target) {
 		return user
 	}
+	rememberViewStoreId(target)
 	const current = isBindStoreIdEmpty(user.bindStoreId) ? '' : String(user.bindStoreId).trim()
 	if (current === String(target).trim()) {
 		return user

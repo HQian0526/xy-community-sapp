@@ -92,6 +92,40 @@ export function getStoreListApi(params) {
 	return get('/store/findStore', params)
 }
 
+export function parseStoreExpireDate(storeTime) {
+	const raw = String(storeTime == null ? '' : storeTime).trim()
+	if (!raw) return ''
+	const iso = raw.match(/(\d{4}-\d{2}-\d{2})/)
+	if (iso) return iso[1]
+	const slash = raw.match(/(\d{4})\/(\d{2})\/(\d{2})/)
+	if (slash) return `${slash[1]}-${slash[2]}-${slash[3]}`
+	const ms = Date.parse(raw)
+	if (Number.isNaN(ms)) return ''
+	return new Intl.DateTimeFormat('en-CA', {
+		timeZone: 'Asia/Shanghai'
+	}).format(new Date(ms))
+}
+
+export function shanghaiToday() {
+	return new Intl.DateTimeFormat('en-CA', {
+		timeZone: 'Asia/Shanghai'
+	}).format(new Date())
+}
+
+export function isStoreRentType(store) {
+	return Number(store?.storeType) === 2
+}
+
+/** 租用且今天已过到期日（到期当天仍有效） */
+export function isStoreSubscriptionExpired(store) {
+	if (!store) return false
+	if (store.subscriptionExpired === true) return true
+	if (!isStoreRentType(store)) return false
+	const expireDate = parseStoreExpireDate(store.storeTime)
+	if (!expireDate) return false
+	return shanghaiToday() > expireDate
+}
+
 export function parseDeliveryFee(store) {
 	const n = Number(store?.deliveryFee)
 	if (!Number.isFinite(n) || n < 0) return 0
@@ -127,6 +161,16 @@ export function updateBusinessHoursApi(data) {
 	return put('/store/updateBusinessHours', data)
 }
 
+export const STORE_EXPIRED_ORDER_MSG = '店铺已到期，店家续费后恢复下单'
+
+export function showStoreExpiredOrderToast() {
+	uni.showToast({
+		title: STORE_EXPIRED_ORDER_MSG,
+		icon: 'none',
+		duration: 2500
+	})
+}
+
 /**
  * 下单前实时校验店铺是否营业（走 /store/findStore，不读本地缓存）
  * @param {string|number} [storeId]
@@ -146,6 +190,14 @@ export async function assertStoreOpenForOrder(storeId) {
 		const store = storeId
 			? (list.find((item) => String(item.storeId) === String(storeId)) || list[0])
 			: list[0]
+		if (isStoreSubscriptionExpired(store)) {
+			showStoreExpiredOrderToast()
+			return {
+				ok: false,
+				reason: 'expired',
+				store
+			}
+		}
 		if (isManuallyClosed(store)) {
 			const until = store.closedUntilText
 			uni.showToast({

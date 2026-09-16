@@ -97,7 +97,7 @@
 					<text class="submit-amount">¥{{ formatMoney(payTotal) }}</text>
 				</view>
 				<view
-					class="btn-success submit-btn"
+					class="submit-btn"
 					:class="{ disabled: !canSubmit }"
 					@click="handleSubmit"
 				>{{ submitBtnText }}</view>
@@ -143,7 +143,7 @@
 <script>
 	import { checkoutInfo, getDefaultContact, formatMoney } from './mock.js'
 	import { getCartItems, getCartTotal, clearCartMap } from '../cart.js'
-	import { assertStoreOpenForOrder, getStoreListApi, parseDeliveryFee } from '@/common/api/personalCenter/store.js'
+	import { assertStoreOpenForOrder, getStoreListApi, isStoreSubscriptionExpired, parseDeliveryFee, showStoreExpiredOrderToast } from '@/common/api/personalCenter/store.js'
 	import { requireLogin, getUserInfo } from '@/common/auth.js'
 	import {
 		checkoutAndPayApi,
@@ -252,7 +252,7 @@
 				const item = this.cartItems.find((row) => row.storeId)
 				return item?.storeId || ''
 			},
-			loadCheckoutData() {
+			async loadCheckoutData() {
 				this.cartItems = getCartItems()
 				if (!this.cartItems.length) return
 				const defaults = getDefaultContact()
@@ -262,14 +262,20 @@
 					...defaults,
 					contact: phone || defaults.contact || ''
 				}
-				this.loadDeliveryFee()
+				const store = await this.loadDeliveryFee()
+				if (isStoreSubscriptionExpired(store)) {
+					clearCartMap()
+					this.cartItems = []
+					showStoreExpiredOrderToast()
+					return
+				}
 				this.refreshPreview({ autoPick: true })
 			},
 			async loadDeliveryFee() {
 				const storeId = this.resolveCheckoutStoreId()
 				if (!storeId) {
 					this.deliveryFee = 0
-					return
+					return null
 				}
 				try {
 					const data = await getStoreListApi({
@@ -278,10 +284,13 @@
 						pageSize: 1
 					})
 					const list = Array.isArray(data) ? data : (data?.list || [])
-					this.deliveryFee = parseDeliveryFee(list[0])
+					const store = list[0]
+					this.deliveryFee = parseDeliveryFee(store)
+					return store || null
 				} catch (error) {
 					console.error('获取店铺配送费失败', error)
 					this.deliveryFee = 0
+					return null
 				}
 			},
 			buildCheckoutItems() {
@@ -425,7 +434,13 @@
 				}
 
 				const check = await assertStoreOpenForOrder(this.resolveCheckoutStoreId())
-				if (!check.ok) return
+				if (!check.ok) {
+					if (check.reason === 'expired') {
+						clearCartMap()
+						this.cartItems = []
+					}
+					return
+				}
 
 				uni.showModal({
 					title: '确认下单',
@@ -433,7 +448,13 @@
 					success: async (res) => {
 						if (!res.confirm) return
 						const recheck = await assertStoreOpenForOrder(this.resolveCheckoutStoreId())
-						if (!recheck.ok) return
+						if (!recheck.ok) {
+							if (recheck.reason === 'expired') {
+								clearCartMap()
+								this.cartItems = []
+							}
+							return
+						}
 						this.submitting = true
 						try {
 							await this.doPayFlow()
@@ -681,6 +702,10 @@
 		padding: 0 48rpx;
 		font-size: 30rpx;
 		font-weight: 600;
+		color: #fff;
+		background-color: $primary;
+		border-radius: 40rpx;
+		text-align: center;
 	}
 
 	.submit-btn.disabled {

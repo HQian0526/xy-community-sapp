@@ -7,6 +7,13 @@
 			<text class="loading-text">加载中...</text>
 		</view>
 		<template v-else>
+		<view v-if="showRentExpireNotice" class="rent-notice-wrap">
+			<up-notice-bar
+				:text="rentExpireNoticeText"
+				direction="row"
+				icon="volume"
+			></up-notice-bar>
+		</view>
 		<view class="profile-section">
 			<view class="avatar-wrap" @click="onHeaderTap">
 				<image class="avatar-img" :src="headerAvatar" mode="aspectFill" />
@@ -91,7 +98,7 @@
 				<view class="service-card">
 					<text class="section-title">商家服务</text>
 					<up-grid :col="4" :border="false">
-						<up-grid-item v-for="item in ownerList" :key="item.key" :name="item.key"
+						<up-grid-item v-for="item in displayOwnerList" :key="item.key" :name="item.key"
 							@click="handleServiceClick(item)">
 							<view class="service-item">
 								<view class="service-icon-wrap">
@@ -218,7 +225,10 @@
 	import {
 		getStoreListApi,
 		getStoreOpenLabel,
-		isStorePaused
+		isStorePaused,
+		isStoreRentType,
+		isStoreSubscriptionExpired,
+		parseStoreExpireDate
 	} from '@/common/api/personalCenter/store.js'
 	import {
 		resolveFileUrl
@@ -252,7 +262,8 @@
 					realName: '',
 					phone: '',
 					avatar: '',
-					identityType: IDENTITY_USER
+					identityType: IDENTITY_USER,
+					storeExpired: false
 				},
 				storeProfile: {
 					id: null,
@@ -262,7 +273,10 @@
 					storeStatus: null,
 					acceptingOrders: true,
 					manuallyClosed: false,
-					openStatus: 'open'
+					openStatus: 'open',
+					subscriptionExpired: false,
+					storeType: null,
+					storeTime: ''
 				},
 				accountList,
 				serviceList,
@@ -330,6 +344,31 @@
 				}
 				return this.serviceList
 			},
+			storeExpired() {
+				return isStoreSubscriptionExpired(this.storeProfile)
+					|| this.userProfile.storeExpired === true
+			},
+			displayOwnerList() {
+				const list = this.ownerList || []
+				if (this.storeExpired) {
+					return list.filter((item) => item.key === 'help')
+				}
+				return list
+			},
+			rentExpireDate() {
+				return parseStoreExpireDate(this.storeProfile.storeTime)
+			},
+			showRentExpireNotice() {
+				return this.isMerchant
+					&& isStoreRentType(this.storeProfile)
+					&& !!this.rentExpireDate
+			},
+			rentExpireNoticeText() {
+				if (this.storeExpired) {
+					return `您的店铺已于${this.rentExpireDate}到期，请联系客服开通永久权限`
+				}
+				return `您的店铺将于${this.rentExpireDate}到期，请联系客服开通永久权限`
+			},
 			memberEntryText() {
 				if (this.memberInfo.member) {
 					return `会员余额：¥${formatMemberBalance(this.memberInfo.balance)}`
@@ -378,7 +417,10 @@
 							storeStatus: null,
 							acceptingOrders: true,
 							manuallyClosed: false,
-							openStatus: 'open'
+							openStatus: 'open',
+							subscriptionExpired: false,
+							storeType: null,
+							storeTime: ''
 						}
 					}
 				} finally {
@@ -395,7 +437,8 @@
 						phone: user.phone || '',
 						avatar: resolveFileUrl(user.avatar || ''),
 						identityType: user.identityType == null ? IDENTITY_USER : Number(user.identityType),
-						bindStoreId: user.bindStoreId
+						bindStoreId: user.bindStoreId,
+						storeExpired: user.storeExpired === true
 					}
 				} catch (error) {
 					console.error('获取用户信息失败', error)
@@ -417,7 +460,10 @@
 							storeStatus: null,
 							acceptingOrders: true,
 							manuallyClosed: false,
-							openStatus: 'open'
+							openStatus: 'open',
+							subscriptionExpired: false,
+							storeType: null,
+							storeTime: ''
 						}
 						return
 					}
@@ -429,7 +475,10 @@
 						storeStatus: store.storeStatus == null ? null : Number(store.storeStatus),
 						acceptingOrders: store.acceptingOrders !== false,
 						manuallyClosed: store.manuallyClosed === true,
-						openStatus: store.openStatus || null
+						openStatus: store.openStatus || null,
+						subscriptionExpired: store.subscriptionExpired === true,
+						storeType: store.storeType == null ? null : Number(store.storeType),
+						storeTime: store.storeTime || ''
 					}
 					if (store.storeId) {
 						setOwnMerchantStoreId(store.storeId)
@@ -507,7 +556,8 @@
 					realName: '',
 					phone: '',
 					avatar: '',
-					identityType: IDENTITY_USER
+					identityType: IDENTITY_USER,
+					storeExpired: false
 				}
 				this.storeProfile = {
 					id: null,
@@ -517,7 +567,10 @@
 					storeStatus: null,
 					acceptingOrders: true,
 					manuallyClosed: false,
-					openStatus: 'open'
+					openStatus: 'open',
+					subscriptionExpired: false,
+					storeType: null,
+					storeTime: ''
 				}
 				this.storeInfo.pendingAmount = 0
 				this.storeInfo.todayIncome = 0
@@ -592,6 +645,7 @@
 					this.handleBindPhone()
 					return
 				}
+				if (this.storeExpired) return
 				this.goStoreProfile()
 			},
 			isPublicService(item) {
@@ -646,13 +700,13 @@
 				})
 			},
 			goStoreProfile() {
-				if (!this.isMerchant) return
+				if (!this.isMerchant || this.storeExpired) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/storeProfile/index'
 				})
 			},
 			async goBusinessStatus() {
-				if (!this.isMerchant) return
+				if (!this.isMerchant || this.storeExpired) return
 				if (!(await requireLogin({ force: true }))) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/businessStatus/index'
@@ -772,6 +826,13 @@
 		right: 0;
 		height: 320rpx;
 		background: linear-gradient(180deg, #e8f8f6 0%, #f2fbfb 60%, #f5f5f5 100%);
+	}
+
+	.rent-notice-wrap {
+		position: relative;
+		margin: 16rpx 24rpx 0;
+		border-radius: 12rpx;
+		overflow: hidden;
 	}
 
 	.profile-section {

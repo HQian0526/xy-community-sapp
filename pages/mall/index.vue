@@ -253,6 +253,7 @@
 	import {
 		assertStoreOpenForOrder,
 		getStoreListApi,
+		isStoreSubscriptionExpired,
 		parseDeliveryFee
 	} from '@/common/api/personalCenter/store.js'
 	import {
@@ -433,9 +434,19 @@
 					this.currentCate = 0
 					this.categoryList = []
 				}
+				const expired = await this.loadStoreDeliveryFee()
+				if (seq !== this.mallRefreshSeq) return
+				if (expired) {
+					this.categoryList = []
+					this.categoryLoading = false
+					this.activePromo = null
+					this.couponTemplates = []
+					this.clearCart()
+					this.$nextTick(() => this.updateCateTabHeight())
+					return
+				}
 				await Promise.all([
 					this.loadCategoryList(),
-					this.loadStoreDeliveryFee(),
 					this.loadPromoAndCoupons()
 				])
 				if (seq !== this.mallRefreshSeq) return
@@ -467,7 +478,7 @@
 				const storeId = this.queryStoreId
 				if (!storeId) {
 					this.deliveryFee = 0
-					return
+					return false
 				}
 				try {
 					const data = await getStoreListApi({
@@ -476,10 +487,13 @@
 						pageSize: 1
 					})
 					const list = Array.isArray(data) ? data : (data?.list || [])
-					this.deliveryFee = parseDeliveryFee(list[0])
+					const store = list[0]
+					this.deliveryFee = parseDeliveryFee(store)
+					return isStoreSubscriptionExpired(store)
 				} catch (error) {
 					console.error('获取店铺配送费失败', error)
 					this.deliveryFee = 0
+					return false
 				}
 			},
 			async loadPromoAndCoupons() {
@@ -740,7 +754,12 @@
 				}
 				// 点结算时实时查 /store/findStore，覆盖「选购中商家突然打烊」
 				const check = await assertStoreOpenForOrder(this.resolveCheckoutStoreId())
-				if (!check.ok) return
+				if (!check.ok) {
+					if (check.reason === 'expired') {
+						this.clearCart()
+					}
+					return
+				}
 				this.saveCartMap()
 				this.closeCartPopup()
 				uni.navigateTo({

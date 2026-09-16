@@ -113,7 +113,8 @@
 		ensureUserInfo
 	} from '@/common/auth.js'
 	import {
-		getStoreListApi
+		getStoreListApi,
+		isStoreSubscriptionExpired
 	} from '@/common/api/personalCenter/store.js'
 	import {
 		bindStoreId
@@ -152,7 +153,10 @@
 				queryStoreId: '',
 				storeProfile: {
 					storeName: '',
-					avatar: ''
+					avatar: '',
+					storeType: null,
+					storeTime: '',
+					subscriptionExpired: false
 				},
 				headerLoading: false,
 				listLoading: true,
@@ -193,6 +197,11 @@
 			applyLaunchQuery()
 			await waitBootstrapAuth()
 			await this.loadHeaderProfile()
+			if (isStoreSubscriptionExpired(this.storeProfile)) {
+				this.businessList = []
+				this.listLoading = false
+				return
+			}
 			await this.loadBusinessList()
 			// 业务列表带回 storeId/storeName 时补全头部店铺信息
 			if (!this.storeProfile.storeName && this.businessList.length) {
@@ -206,6 +215,11 @@
 				.then(async () => {
 					await waitBootstrapAuth()
 					await this.loadHeaderProfile()
+					if (isStoreSubscriptionExpired(this.storeProfile)) {
+						this.businessList = []
+						this.listLoading = false
+						return
+					}
 					await this.loadBusinessList()
 					if (!this.storeProfile.storeName && this.businessList.length) {
 						await this.fetchStoreInfo({
@@ -306,13 +320,19 @@
 						const fallback = this.businessList[0]
 						this.storeProfile = {
 							storeName: fallback?.storeName || this.storeProfile.storeName || '',
-							avatar: this.storeProfile.avatar || ''
+							avatar: this.storeProfile.avatar || '',
+							storeType: null,
+							storeTime: '',
+							subscriptionExpired: false
 						}
 						return
 					}
 					this.storeProfile = {
 						storeName: store.storeName || '',
-						avatar: resolveFileUrl(store.avatar || '')
+						avatar: resolveFileUrl(store.avatar || ''),
+						storeType: store.storeType == null ? null : Number(store.storeType),
+						storeTime: store.storeTime || '',
+						subscriptionExpired: store.subscriptionExpired === true
 					}
 					if (params.userId && store.storeId) {
 						setOwnMerchantStoreId(store.storeId)

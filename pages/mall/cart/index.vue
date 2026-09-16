@@ -72,6 +72,7 @@
 	import {
 		assertStoreOpenForOrder,
 		getStoreListApi,
+		isStoreSubscriptionExpired,
 		parseDeliveryFee
 	} from '@/common/api/personalCenter/store.js'
 	import { resolveFileUrl } from '@/common/api/config.js'
@@ -132,6 +133,7 @@
 			this.refreshCartProducts()
 			this.loadDeliveryFee()
 			this.loadActivePromo()
+			this.clearCartIfStoreExpired()
 		},
 		methods: {
 			formatMoney,
@@ -146,7 +148,7 @@
 				const storeId = this.resolveStoreId()
 				if (!storeId) {
 					this.deliveryFee = 0
-					return
+					return null
 				}
 				try {
 					const data = await getStoreListApi({
@@ -156,9 +158,30 @@
 					})
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					this.deliveryFee = parseDeliveryFee(list[0])
+					return list[0] || null
 				} catch (error) {
 					console.error('获取店铺配送费失败', error)
 					this.deliveryFee = 0
+					return null
+				}
+			},
+			async clearCartIfStoreExpired() {
+				const storeId = this.resolveStoreId()
+				if (!storeId) return
+				try {
+					const data = await getStoreListApi({
+						storeId,
+						pageNum: 1,
+						pageSize: 1
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					if (!isStoreSubscriptionExpired(list[0])) return
+					clearCartMap()
+					this.reloadCart()
+					this.deliveryFee = 0
+					this.activePromo = null
+				} catch (error) {
+					console.error('校验店铺租期失败', error)
 				}
 			},
 			async loadActivePromo() {
@@ -292,7 +315,15 @@
 					return
 				}
 				const check = await assertStoreOpenForOrder(this.resolveStoreId())
-				if (!check.ok) return
+				if (!check.ok) {
+					if (check.reason === 'expired') {
+						clearCartMap()
+						this.reloadCart()
+						this.deliveryFee = 0
+						this.activePromo = null
+					}
+					return
+				}
 				uni.navigateTo({
 					url: '/pages/mall/checkout/index'
 				})

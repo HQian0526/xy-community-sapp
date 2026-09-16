@@ -4,6 +4,7 @@ import {
 } from '@/config/index.js'
 
 const IDENTITY_MERCHANT = 2
+const REMEMBERED_STORE_KEY = 'lastViewStoreId'
 
 /** 本次启动由扫码 / onLoad 带入的店铺，只放内存，杀进程后失效 */
 let entryStoreId = ''
@@ -160,11 +161,31 @@ export function getEntryStoreId() {
 	return entryStoreId
 }
 
+export function getRememberedStoreId() {
+	try {
+		return normalizeStoreId(uni.getStorageSync(REMEMBERED_STORE_KEY))
+	} catch (e) {
+		return ''
+	}
+}
+
+export function rememberViewStoreId(id) {
+	const next = normalizeStoreId(id)
+	if (!next || lockStoreId) return ''
+	try {
+		uni.setStorageSync(REMEMBERED_STORE_KEY, next)
+	} catch (e) {
+		// ignore
+	}
+	return next
+}
+
 export function setEntryStoreId(id) {
 	const next = normalizeStoreId(id)
 	if (next) {
 		entryStoreId = next
 		lockOwnStore = false
+		rememberViewStoreId(next)
 	}
 	return entryStoreId
 }
@@ -222,7 +243,7 @@ export function getOwnMerchantStoreId() {
 }
 
 /**
- * 逛店 / 其他业务用的店铺：扫码入参 > 用户 bindStoreId > 项目默认店铺
+ * 逛店 / 其他业务用的店铺：扫码入参 > 用户 bindStoreId > 本地记住的扫码店 > 项目默认店铺
  * 买断包 lockStoreId=true 时固定本包店铺。
  */
 export function resolveViewStoreId(user) {
@@ -237,6 +258,8 @@ export function resolveViewStoreId(user) {
 	}
 	const bound = user && user.bindStoreId
 	if (!isBlankStoreId(bound)) return normalizeStoreId(bound)
+	const remembered = getRememberedStoreId()
+	if (remembered) return remembered
 	return String(defaultBindStoreId)
 }
 
