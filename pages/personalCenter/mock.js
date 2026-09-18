@@ -1,7 +1,7 @@
 export const storeInfo = {
 	avatar: 'https://www.gzstarfly.com/xy-community/girl.png',
-	storeName: '用户9527',
-	phone: '188****8888',
+	storeName: '',
+	phone: '',
 	status: '营业中',
 	pendingAmount: 0,
 	todayIncome: 0

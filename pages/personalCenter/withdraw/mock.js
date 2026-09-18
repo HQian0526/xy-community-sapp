@@ -1,5 +1,3 @@
-import { storeInfo } from '../mock.js'
-
 export const MIN_WITHDRAW = 10
 export const AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/
 export const BALANCE_STORAGE_KEY = 'walletBalance'
@@ -15,7 +13,7 @@ export function getWalletBalance() {
 	if (cached !== '' && cached !== null && cached !== undefined) {
 		return Number(cached)
 	}
-	return storeInfo.totalAssets
+	return 0
 }
 
 export function setWalletBalance(balance) {

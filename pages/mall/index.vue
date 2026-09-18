@@ -311,7 +311,7 @@
 				mallRefreshSeq: 0,
 				currentCate: 0,
 				searchKeyword: '',
-				socialName: '上海-汤臣一品',
+				socialName: '地址',
 				cartMap: {},
 				cartShow: false,
 				contentHeight: '100%',
