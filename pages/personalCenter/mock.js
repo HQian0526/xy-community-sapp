@@ -35,7 +35,7 @@ export const serviceList = [
 export const ownerList = [
 	{ key: 'storeProfile', name: '商家资料', icon: 'integral', url: '/pages/personalCenter/storeProfile/index' },
 	{ key: 'status', name: '营业状态', icon: 'star', url: '/pages/personalCenter/businessStatus/index' },
-	{ key: 'otherBusiness', name: '其他业务', icon: 'more-circle', url: '/pages/personalCenter/otherBusinessSetting/index' },
+	// { key: 'otherBusiness', name: '其他业务', icon: 'more-circle', url: '/pages/personalCenter/otherBusinessSetting/index' },
 	{ key: 'customerlist', name: '顾客列表', icon: 'man-add', url: '/pages/personalCenter/customerlist/index' },
 	{ key: 'blacklist', name: '黑名单', icon: 'close-circle', url: '/pages/personalCenter/blacklist/index' },
 	{ key: 'agreement', name: '服务协议', icon: 'question-circle', url: '/pages/personalCenter/businessAgreement/index' },

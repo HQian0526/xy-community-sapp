@@ -611,6 +611,12 @@
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					const children = list
 						.filter((item) => item.productStatus !== 0)
+						.sort((a, b) => {
+							const left = Number(a.orderNum) || 0
+							const right = Number(b.orderNum) || 0
+							if (left !== right) return left - right
+							return String(a.id || '').localeCompare(String(b.id || ''))
+						})
 						.map((item) => mapProductItem(item, cate.name, cate.storeId))
 
 					this.$set(cate, 'children', children)

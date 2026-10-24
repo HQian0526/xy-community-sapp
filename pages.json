@@ -1270,11 +1270,17 @@
 				"text": "逛店"
 			},
 			{
-				"pagePath": "pages/otherBusiness/index",
+				"pagePath": "pages/personalCenter/storeOrder/index",
 				"iconPath": "static/tarbar/tarbar1.png",
 				"selectedIconPath": "/static/tarbar/tarbar1-active.png",
-				"text": "其他业务"
+				"text": "订单"
 			},
+			// {
+			// 	"pagePath": "pages/otherBusiness/index",
+			// 	"iconPath": "static/tarbar/tarbar1.png",
+			// 	"selectedIconPath": "/static/tarbar/tarbar1-active.png",
+			// 	"text": "其他业务"
+			// },
 			{
 				"pagePath": "pages/personalCenter/index",
 				"iconPath": "static/tarbar/tarbar3.png",

@@ -263,6 +263,14 @@ export function resolveViewStoreId(user) {
 	return String(defaultBindStoreId)
 }
 
+/** 当前正在逛的店：扫码进店 > 上次浏览。不含「自己的店」兜底，避免误判没在逛别人店。 */
+export function getBrowsingStoreId() {
+	if (lockStoreId) {
+		return String(defaultBindStoreId)
+	}
+	return getEntryStoreId() || getRememberedStoreId()
+}
+
 /**
  * 商家扫了别人店的码：其他业务、我的按普通用户界面展示
  */
@@ -273,9 +281,9 @@ export function shouldForceOrdinaryUi(user) {
 	if (!user || Number(user.identityType) !== IDENTITY_MERCHANT) {
 		return false
 	}
-	const entry = getEntryStoreId()
-	if (!entry) return false
+	const browsing = getBrowsingStoreId()
+	if (!browsing) return false
 	const own = getOwnMerchantStoreId() || normalizeStoreId(user.bindStoreId)
 	if (!own) return false
-	return own !== entry
+	return own !== browsing
 }

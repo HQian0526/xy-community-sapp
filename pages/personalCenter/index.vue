@@ -236,6 +236,7 @@
 	import {
 		applyLaunchQuery,
 		resolveViewStoreId,
+		getBrowsingStoreId,
 		shouldForceOrdinaryUi,
 		setOwnMerchantStoreId,
 		switchToOwnStore
@@ -277,6 +278,10 @@
 					subscriptionExpired: false,
 					storeType: null,
 					storeTime: ''
+				},
+				visitStore: {
+					storeName: '',
+					avatar: ''
 				},
 				accountList,
 				serviceList,
@@ -323,6 +328,9 @@
 				if (this.isMerchant) {
 					return this.storeProfile.storeName || this.storeInfo.storeName || '我的店铺'
 				}
+				if (this.visitStore.storeName) {
+					return this.visitStore.storeName
+				}
 				return this.userProfile.realName || '微信用户'
 			},
 			headerPhone() {
@@ -335,6 +343,9 @@
 			headerAvatar() {
 				if (this.isMerchant) {
 					return this.storeProfile.avatar || this.storeInfo.avatar || DEFAULT_AVATAR
+				}
+				if (this.visitStore.avatar) {
+					return this.visitStore.avatar
 				}
 				return this.userProfile.avatar || DEFAULT_AVATAR
 			},
@@ -423,6 +434,13 @@
 							storeTime: ''
 						}
 					}
+					if (!this.isMerchant) {
+						await this.fetchVisitStoreInfo(
+							getBrowsingStoreId() || resolveViewStoreId(this.userProfile)
+						)
+					} else {
+						this.visitStore = { storeName: '', avatar: '' }
+					}
 				} finally {
 					this.userLoading = false
 				}
@@ -442,6 +460,29 @@
 					}
 				} catch (error) {
 					console.error('获取用户信息失败', error)
+				}
+			},
+			async fetchVisitStoreInfo(storeId) {
+				const id = storeId == null ? '' : String(storeId).trim()
+				if (!id) {
+					this.visitStore = { storeName: '', avatar: '' }
+					return
+				}
+				try {
+					const data = await getStoreListApi({
+						storeId: id,
+						pageNum: 1,
+						pageSize: 1
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					const store = list[0]
+					this.visitStore = {
+						storeName: store?.storeName || '',
+						avatar: resolveFileUrl(store?.avatar || '')
+					}
+				} catch (error) {
+					console.error('获取当前浏览店铺失败', error)
+					this.visitStore = { storeName: '', avatar: '' }
 				}
 			},
 			async fetchStoreInfo(userId) {
@@ -574,6 +615,7 @@
 				}
 				this.storeInfo.pendingAmount = 0
 				this.storeInfo.todayIncome = 0
+				this.visitStore = { storeName: '', avatar: '' }
 			},
 			async handleLogin() {
 				if (this.loginLoading) return
@@ -648,6 +690,11 @@
 				if (this.storeExpired) return
 				this.goStoreProfile()
 			},
+			isTabService(item) {
+				const url = item?.url || ''
+				return item?.key === 'storeOrder'
+					|| url.indexOf('/storeOrder/') !== -1
+			},
 			isPublicService(item) {
 				const url = item?.url || ''
 				return item?.key === 'cart'
@@ -680,6 +727,12 @@
 				if (!(await this.ensureOrdinaryUserPhone())) return
 				if (item.key === 'share') {
 					this.handleShareMiniProgram()
+					return
+				}
+				if (this.isTabService(item)) {
+					uni.switchTab({
+						url: '/pages/personalCenter/storeOrder/index'
+					})
 					return
 				}
 				if (item.url) {
