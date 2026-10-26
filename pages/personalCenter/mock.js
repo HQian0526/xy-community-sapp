@@ -10,7 +10,7 @@ export const storeInfo = {
 // 商家端
 export const businessList = [
 	{ key: 'storeOrder', name: '全部订单', icon: 'bag', url: '/pages/personalCenter/storeOrder/index' },
-	{ key: 'info', name: '待处理', icon: 'info-circle', url: '/pages/personalCenter/pending/index' },
+	{ key: 'verify', name: '核验', icon: 'checkmark-circle', url: '/pages/personalCenter/verify/index' },
 	{ key: 'finance', name: '流水查询', icon: 'file-text', url: '/pages/personalCenter/finance/index' },
 	{ key: 'chart', name: '月度报表', icon: 'calendar', url: '/pages/personalCenter/monthlyReport/index' },
 ]

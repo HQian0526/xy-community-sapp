@@ -39,6 +39,8 @@ export function mapCustomerItem(item = {}) {
 		avatar: item.avatar || '',
 		createdTime,
 		nickname: realName || phone || '微信用户',
+		member: Number(item.isMember) === 1,
+		balance: Number(item.memberBalance || 0),
 		label: phone || '未授权手机号'
 	}
 }

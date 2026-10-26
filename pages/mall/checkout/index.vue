@@ -1,12 +1,17 @@
 <template>
 	<view class="checkout-page">
-		<view v-if="!cartItems.length" class="empty-wrap">
+		<view v-if="pageLoading" class="empty-wrap">
+			<u-loading-icon mode="circle" size="36"></u-loading-icon>
+			<text class="loading-text">加载中...</text>
+		</view>
+
+		<view v-else-if="!cartItems.length" class="empty-wrap">
 			<u-empty text="购物车是空的" mode="car"></u-empty>
 		</view>
 
 		<template v-else>
 			<view class="form-card">
-				<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="160rpx">
+				<uni-forms ref="formRef" :model="formData" :rules="formRules" label-width="160rpx">
 					<uni-forms-item label="联系电话" name="contact" required>
 						<uni-easyinput
 							v-model="formData.contact"
@@ -17,7 +22,7 @@
 						/>
 					</uni-forms-item>
 
-					<uni-forms-item label="收货地址" name="address" required>
+					<uni-forms-item v-if="miniappUi.showAddress" label="收货地址" name="address" required>
 						<uni-easyinput
 							v-model="formData.address"
 							type="textarea"
@@ -32,7 +37,7 @@
 							v-model="formData.remark"
 							type="textarea"
 							autoHeight
-							placeholder="选填，可补充配送说明"
+							placeholder="选填"
 							:inputBorder="false"
 						/>
 					</uni-forms-item>
@@ -40,16 +45,12 @@
 			</view>
 
 			<view class="goods-card">
-				<view class="card-header">
-					<text class="card-title">{{ checkoutInfo.storeName }}</text>
-					<text class="card-tip">{{ checkoutInfo.deliveryTip }}</text>
-				</view>
 				<view v-for="item in cartItems" :key="item.id" class="goods-item">
 					<image class="goods-img" :src="item.icon || '/static/image-wrong.png'" mode="aspectFill" />
 					<view class="goods-info">
 						<text class="goods-name">{{ item.name }}</text>
 						<view class="goods-bottom">
-							<view class="goods-price">
+							<view v-if="showPrice" class="goods-price">
 								<text v-if="preview?.memberPriced && item.hasMemberPrice" class="price-label">会员价:</text>
 								<text class="price-symbol" :class="{ 'price-symbol--member': preview?.memberPriced && item.hasMemberPrice }">¥</text>
 								<text class="price-value" :class="{ 'price-value--member': preview?.memberPriced && item.hasMemberPrice }">{{ formatMoney(itemDisplayPrice(item)) }}</text>
@@ -60,9 +61,9 @@
 				</view>
 			</view>
 
-			<view class="summary-card">
+			<view v-if="showFeeSummary" class="summary-card">
 				<view class="summary-row">
-					<text class="summary-label">商品金额</text>
+					<text class="summary-label">金额</text>
 					<text class="summary-value">¥{{ formatMoney(goodsTotal) }}</text>
 				</view>
 				<view v-if="promoDiscount > 0" class="summary-row">
@@ -76,7 +77,7 @@
 						<up-icon name="arrow-right" size="12" color="#bbb"></up-icon>
 					</view>
 				</view>
-				<view class="summary-row">
+				<view v-if="showDeliveryFee" class="summary-row">
 					<text class="summary-label">配送费</text>
 					<text class="summary-value">¥{{ formatMoney(deliveryFee) }}</text>
 				</view>
@@ -84,15 +85,15 @@
 					<text class="summary-label">合计</text>
 					<text class="summary-total">¥{{ formatMoney(payTotal) }}</text>
 				</view>
-				<view v-if="preview?.memberPriced" class="member-tip member-tip--ok">本单已按会员价，将从余额全额扣除</view>
-				<view v-else-if="preview?.memberPriceUnavailable" class="member-tip">
+				<view v-if="miniappUi.enablePay && preview?.memberPriced" class="member-tip member-tip--ok">本单已按会员价，将从余额全额扣除</view>
+				<view v-else-if="miniappUi.enablePay && preview?.memberPriceUnavailable" class="member-tip">
 					<text>余额不足，本单将按原价微信支付。储值满额后可享会员价。</text>
 					<text class="member-tip-link" @click="goRecharge">去储值</text>
 				</view>
 			</view>
 
-			<view class="submit-bar">
-				<view class="submit-total">
+			<view class="submit-bar" :class="{ 'submit-bar--no-price': !showPrice }">
+				<view v-if="showPrice" class="submit-total">
 					<text class="submit-label">应付</text>
 					<text class="submit-amount">¥{{ formatMoney(payTotal) }}</text>
 				</view>
@@ -141,7 +142,7 @@
 </template>
 
 <script>
-	import { checkoutInfo, getDefaultContact, formatMoney } from './mock.js'
+	import { getDefaultContact, formatMoney } from './mock.js'
 	import { getCartItems, getCartTotal, clearCartMap } from '../cart.js'
 	import { assertStoreOpenForOrder, getStoreListApi, isStoreSubscriptionExpired, parseDeliveryFee, showStoreExpiredOrderToast } from '@/common/api/personalCenter/store.js'
 	import { requireLogin, getUserInfo } from '@/common/auth.js'
@@ -153,6 +154,13 @@
 		waitMallOrderPaid
 	} from '@/common/api/mall/order.js'
 	import { couponThresholdText } from '@/common/api/mall/promo.js'
+	import {
+		applyStoreMiniappUi,
+		getMiniappUi,
+		isBookingMiniapp,
+		isMiniappUiReady,
+		mallMiniappUi
+	} from '@/common/miniappUi.js'
 
 	const defaultFormData = () => ({
 		contact: '',
@@ -163,7 +171,6 @@
 	export default {
 		data() {
 			return {
-				checkoutInfo,
 				deliveryFee: 0,
 				cartItems: [],
 				submitting: false,
@@ -173,18 +180,9 @@
 				userCouponId: '',
 				couponCleared: false,
 				couponShow: false,
+				pageLoading: true,
 				formData: defaultFormData(),
-				rules: {
-					contact: {
-						rules: [
-							{ required: true, errorMessage: '请输入联系电话' },
-							{ pattern: /^1[3-9]\d{9}$/, errorMessage: '手机号码格式不正确' }
-						]
-					},
-					address: {
-						rules: [{ required: true, errorMessage: '请输入收货地址' }]
-					}
-				}
+				miniappUi: mallMiniappUi()
 			}
 		},
 		computed: {
@@ -228,7 +226,35 @@
 			submitBtnText() {
 				if (this.submitting) return '提交中...'
 				if (this.previewLoading || !this.preview) return '计算中...'
-				return '提交订单'
+				return this.miniappUi.orderBtnText || '提交订单'
+			},
+			isBooking() {
+				return isBookingMiniapp(this.miniappUi)
+			},
+			showPrice() {
+				return this.miniappUi.enablePay !== false
+			},
+			showFeeSummary() {
+				return this.showPrice && !this.isBooking
+			},
+			showDeliveryFee() {
+				return this.miniappUi.showDeliveryFee !== false
+			},
+			formRules() {
+				const rules = {
+					contact: {
+						rules: [
+							{ required: true, errorMessage: '请输入联系电话' },
+							{ pattern: /^1[3-9]\d{9}$/, errorMessage: '手机号码格式不正确' }
+						]
+					}
+				}
+				if (this.miniappUi.showAddress) {
+					rules.address = {
+						rules: [{ required: true, errorMessage: '请输入收货地址' }]
+					}
+				}
+				return rules
 			}
 		},
 		async onLoad() {
@@ -253,28 +279,34 @@
 				return item?.storeId || ''
 			},
 			async loadCheckoutData() {
-				this.cartItems = getCartItems()
-				if (!this.cartItems.length) return
-				const defaults = getDefaultContact()
-				const phone = String(getUserInfo()?.phone || '').trim()
-				this.formData = {
-					...defaultFormData(),
-					...defaults,
-					contact: phone || defaults.contact || ''
+				this.pageLoading = true
+				try {
+					this.cartItems = getCartItems()
+					if (!this.cartItems.length) return
+					const defaults = getDefaultContact()
+					const phone = String(getUserInfo()?.phone || '').trim()
+					this.formData = {
+						...defaultFormData(),
+						...defaults,
+						contact: phone || defaults.contact || ''
+					}
+					const store = await this.loadDeliveryFee()
+					if (isStoreSubscriptionExpired(store)) {
+						clearCartMap()
+						this.cartItems = []
+						showStoreExpiredOrderToast()
+						return
+					}
+					this.refreshPreview({ autoPick: this.showFeeSummary })
+				} finally {
+					this.pageLoading = false
 				}
-				const store = await this.loadDeliveryFee()
-				if (isStoreSubscriptionExpired(store)) {
-					clearCartMap()
-					this.cartItems = []
-					showStoreExpiredOrderToast()
-					return
-				}
-				this.refreshPreview({ autoPick: true })
 			},
 			async loadDeliveryFee() {
 				const storeId = this.resolveCheckoutStoreId()
 				if (!storeId) {
 					this.deliveryFee = 0
+					this.miniappUi = isMiniappUiReady() ? getMiniappUi() : applyStoreMiniappUi(null)
 					return null
 				}
 				try {
@@ -286,10 +318,12 @@
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					const store = list[0]
 					this.deliveryFee = parseDeliveryFee(store)
+					this.miniappUi = applyStoreMiniappUi(store)
 					return store || null
 				} catch (error) {
 					console.error('获取店铺配送费失败', error)
 					this.deliveryFee = 0
+					this.miniappUi = applyStoreMiniappUi(null)
 					return null
 				}
 			},
@@ -302,11 +336,11 @@
 			buildCheckoutPayload() {
 				const payload = {
 					contact: this.formData.contact,
-					address: this.formData.address,
+					address: this.miniappUi.showAddress ? this.formData.address : '',
 					remark: this.formData.remark || '',
 					items: this.buildCheckoutItems()
 				}
-				if (this.userCouponId) {
+				if (this.showPrice && this.userCouponId) {
 					payload.userCouponId = this.userCouponId
 				}
 				return payload
@@ -343,14 +377,16 @@
 				this.previewLoading = true
 				try {
 					const payload = { items: this.buildCheckoutItems() }
-					if (this.userCouponId) {
+					if (this.showPrice && this.userCouponId) {
 						payload.userCouponId = this.userCouponId
 					}
 					const data = await previewCheckoutApi(payload)
 					if (seq !== this.previewSeq) return
 					this.preview = data || null
 					if (data?.deliveryFee != null) {
-						this.deliveryFee = Number(data.deliveryFee)
+						this.deliveryFee = this.showDeliveryFee ? Number(data.deliveryFee) : 0
+					} else if (!this.showDeliveryFee) {
+						this.deliveryFee = 0
 					}
 					if (data?.couponError) {
 						this.userCouponId = ''
@@ -383,9 +419,10 @@
 					throw new Error('下单失败：未返回订单号')
 				}
 
+				const skipPay = payParams?.skipPay === true || Number(payParams?.payChannel) === 3
 				const alreadyPaid = Number(payParams?.payStatus) === 1 || Number(payParams?.payChannel) === 2
-				if (alreadyPaid) {
-					// 余额全额支付，无需微信
+				if (alreadyPaid || skipPay) {
+					// 无需微信支付：未接入支付 / 余额全额支付
 				} else if (payParams.mock) {
 					await mockConfirmMallPayApi(orderNo)
 				} else {
@@ -410,7 +447,7 @@
 				}
 
 				clearCartMap()
-				uni.showToast({ title: '支付成功', icon: 'success' })
+				uni.showToast({ title: skipPay ? '成功' : '支付成功', icon: 'success' })
 				setTimeout(() => {
 					uni.navigateBack()
 				}, 1200)
@@ -443,8 +480,10 @@
 				}
 
 				uni.showModal({
-					title: '确认下单',
-					content: `确定支付 ¥${formatMoney(this.payTotal)} 吗？`,
+					title: '请确认',
+					content: this.miniappUi.enablePay
+						? `确定支付 ¥${formatMoney(this.payTotal)} 吗？`
+						: '确定提交订单吗？',
 					success: async (res) => {
 						if (!res.confirm) return
 						const recheck = await assertStoreOpenForOrder(this.resolveCheckoutStoreId())
@@ -484,6 +523,15 @@
 
 	.empty-wrap {
 		padding-top: 200rpx;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 16rpx;
+	}
+
+	.loading-text {
+		font-size: 26rpx;
+		color: #999;
 	}
 
 	.form-card,
@@ -498,26 +546,6 @@
 
 	.goods-card {
 		padding: 24rpx;
-	}
-
-	.card-header {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		margin-bottom: 20rpx;
-		padding-bottom: 16rpx;
-		border-bottom: 1rpx solid #f0f0f0;
-	}
-
-	.card-title {
-		font-size: 30rpx;
-		font-weight: 600;
-		color: #333;
-	}
-
-	.card-tip {
-		font-size: 22rpx;
-		color: #999;
 	}
 
 	.goods-item {
@@ -710,6 +738,10 @@
 
 	.submit-btn.disabled {
 		opacity: 0.45;
+	}
+
+	.submit-bar--no-price {
+		justify-content: flex-end;
 	}
 
 	.coupon-popup {

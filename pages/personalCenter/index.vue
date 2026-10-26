@@ -44,7 +44,7 @@
 				@click="goBusinessStatus"
 			>{{ storeInfo.status }}</text>
 			<text
-				v-else
+				v-else-if="showMemberEntry"
 				class="member-entry"
 				@click="goRecharge"
 			>{{ memberEntryText }}</text>
@@ -79,7 +79,7 @@
 						</view>
 					</view>
 					<up-grid :col="4" :border="false">
-						<up-grid-item v-for="item in businessList" :key="item.key" :name="item.key"
+						<up-grid-item v-for="item in displayBusinessList" :key="item.key" :name="item.key"
 							@click="handleServiceClick(item)">
 							<view class="service-item">
 								<view class="service-icon-square">
@@ -87,8 +87,6 @@
 								</view>
 								<view class="service-name">
 									{{ item.name }}
-									<up-badge v-if="item.name === '待处理'" class="badge" max="99"
-										:value="badgeCount"></up-badge>
 								</view>
 							</view>
 						</up-grid-item>
@@ -118,7 +116,7 @@
 						<text class="card-title">我的订单</text>
 					</view>
 					<up-grid :col="4" :border="false">
-						<up-grid-item v-for="item in accountList" :key="item.key" :name="item.key"
+						<up-grid-item v-for="item in displayAccountList" :key="item.key" :name="item.key"
 							@click="handleServiceClick(item)">
 							<view class="service-item">
 								<view class="service-icon-square">
@@ -233,6 +231,7 @@
 	import {
 		resolveFileUrl
 	} from '@/common/api/config.js'
+	import { applyStoreMiniappUi, getMiniappUi, mallMiniappUi } from '@/common/miniappUi.js'
 	import {
 		applyLaunchQuery,
 		resolveViewStoreId,
@@ -301,7 +300,8 @@
 				memberInfo: {
 					member: false,
 					balance: 0
-				}
+				},
+				miniappUi: mallMiniappUi()
 			}
 		},
 		computed: {
@@ -328,9 +328,6 @@
 				if (this.isMerchant) {
 					return this.storeProfile.storeName || this.storeInfo.storeName || '我的店铺'
 				}
-				if (this.visitStore.storeName) {
-					return this.visitStore.storeName
-				}
 				return this.userProfile.realName || '微信用户'
 			},
 			headerPhone() {
@@ -344,16 +341,31 @@
 				if (this.isMerchant) {
 					return this.storeProfile.avatar || this.storeInfo.avatar || DEFAULT_AVATAR
 				}
-				if (this.visitStore.avatar) {
-					return this.visitStore.avatar
-				}
 				return this.userProfile.avatar || DEFAULT_AVATAR
 			},
-			displayServiceList() {
-				if (this.isMerchant) {
-					return (this.serviceList || []).filter((item) => item.key !== 'coupon')
+			displayBusinessList() {
+				const list = this.businessList || []
+				if (this.miniappUi.enablePay === false) {
+					return list.filter((item) => item.key !== 'verify')
 				}
-				return this.serviceList
+				return list
+			},
+			displayAccountList() {
+				const list = this.accountList || []
+				if (this.miniappUi.enablePay === false || this.miniappUi.showCart === false) {
+					return list.filter((item) => item.key !== 'cart')
+				}
+				return list
+			},
+			showMemberEntry() {
+				return this.miniappUi.enablePay !== false
+			},
+			displayServiceList() {
+				const list = this.serviceList || []
+				if (this.isMerchant || this.miniappUi.enablePay === false) {
+					return list.filter((item) => item.key !== 'coupon')
+				}
+				return list
 			},
 			storeExpired() {
 				return isStoreSubscriptionExpired(this.storeProfile)
@@ -392,6 +404,7 @@
 		},
 		async onShow() {
 			applyLaunchQuery()
+			this.pageLoading = true
 			try {
 				await waitBootstrapAuth()
 				await this.initUserProfile()
@@ -476,6 +489,11 @@
 					})
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					const store = list[0]
+					if (store) {
+						this.miniappUi = applyStoreMiniappUi(store)
+					} else {
+						this.miniappUi = getMiniappUi()
+					}
 					this.visitStore = {
 						storeName: store?.storeName || '',
 						avatar: resolveFileUrl(store?.avatar || '')
@@ -523,6 +541,9 @@
 					}
 					if (store.storeId) {
 						setOwnMerchantStoreId(store.storeId)
+					}
+					if (!shouldForceOrdinaryUi(this.userProfile)) {
+						this.miniappUi = applyStoreMiniappUi(store)
 					}
 					this.storeInfo.storeName = this.storeProfile.storeName || this.storeInfo.storeName
 					this.storeInfo.status = getStoreOpenLabel(this.storeProfile)
@@ -580,6 +601,7 @@
 				}
 			},
 			async goRecharge() {
+				if (!this.showMemberEntry) return
 				if (!(await this.ensureOrdinaryUserPhone())) return
 				uni.navigateTo({
 					url: '/pages/personalCenter/recharge/index'
@@ -707,6 +729,15 @@
 					|| (item?.url || '').indexOf('/personInfo/') !== -1
 			},
 			async handleServiceClick(item) {
+				if (item?.key === 'cart' && (this.miniappUi.enablePay === false || this.miniappUi.showCart === false)) {
+					return
+				}
+				if (item?.key === 'coupon' && this.miniappUi.enablePay === false) {
+					return
+				}
+				if (item?.key === 'verify' && this.miniappUi.enablePay === false) {
+					return
+				}
 				if (this.isPublicService(item)) {
 					if (item.url) {
 						uni.navigateTo({ url: item.url })

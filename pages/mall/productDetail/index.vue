@@ -23,20 +23,20 @@
 			</swiper>
 
 			<view class="info-card">
-				<view class="price-row">
+				<view v-if="miniappUi.enablePay" class="price-row">
 					<text v-if="product.hasMemberPrice" class="price-label">会员价：</text>
 					<text class="price-symbol" :class="{ 'price-symbol--member': product.hasMemberPrice }">¥</text>
 					<text class="price-value" :class="{ 'price-value--member': product.hasMemberPrice }">{{ formatMoney(product.price) }}</text>
 					<text v-if="product.hasMemberPrice" class="price-original">¥{{ formatMoney(product.originalPrice) }}</text>
 				</view>
 				<text class="product-name">{{ product.name }}</text>
-				<view class="meta-row">
-					<text>销量 {{ product.saleNum }}{{ product.unit }}</text>
-					<text>库存 {{ product.has }}{{ product.unit }}</text>
+				<view v-if="miniappUi.showSaleNum || miniappUi.showStock" class="meta-row">
+					<text v-if="miniappUi.showSaleNum">销量 {{ product.saleNum }}{{ product.unit }}</text>
+					<text v-if="miniappUi.showStock">库存 {{ product.has }}{{ product.unit }}</text>
 				</view>
 			</view>
 
-			<view class="info-card">
+			<view v-if="miniappUi.showQuantity" class="info-card">
 				<view class="qty-row">
 					<text class="qty-label">购买数量</text>
 					<view class="stepper">
@@ -62,11 +62,16 @@
 
 			<view class="bottom-placeholder"></view>
 			<view class="action-bar">
-				<view class="action-btn action-btn--cart" :class="{ disabled: soldOut }" @click="handleAddCart">
+				<view
+					v-if="miniappUi.showCart"
+					class="action-btn action-btn--cart"
+					:class="{ disabled: soldOut }"
+					@click="handleAddCart"
+				>
 					加入购物车
 				</view>
 				<view class="action-btn action-btn--buy" :class="{ disabled: soldOut }" @click="handleBuyNow">
-					立即购买
+					{{ miniappUi.orderBtnText }}
 				</view>
 			</view>
 		</template>
@@ -85,6 +90,13 @@
 	import { addCartQuantity } from '../cart.js'
 	import { formatMoney } from '../checkout/mock.js'
 	import { pickDisplayPrice } from '@/common/api/mall/member.js'
+	import { getStoreListApi } from '@/common/api/personalCenter/store.js'
+	import {
+		applyStoreMiniappUi,
+		getMiniappUi,
+		isMiniappUiReady,
+		mallMiniappUi
+	} from '@/common/miniappUi.js'
 
 	function splitImages(raw) {
 		return String(raw || '')
@@ -127,10 +139,13 @@
 		data() {
 			return {
 				loading: true,
+				productLoaded: false,
+				uiLoaded: false,
 				productId: '',
 				storeId: '',
 				product: null,
-				quantity: 1
+				quantity: 1,
+				miniappUi: mallMiniappUi()
 			}
 		},
 		computed: {
@@ -140,10 +155,12 @@
 			soldOut() {
 				if (!this.product) return true
 				if (Number(this.product.productStatus) === 0) return true
+				if (!this.miniappUi.showStock) return false
 				return Number(this.product.has) <= 0
 			},
 			canIncrease() {
 				if (this.soldOut) return false
+				if (!this.miniappUi.showStock) return true
 				return this.quantity < Number(this.product.has || 0)
 			}
 		},
@@ -162,19 +179,58 @@
 				console.log(e)
 			}
 			this.loadProduct()
+			this.loadMiniappUi()
 		},
 		methods: {
 			formatMoney,
+			finishLoading() {
+				if (this.productLoaded && this.uiLoaded) {
+					this.loading = false
+				}
+			},
+			async loadMiniappUi() {
+				try {
+					const readyUi = isMiniappUiReady() ? getMiniappUi() : null
+					if (readyUi && (!this.storeId || String(readyUi.storeId || '') === String(this.storeId))) {
+						this.miniappUi = readyUi
+					} else if (this.storeId) {
+						const data = await getStoreListApi({
+							storeId: this.storeId,
+							pageNum: 1,
+							pageSize: 1
+						})
+						const list = Array.isArray(data) ? data : (data?.list || [])
+						this.miniappUi = applyStoreMiniappUi(list[0])
+					} else {
+						this.miniappUi = applyStoreMiniappUi(null)
+					}
+					this.syncQuantityByUi()
+				} catch (error) {
+					console.error('获取小程序权限失败', error)
+					this.miniappUi = applyStoreMiniappUi(null)
+				} finally {
+					this.uiLoaded = true
+					this.finishLoading()
+				}
+			},
+			syncQuantityByUi() {
+				if (!this.miniappUi.showQuantity) {
+					this.quantity = 1
+				}
+			},
 			applyProduct(mapped) {
 				if (!mapped) return
 				this.product = mapped
 				this.storeId = mapped.storeId || this.storeId
 				this.quantity = this.soldOut ? 1 : Math.min(this.quantity || 1, Math.max(1, Number(mapped.has) || 1))
-				this.loading = false
+				this.syncQuantityByUi()
+				this.productLoaded = true
+				this.finishLoading()
 			},
 			async loadProduct() {
 				if (!this.productId) {
-					this.loading = false
+					this.productLoaded = true
+					this.finishLoading()
 					return
 				}
 				try {
@@ -189,11 +245,15 @@
 					if (hit) {
 						this.applyProduct(mapProduct(hit, this.storeId))
 					} else if (!this.product) {
-						this.loading = false
+						this.productLoaded = true
+						this.finishLoading()
 					}
 				} catch (error) {
 					console.error('加载商品详情失败', error)
-					if (!this.product) this.loading = false
+					if (!this.product) {
+						this.productLoaded = true
+						this.finishLoading()
+					}
 				}
 			},
 			previewImage(index) {
@@ -206,7 +266,7 @@
 				if (!this.product || this.soldOut) return
 				const next = this.quantity + step
 				if (next < 1) return
-				if (next > Number(this.product.has || 0)) {
+				if (this.miniappUi.showStock && next > Number(this.product.has || 0)) {
 					uni.showToast({ title: '已达库存上限', icon: 'none' })
 					return
 				}
@@ -233,6 +293,7 @@
 				return false
 			},
 			handleAddCart() {
+				if (!this.miniappUi.showCart) return
 				if (!this.ensureCanBuy()) return
 				if (!this.addCurrentQty()) return
 				uni.showToast({ title: '已加入购物车', icon: 'success' })

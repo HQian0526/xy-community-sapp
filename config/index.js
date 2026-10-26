@@ -1,5 +1,5 @@
 /** 若用户未绑定商户，则默认获取以下商户信息 */
-export const bindStoreId = "2094318060668157955"
+export const bindStoreId = "2113530833270681603"
 
 /**
  * 买断独立小程序打包时改为 true：始终使用本包 bindStoreId，忽略扫码换店。

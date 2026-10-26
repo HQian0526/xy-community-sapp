@@ -26,7 +26,7 @@
 		{
 			"path": "pages/mall/index",
 			"style": {
-				"navigationBarTitleText": "逛店",
+				"navigationBarTitleText": " ",
 				"disableScroll": true,
 				"app-plus": {
 					"bounce": "vertical",
@@ -133,6 +133,12 @@
 			}
 		},
 		{
+			"path": "pages/personalCenter/customerRecharge/index",
+			"style": {
+				"navigationBarTitleText": "顾客储值"
+			}
+		},
+		{
 			"path": "pages/personalCenter/otherBusinessSetting/index",
 			"style": {
 				"navigationBarTitleText": "更多业务"
@@ -181,6 +187,12 @@
 			"style": {
 				"navigationBarTitleText": "待处理",
 				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/personalCenter/verify/index",
+			"style": {
+				"navigationBarTitleText": "核验"
 			}
 		},
 		{

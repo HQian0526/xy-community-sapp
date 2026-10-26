@@ -47,7 +47,7 @@
 						<text class="ticket-time">{{ expireLabel(item) }}</text>
 					</view>
 					<view class="ticket-foot">
-						<text class="ticket-tip">仅抵商品金额，不抵配送费</text>
+						<text class="ticket-tip">{{ couponTip }}</text>
 						<text v-if="currentSection === 0" class="ticket-use">去使用</text>
 						<text v-else class="ticket-stamp">{{ statusStamp(item) }}</text>
 					</view>
@@ -66,6 +66,7 @@
 	import { requireLogin } from '@/common/auth.js'
 	import { findMyCouponsApi } from '@/common/api/mall/coupon.js'
 	import { couponThresholdText } from '@/common/api/mall/promo.js'
+	import { getMiniappUi } from '@/common/miniappUi.js'
 
 	const TABS = ['unused', 'used', 'expired']
 
@@ -78,15 +79,23 @@
 					{ name: '已使用' },
 					{ name: '已过期' }
 				],
-				list: []
+				list: [],
+				showDeliveryFee: getMiniappUi()?.showDeliveryFee !== false
 			}
 		},
 		computed: {
 			emptyText() {
 				return ['暂无未使用优惠券', '暂无已使用优惠券', '暂无已过期优惠券'][this.currentSection] || '暂无优惠券'
+			},
+			couponTip() {
+				if (this.showDeliveryFee === false) {
+					return '仅抵产品/服务金额'
+				}
+				return '仅抵产品/服务金额，不抵配送费'
 			}
 		},
 		async onShow() {
+			this.showDeliveryFee = getMiniappUi()?.showDeliveryFee !== false
 			if (!(await requireLogin({ force: true }))) return
 			this.loadCoupons()
 		},

@@ -1,17 +1,17 @@
 <template>
 	<view class="mall-root">
 		<view class="mall-page">
-			<view v-if="showPromoBar" class="promo-bar">
+			<view v-if="mallUiReady && showPromoBar" class="promo-bar">
 				<view class="promo-bar-main">
 					<up-icon name="volume" size="16" color="#00a896"></up-icon>
 					<text class="promo-bar-text">{{ promoBarLabel }}</text>
 				</view>
 				<text v-if="couponTemplates.length" class="promo-bar-action" @click="openCouponPopup">领券</text>
 			</view>
-			<view class="search-wrap">
+			<view v-if="!mallPageLoading" class="search-wrap">
 				<up-search
 					v-model="searchKeyword"
-					placeholder="搜索商品名称"
+					placeholder="搜索名称"
 					shape="round"
 					bgColor="#fff"
 					:showAction="false"
@@ -19,7 +19,12 @@
 				></up-search>
 			</view>
 
-			<view v-if="isSearching" class="search-result-wrap">
+			<view v-if="mallPageLoading" class="page-loading">
+				<up-loading-icon color="#00a896"></up-loading-icon>
+				<text class="loading-text">加载中...</text>
+			</view>
+
+			<view v-else-if="isSearching" class="search-result-wrap">
 				<scroll-view scroll-y class="search-result-scroll" :style="{ height: contentHeight }">
 					<view v-if="searchPending" class="page-loading">
 						<up-loading-icon color="#00a896"></up-loading-icon>
@@ -35,7 +40,7 @@
 						mode="search"
 						marginTop="80"
 					></u-empty>
-					<view v-else class="product-list" :class="{ 'product-list--with-cart': cartCount > 0 }">
+					<view v-else class="product-list" :class="{ 'product-list--with-cart': showCartBar }">
 						<view
 							v-for="product in searchResults"
 							:key="product.id"
@@ -50,16 +55,20 @@
 							<view class="product-info">
 								<text class="product-name">{{ product.name }}</text>
 								<text class="product-desc">{{ product.remark || '' }}</text>
-								<text class="product-stock">库存 {{ product.has }}{{ product.unit }}</text>
-								<view class="product-bottom">
-									<view class="product-price">
+								<text v-if="miniappUi.showStock" class="product-stock">库存 {{ product.has }}{{ product.unit }}</text>
+								<view class="product-bottom" :class="{ 'product-bottom--action-only': !showPrice }">
+									<view v-if="showPrice" class="product-price">
 										<text v-if="product.hasMemberPrice" class="price-label">会员价：</text>
 										<text class="price-symbol" :class="{ 'price-symbol--member': product.hasMemberPrice }">¥</text>
 										<text class="price-value" :class="{ 'price-value--member': product.hasMemberPrice }">{{ product.price }}</text>
 										<text v-if="product.hasMemberPrice" class="price-original">¥{{ product.originalPrice }}</text>
 									</view>
-									<view class="add-btn" @click.stop="handleAddCart(product)">
-										<up-icon name="plus" size="14" color="#fff"></up-icon>
+									<view
+										class="book-btn"
+										:class="{ disabled: isProductSoldOut(product) }"
+										@click.stop="handleBookNow(product)"
+									>
+										<text class="book-btn-text">{{ miniappUi.listBtnText }}</text>
 									</view>
 								</view>
 							</view>
@@ -67,11 +76,6 @@
 					</view>
 					</template>
 				</scroll-view>
-			</view>
-
-			<view v-else-if="mallPageLoading" class="page-loading">
-				<up-loading-icon color="#00a896"></up-loading-icon>
-				<text class="loading-text">加载中...</text>
 			</view>
 
 			<view v-else-if="!categoryList.length" class="page-loading">
@@ -85,7 +89,7 @@
 							class="product-list"
 							:class="{
 								'product-list--with-cart':
-									cartCount > 0 &&
+									showCartBar &&
 									item.id === categoryList[categoryList.length - 1]?.id
 							}"
 						>
@@ -109,16 +113,20 @@
 								<view class="product-info">
 									<text class="product-name">{{ product.name }}</text>
 									<text class="product-desc">{{ product.remark || '' }}</text>
-									<text class="product-stock">库存 {{ product.has }}{{ product.unit }}</text>
-									<view class="product-bottom">
-										<view class="product-price">
+									<text v-if="miniappUi.showStock" class="product-stock">库存 {{ product.has }}{{ product.unit }}</text>
+									<view class="product-bottom" :class="{ 'product-bottom--action-only': !showPrice }">
+										<view v-if="showPrice" class="product-price">
 											<text v-if="product.hasMemberPrice" class="price-label">会员价：</text>
 											<text class="price-symbol" :class="{ 'price-symbol--member': product.hasMemberPrice }">¥</text>
 											<text class="price-value" :class="{ 'price-value--member': product.hasMemberPrice }">{{ product.price }}</text>
 											<text v-if="product.hasMemberPrice" class="price-original">¥{{ product.originalPrice }}</text>
 										</view>
-										<view class="add-btn" @click.stop="handleAddCart(product)">
-											<up-icon name="plus" size="14" color="#fff"></up-icon>
+										<view
+											class="book-btn"
+											:class="{ disabled: isProductSoldOut(product) }"
+											@click.stop="handleBookNow(product)"
+										>
+											<text class="book-btn-text">{{ miniappUi.listBtnText }}</text>
 										</view>
 									</view>
 								</view>
@@ -128,15 +136,16 @@
 				</up-cate-tab>
 			</view>
 
-			<view v-if="cartCount > 0" class="cart-bar" :style="{ bottom: cartBarBottom }">
+			<view v-if="showCartBar" class="cart-bar" :style="{ bottom: cartBarBottom }">
 				<view class="cart-left" @click="openCartPopup">
 					<view class="cart-icon-wrap">
 						<up-icon name="shopping-cart" size="22" color="#fff"></up-icon>
 						<view class="cart-badge">{{ cartCount }}</view>
 					</view>
 					<view class="cart-info">
-						<text class="cart-total">¥{{ cartTotal.toFixed(2) }}</text>
-						<text class="cart-tip">{{ cartFeeTip }}</text>
+						<text v-if="showPrice" class="cart-total">¥{{ cartTotal.toFixed(2) }}</text>
+						<text v-else class="cart-total">已选 {{ cartCount }} 件</text>
+						<text v-if="showPrice && cartFeeTip" class="cart-tip">{{ cartFeeTip }}</text>
 					</view>
 				</view>
 				<view class="cart-submit" @click.stop="handleCheckout">去结算</view>
@@ -159,7 +168,7 @@
 							<view class="cart-item-info">
 								<text class="cart-item-name">{{ item.name }}</text>
 								<view class="cart-item-bottom">
-									<view class="cart-item-price">
+									<view v-if="showPrice" class="cart-item-price">
 										<text v-if="item.hasMemberPrice" class="price-label">会员价：</text>
 										<text class="price-symbol" :class="{ 'price-symbol--member': item.hasMemberPrice }">¥</text>
 										<text class="price-value" :class="{ 'price-value--member': item.hasMemberPrice }">{{ item.price }}</text>
@@ -179,8 +188,8 @@
 						</view>
 					</scroll-view>
 
-					<view class="cart-popup-footer">
-						<view class="cart-popup-total">
+					<view class="cart-popup-footer" :class="{ 'cart-popup-footer--no-price': !showPrice }">
+						<view v-if="showPrice" class="cart-popup-total">
 							<text class="total-label">合计</text>
 							<text class="total-value">¥{{ cartTotal.toFixed(2) }}</text>
 						</view>
@@ -231,7 +240,8 @@
 		getCartItems,
 		getCartCount,
 		getCartTotal,
-		rememberCartProduct
+		rememberCartProduct,
+		addCartQuantity
 	} from './cart.js'
 	import {
 		requireLogin,
@@ -275,6 +285,13 @@
 	import {
 		pickDisplayPrice
 	} from '@/common/api/mall/member.js'
+	import {
+		applyStoreMiniappUi,
+		getMiniappUi,
+		hideHomeTabBarUntilReady,
+		mallMiniappUi,
+		resetMiniappUi
+	} from '@/common/miniappUi.js'
 
 	/** 把接口商品字段转成列表展示结构 */
 	function mapProductItem(item, categoryName = '', fallbackStoreId = '') {
@@ -309,6 +326,7 @@
 				categoryLoading: true,
 				pageBootstrapping: false,
 				mallRefreshSeq: 0,
+				bookingBusy: false,
 				currentCate: 0,
 				searchKeyword: '',
 				socialName: '地址',
@@ -321,10 +339,13 @@
 				activePromo: null,
 				couponTemplates: [],
 				couponShow: false,
-				receivingCouponId: ''
+				receivingCouponId: '',
+				mallUiReady: false,
+				miniappUi: mallMiniappUi()
 			}
 		},
 		onLoad(options = {}) {
+			hideHomeTabBarUntilReady()
 			const storeId = applyLaunchQuery(options)
 			if (storeId) {
 				this.syncCartWithStore(storeId)
@@ -333,6 +354,13 @@
 		/** 进入页面：同步购物车后加载分类商品（游客可浏览，不弹登录/手机号） */
 		async onShow() {
 			applyLaunchQuery()
+			this.mallUiReady = false
+			this.categoryList = []
+			this.searchKeyword = ''
+			this.categoryLoading = true
+			this.cartShow = false
+			resetMiniappUi()
+			this.miniappUi = getMiniappUi()
 			this.cartMap = getCartMap()
 			this.$nextTick(() => {
 				this.updateCateTabHeight()
@@ -364,7 +392,10 @@
 			},
 			/** 分类列表尚未返回，避免空态闪一下 */
 			mallPageLoading() {
-				return !this.categoryList.length && (this.categoryLoading || this.pageBootstrapping)
+				return !this.mallUiReady || (!this.categoryList.length && (this.categoryLoading || this.pageBootstrapping))
+			},
+			showCartBar() {
+				return this.mallUiReady && this.miniappUi.showCart && this.cartCount > 0
 			},
 			/** 搜索时尚有分类商品未拉完，且还没有匹配结果 */
 			searchPending() {
@@ -388,8 +419,11 @@
 			cartTotal() {
 				return getCartTotal(this.cartMap)
 			},
+			showPrice() {
+				return this.miniappUi.enablePay !== false
+			},
 			showPromoBar() {
-				return !!this.promoBarLabel
+				return this.showPrice && !!this.promoBarLabel
 			},
 			promoBarLabel() {
 				const promoText = promoBarText(this.activePromo)
@@ -402,11 +436,14 @@
 				return pickPromoDiscount(this.activePromo, this.cartTotal)
 			},
 			cartFeeTip() {
-				const fee = `另需配送费 ¥${this.deliveryFee.toFixed(2)}`
-				if (this.promoDiscount > 0) {
-					return `${fee} · 满减已减¥${this.promoDiscount.toFixed(2)}`
+				const parts = []
+				if (this.miniappUi.showDeliveryFee !== false) {
+					parts.push(`另需配送费 ¥${this.deliveryFee.toFixed(2)}`)
 				}
-				return fee
+				if (this.promoDiscount > 0) {
+					parts.push(`满减已减¥${this.promoDiscount.toFixed(2)}`)
+				}
+				return parts.join(' · ')
 			}
 		},
 		methods: {
@@ -430,7 +467,10 @@
 				await this.ensureMallStoreId()
 				if (seq !== this.mallRefreshSeq) return
 				this.syncCartWithStore(this.queryStoreId)
+				this.mallUiReady = false
 				if (String(prevStoreId || '') !== String(this.queryStoreId || '')) {
+					hideHomeTabBarUntilReady()
+					uni.setNavigationBarTitle({ title: ' ' })
 					this.currentCate = 0
 					this.categoryList = []
 				}
@@ -478,6 +518,9 @@
 				const storeId = this.queryStoreId
 				if (!storeId) {
 					this.deliveryFee = 0
+					this.miniappUi = applyStoreMiniappUi(null)
+					this.mallUiReady = true
+					uni.setNavigationBarTitle({ title: this.miniappUi.homeTabText || '逛店' })
 					return false
 				}
 				try {
@@ -489,10 +532,16 @@
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					const store = list[0]
 					this.deliveryFee = parseDeliveryFee(store)
+					this.miniappUi = applyStoreMiniappUi(store)
+					this.mallUiReady = true
+					uni.setNavigationBarTitle({ title: this.miniappUi.homeTabText || '逛店' })
 					return isStoreSubscriptionExpired(store)
 				} catch (error) {
 					console.error('获取店铺配送费失败', error)
 					this.deliveryFee = 0
+					this.miniappUi = applyStoreMiniappUi(null)
+					this.mallUiReady = true
+					uni.setNavigationBarTitle({ title: this.miniappUi.homeTabText || '逛店' })
 					return false
 				}
 			},
@@ -684,8 +733,74 @@
 					}
 				})
 			},
+			isProductSoldOut(product) {
+				if (!product) return true
+				if (!this.miniappUi.showStock) return false
+				return Number(product.has) <= 0
+			},
+			/** 列表预定：加购一件后进入结算页 */
+			async handleBookNow(product) {
+				if (!product || this.bookingBusy) return
+				if (this.isProductSoldOut(product)) {
+					uni.showToast({
+						title: '商品已售罄',
+						icon: 'none'
+					})
+					return
+				}
+				this.bookingBusy = true
+				try {
+					if (!(await requireLogin({
+							force: true
+						}))) return
+					const phoneResult = await ensurePhoneBound({
+						required: true
+					})
+					if (!phoneResult.bound) {
+						uni.showToast({
+							title: '请先授权手机号后再预定',
+							icon: 'none'
+						})
+						return
+					}
+					const check = await assertStoreOpenForOrder(product.storeId || this.queryStoreId)
+					if (!check.ok) {
+						if (check.reason === 'expired') {
+							this.clearCart()
+						}
+						return
+					}
+					const result = addCartQuantity(product, 1)
+					if (!result.ok) {
+						if (result.reason === 'otherStore') {
+							uni.showToast({
+								title: '购物车中有其他店铺商品，请先结算',
+								icon: 'none'
+							})
+						} else if (result.reason === 'stock') {
+							uni.showToast({
+								title: '库存不足',
+								icon: 'none'
+							})
+						} else {
+							uni.showToast({
+								title: '预定失败',
+								icon: 'none'
+							})
+						}
+						return
+					}
+					this.cartMap = getCartMap()
+					uni.navigateTo({
+						url: '/pages/mall/checkout/index'
+					})
+				} finally {
+					this.bookingBusy = false
+				}
+			},
 			/** 商品加购一件并记住商品信息 */
 			handleAddCart(product) {
+				if (!this.miniappUi.showCart) return
 				rememberCartProduct(product)
 				const count = this.cartMap[product.id] || 0
 				this.cartMap = {
@@ -1112,6 +1227,10 @@
 		margin-top: auto;
 	}
 
+	.product-bottom--action-only {
+		justify-content: flex-end;
+	}
+
 	.product-price {
 		display: flex;
 		align-items: baseline;
@@ -1152,14 +1271,27 @@
 		margin-left: 8rpx;
 	}
 
-	.add-btn {
-		width: 48rpx;
-		height: 48rpx;
-		border-radius: 50%;
+	.book-btn {
+		flex-shrink: 0;
+		min-width: 96rpx;
+		height: 52rpx;
+		padding: 0 20rpx;
+		border-radius: 26rpx;
 		background-color: #00a896;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+	}
+
+	.book-btn.disabled {
+		opacity: 0.45;
+	}
+
+	.book-btn-text {
+		font-size: 24rpx;
+		color: #fff;
+		line-height: 1;
+		white-space: nowrap;
 	}
 
 	.cart-bar {
@@ -1366,6 +1498,10 @@
 		justify-content: space-between;
 		padding: 20rpx 32rpx 24rpx;
 		border-top: 1rpx solid #f0f0f0;
+	}
+
+	.cart-popup-footer--no-price {
+		justify-content: flex-end;
 	}
 
 	.cart-popup-total {

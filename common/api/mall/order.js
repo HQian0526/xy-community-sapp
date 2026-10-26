@@ -20,7 +20,7 @@ export function previewCheckoutApi(data) {
 export function checkoutAndPayApi(data) {
 	return post('/mallOrder/checkoutAndPay', data, {
 		loading: true,
-		loadingText: '正在下单...'
+		loadingText: '请稍等...'
 	})
 }
 
@@ -86,8 +86,8 @@ export function getMallPendingCountApi() {
 export function mapMallOrderCard(order) {
 	const payStatus = Number(order?.payStatus)
 	const statusMeta = {
-		0: { status: '待支付', statusType: 'pending' },
-		1: { status: '已支付', statusType: 'delivering' },
+		0: { status: '待下单', statusType: 'pending' },
+		1: { status: '已下单', statusType: 'delivering' },
 		2: { status: '已关闭', statusType: 'cancelled' },
 		3: { status: '退款中', statusType: 'refunding' },
 		4: { status: '部分退款', statusType: 'partialRefund' },
@@ -120,6 +120,7 @@ export function mapMallOrderCard(order) {
 		couponDiscount: order.couponDiscount,
 		discountAmount: order.discountAmount,
 		discountDesc: order.discountDesc,
+		payChannel: order.payChannel,
 		payTotal: order.payAmount
 	}
 }

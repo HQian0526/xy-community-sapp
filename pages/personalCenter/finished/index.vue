@@ -18,7 +18,7 @@
 						<text class="order-time">{{ item.createTime }}</text>
 					</view>
 					<view class="order-amount">
-						<text class="amount-value">¥{{ formatMoney(item.payTotal) }}</text>
+						<text class="amount-value">¥{{ formatOrderPayAmount(item.payTotal, item) }}</text>
 						<text class="amount-label">共{{ getGoodsCount(item.goods) }}件</text>
 					</view>
 				</view>
@@ -48,13 +48,14 @@
 </template>
 
 <script>
-	import { formatMoney, getGoodsSummary } from '../storeOrder/mock.js'
+	import { getGoodsSummary } from '../storeOrder/mock.js'
 	import {
 		findMallOrderApi,
 		mapMallOrderCard,
 		goMallOrderDetail
 	} from '@/common/api/mall/order.js'
 	import { requireLogin } from '@/common/auth.js'
+	import { formatOrderPayAmount } from '@/common/miniappUi.js'
 
 	export default {
 		data() {
@@ -76,7 +77,7 @@
 			this.loadOrders().finally(() => uni.stopPullDownRefresh())
 		},
 		methods: {
-			formatMoney,
+			formatOrderPayAmount,
 			getGoodsSummary,
 			async loadOrders() {
 				try {

@@ -199,7 +199,11 @@ export function clearEntryStoreId() {
 export function switchToOwnStore() {
 	entryStoreId = ''
 	lockOwnStore = true
-	return getOwnMerchantStoreId()
+	const own = getOwnMerchantStoreId()
+	if (own) {
+		rememberViewStoreId(own)
+	}
+	return own
 }
 
 export function applyLaunchQuery(query, meta = {}) {
@@ -268,6 +272,9 @@ export function getBrowsingStoreId() {
 	if (lockStoreId) {
 		return String(defaultBindStoreId)
 	}
+	if (lockOwnStore) {
+		return getOwnMerchantStoreId()
+	}
 	return getEntryStoreId() || getRememberedStoreId()
 }
 
@@ -275,7 +282,7 @@ export function getBrowsingStoreId() {
  * 商家扫了别人店的码：其他业务、我的按普通用户界面展示
  */
 export function shouldForceOrdinaryUi(user) {
-	if (lockStoreId) {
+	if (lockStoreId || lockOwnStore) {
 		return false
 	}
 	if (!user || Number(user.identityType) !== IDENTITY_MERCHANT) {

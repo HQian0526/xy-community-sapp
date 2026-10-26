@@ -54,7 +54,7 @@
 						<text class="sum-label">合计</text>
 						<text class="sum-value">¥{{ formatMoney(goodsTotal) }}</text>
 					</view>
-					<text class="sum-tip">{{ cartFeeTip }}</text>
+					<text v-if="cartFeeTip" class="sum-tip">{{ cartFeeTip }}</text>
 				</view>
 				<view class="action-btn" @click="handleCheckout">去结算</view>
 			</view>
@@ -89,6 +89,11 @@
 		setCartItemCount,
 		setCartMap
 	} from '../cart.js'
+	import {
+		applyStoreMiniappUi,
+		getMiniappUi,
+		isMiniappUiReady
+	} from '@/common/miniappUi.js'
 
 	function firstImage(raw) {
 		const first = String(raw || '').split(',')[0].trim()
@@ -104,7 +109,8 @@
 			return {
 				cartMap: {},
 				deliveryFee: 0,
-				activePromo: null
+				activePromo: null,
+				miniappUi: getMiniappUi()
 			}
 		},
 		computed: {
@@ -120,16 +126,23 @@
 			promoDiscount() {
 				return pickPromoDiscount(this.activePromo, this.goodsTotal)
 			},
+			showDeliveryFee() {
+				return this.miniappUi.showDeliveryFee !== false
+			},
 			cartFeeTip() {
-				const fee = `另需配送费 ¥${formatMoney(this.deliveryFee)}`
-				if (this.promoDiscount > 0) {
-					return `${fee} · 满减已减¥${formatMoney(this.promoDiscount)}`
+				const parts = []
+				if (this.showDeliveryFee) {
+					parts.push(`另需配送费 ¥${formatMoney(this.deliveryFee)}`)
 				}
-				return fee
+				if (this.promoDiscount > 0) {
+					parts.push(`满减已减¥${formatMoney(this.promoDiscount)}`)
+				}
+				return parts.join(' · ')
 			}
 		},
-		onShow() {
+		async onShow() {
 			this.reloadCart()
+			if (!(await this.ensureCartAllowed())) return
 			this.refreshCartProducts()
 			this.loadDeliveryFee()
 			this.loadActivePromo()
@@ -139,6 +152,36 @@
 			formatMoney,
 			reloadCart() {
 				this.cartMap = getCartMap()
+			},
+			async ensureCartAllowed() {
+				const storeId = this.resolveStoreId()
+				const readyUi = isMiniappUiReady() ? getMiniappUi() : null
+				if (readyUi && (!storeId || String(readyUi.storeId || '') === String(storeId))) {
+					this.miniappUi = readyUi
+					if (!readyUi.showCart) {
+						uni.switchTab({ url: '/pages/mall/index' })
+						return false
+					}
+					return true
+				}
+				if (!storeId) return true
+				try {
+					const data = await getStoreListApi({
+						storeId,
+						pageNum: 1,
+						pageSize: 1
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					const ui = applyStoreMiniappUi(list[0])
+					this.miniappUi = ui
+					if (!ui.showCart) {
+						uni.switchTab({ url: '/pages/mall/index' })
+						return false
+					}
+				} catch (error) {
+					console.error('获取小程序权限失败', error)
+				}
+				return true
 			},
 			resolveStoreId() {
 				const hit = this.cartItems.find((item) => item.storeId)

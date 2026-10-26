@@ -35,7 +35,7 @@
 					<view class="order-meta">
 						<text class="order-time">{{ item.createTime }}</text>
 						<view class="order-amount">
-							<text class="amount-value">¥{{ formatMoney(item.payTotal) }}</text>
+							<text class="amount-value">¥{{ formatOrderPayAmount(item.payTotal, item) }}</text>
 							<text class="amount-label">共{{ getGoodsCount(item.goods) }}件</text>
 						</view>
 					</view>
@@ -53,7 +53,7 @@
 							<text class="order-time">{{ item.createTime }}</text>
 						</view>
 						<view class="order-amount">
-							<text class="amount-value">¥{{ formatMoney(item.payTotal) }}</text>
+							<text class="amount-value">¥{{ formatOrderPayAmount(item.payTotal, item) }}</text>
 							<text class="amount-label">共{{ getGoodsCount(item.goods) }}件</text>
 						</view>
 					</view>
@@ -84,13 +84,14 @@
 </template>
 
 <script>
-	import { formatMoney, getGoodsSummary } from './mock.js'
+	import { getGoodsSummary } from './mock.js'
 	import {
 		findMallOrderApi,
 		mapMallOrderCard,
 		goMallOrderDetail
 	} from '@/common/api/mall/order.js'
 	import { requireLogin } from '@/common/auth.js'
+	import { formatOrderPayAmount, getMiniappUi, isMiniappUiReady, syncHomeTabBar } from '@/common/miniappUi.js'
 
 	export default {
 		data() {
@@ -100,14 +101,14 @@
 				currentSection: 0,
 				sectionList: [
 					{ name: '全部' },
-					{ name: '待支付' },
-					{ name: '已支付' }
+					// { name: '待支付' },
+					{ name: '已下单' }
 				]
 			}
 		},
 		computed: {
 			isPendingTab() {
-				return this.currentSection === 1
+				return false
 			},
 			displayList() {
 				return this.orders
@@ -116,21 +117,22 @@
 		async onShow() {
 			if (!(await requireLogin({ force: true }))) return
 			uni.setNavigationBarTitle({ title: '全部订单' })
+			if (isMiniappUiReady()) {
+				syncHomeTabBar(getMiniappUi().homeTabText)
+			}
 			this.loadOrders()
 		},
 		onPullDownRefresh() {
 			this.loadOrders().finally(() => uni.stopPullDownRefresh())
 		},
 		methods: {
-			formatMoney,
+			formatOrderPayAmount,
 			getGoodsSummary,
 			async loadOrders() {
 				try {
 					const params = { pageNum: 1, pageSize: 100 }
 					if (this.currentSection === 1) {
-						params.payStatus = 0
-					} else if (this.currentSection === 2) {
-						// 已支付含退款中 / 部分退款 / 已全额退款
+						// 已下单：已支付含退款中 / 部分退款 / 已全额退款
 						params.payStatuses = '1,3,4,5'
 					}
 					const data = await findMallOrderApi(params)

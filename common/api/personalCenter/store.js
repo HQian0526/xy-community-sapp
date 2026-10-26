@@ -127,6 +127,12 @@ export function isStoreSubscriptionExpired(store) {
 }
 
 export function parseDeliveryFee(store) {
+	const type = Number(store?.miniappType) === 2 ? 2 : 1
+	const raw = store?.showDeliveryFee
+	const shown = raw === undefined || raw === null || raw === ''
+		? type !== 2
+		: Number(raw) === 1
+	if (!shown) return 0
 	const n = Number(store?.deliveryFee)
 	if (!Number.isFinite(n) || n < 0) return 0
 	return Math.round(n * 100) / 100

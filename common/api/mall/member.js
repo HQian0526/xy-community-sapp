@@ -9,6 +9,34 @@ import {
 export const MIN_RECHARGE_AMOUNT = 100
 export const RECHARGE_PRESETS = [100, 200, 500]
 
+export function lookupStoreMemberByPhoneApi(phone, storeId) {
+	return lookupStoreMemberApi({ phone, storeId })
+}
+
+export function lookupStoreMemberApi(params = {}) {
+	const query = {}
+	if (params.phone) query.phone = params.phone
+	if (params.userId) query.userId = params.userId
+	if (params.storeId) query.storeId = params.storeId
+	return get('/storeMember/lookup', query, {
+		showError: true
+	})
+}
+
+export function assistStoreMemberRechargeApi(data) {
+	return post('/storeMember/assistRecharge', data, {
+		loading: true,
+		loadingText: '储值中...'
+	})
+}
+
+export function verifyStoreMemberDebitApi(data) {
+	return post('/storeMember/verifyDebit', data, {
+		loading: true,
+		loadingText: '核验中...'
+	})
+}
+
 export function getStoreMemberMineApi(storeId) {
 	return get('/storeMember/mine', storeId ? { storeId } : {}, {
 		showError: false
@@ -18,7 +46,7 @@ export function getStoreMemberMineApi(storeId) {
 export function rechargeStoreMemberApi(data) {
 	return post('/storeMember/recharge', data, {
 		loading: true,
-		loadingText: '正在下单...'
+		loadingText: '请稍等...'
 	})
 }
 

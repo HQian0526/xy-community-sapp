@@ -20,13 +20,13 @@
 					<text class="info-label">联系电话</text>
 					<text class="info-value">{{ order.contact || '-' }}</text>
 				</view>
-				<view class="info-row">
+				<view v-if="showAddress" class="info-row">
 					<text class="info-label">收货地址</text>
 					<text class="info-value">{{ order.address || '-' }}</text>
 				</view>
-				<view v-if="order.remark" class="info-row info-row-last">
+				<view class="info-row info-row-last">
 					<text class="info-label">备注</text>
-					<text class="info-value">{{ order.remark }}</text>
+					<text class="info-value">{{ order.remark || '' }}</text>
 				</view>
 			</view>
 
@@ -43,7 +43,7 @@
 						<view class="goods-bottom">
 							<view class="goods-price">
 								<text class="price-symbol">¥</text>
-								<text class="price-value">{{ formatMoney(item.price) }}</text>
+								<text class="price-value">{{ displayMoney(item.price) }}</text>
 							</view>
 							<text class="goods-count">x{{ item.quantity }}</text>
 						</view>
@@ -51,22 +51,22 @@
 				</view>
 			</view>
 
-			<view class="summary-card">
+			<view v-if="showPaySummary" class="summary-card">
 				<view class="summary-row">
-					<text class="summary-label">商品金额</text>
-					<text class="summary-value">¥{{ formatMoney(order.goodsAmount) }}</text>
+					<text class="summary-label">金额</text>
+					<text class="summary-value">¥{{ displayMoney(order.goodsAmount) }}</text>
 				</view>
-				<view class="summary-row">
+				<view v-if="showDeliveryFee" class="summary-row">
 					<text class="summary-label">配送费</text>
-					<text class="summary-value">¥{{ formatMoney(order.deliveryFee) }}</text>
+					<text class="summary-value">¥{{ displayMoney(order.deliveryFee) }}</text>
 				</view>
-				<view v-if="promoDiscount > 0" class="summary-row">
+				<view v-if="promoDiscount > 0 && !zeroAmount" class="summary-row">
 					<text class="summary-label">满减</text>
-					<text class="summary-value summary-discount">-¥{{ formatMoney(promoDiscount) }}</text>
+					<text class="summary-value summary-discount">-¥{{ displayMoney(promoDiscount) }}</text>
 				</view>
-				<view v-if="couponDiscount > 0" class="summary-row">
+				<view v-if="couponDiscount > 0 && !zeroAmount" class="summary-row">
 					<text class="summary-label">优惠券</text>
-					<text class="summary-value summary-discount">-¥{{ formatMoney(couponDiscount) }}</text>
+					<text class="summary-value summary-discount">-¥{{ displayMoney(couponDiscount) }}</text>
 				</view>
 				<view v-if="discountDesc" class="summary-row">
 					<text class="summary-label">优惠说明</text>
@@ -74,18 +74,18 @@
 				</view>
 				<view class="summary-row summary-row-total">
 					<text class="summary-label">实付</text>
-					<text class="summary-total">¥{{ formatMoney(order.payAmount) }}</text>
+					<text class="summary-total">¥{{ displayMoney(order.payAmount) }}</text>
 				</view>
 			</view>
 
-			<view v-if="order.transactionId || order.paidTime" class="info-card">
-				<view v-if="order.transactionId" class="info-row">
-					<text class="info-label">支付单号</text>
-					<text class="info-value">{{ order.transactionId }}</text>
+			<view class="info-card">
+				<view class="info-row">
+					<text class="info-label">订单号</text>
+					<text class="info-value">{{ order.orderNo || '-' }}</text>
 				</view>
-				<view v-if="order.paidTime" class="info-row info-row-last">
-					<text class="info-label">支付时间</text>
-					<text class="info-value">{{ formatTime(order.paidTime) }}</text>
+				<view class="info-row info-row-last">
+					<text class="info-label">下单时间</text>
+					<text class="info-value">{{ formatTime(order.createdTime || order.paidTime) }}</text>
 				</view>
 			</view>
 		</template>
@@ -95,11 +95,19 @@
 <script>
 	import { requireLogin } from '@/common/auth.js'
 	import { queryMallOrderApi } from '@/common/api/mall/order.js'
+	import { getStoreListApi } from '@/common/api/personalCenter/store.js'
 	import { formatMoney } from './checkout/mock.js'
+	import {
+		applyStoreMiniappUi,
+		getMiniappUi,
+		isMiniappUiReady,
+		mallMiniappUi,
+		shouldZeroOrderAmount
+	} from '@/common/miniappUi.js'
 
 	const PAY_STATUS_MAP = {
-		0: '待支付',
-		1: '已支付',
+		0: '待下单',
+		1: '已下单',
 		2: '已关闭',
 		3: '退款中',
 		4: '部分退款',
@@ -111,7 +119,8 @@
 			return {
 				loading: true,
 				orderNo: '',
-				order: null
+				order: null,
+				miniappUi: mallMiniappUi()
 			}
 		},
 		computed: {
@@ -127,6 +136,18 @@
 			},
 			discountDesc() {
 				return String(this.order?.discountDesc || '').trim()
+			},
+			zeroAmount() {
+				return shouldZeroOrderAmount(this.order, this.miniappUi)
+			},
+			showAddress() {
+				return this.miniappUi.showAddress !== false
+			},
+			showPaySummary() {
+				return this.miniappUi.enablePay !== false
+			},
+			showDeliveryFee() {
+				return this.miniappUi.showDeliveryFee !== false
 			}
 		},
 		async onLoad(options = {}) {
@@ -147,12 +168,39 @@
 		},
 		methods: {
 			formatMoney,
+			displayMoney(value) {
+				return this.zeroAmount ? '0.00' : formatMoney(value)
+			},
 			formatTime(value) {
 				if (!value) return '-'
 				const date = new Date(value)
 				if (Number.isNaN(date.getTime())) return String(value)
 				const pad = (n) => String(n).padStart(2, '0')
 				return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+			},
+			async loadMiniappUi(storeId) {
+				const id = storeId == null ? '' : String(storeId).trim()
+				try {
+					const readyUi = isMiniappUiReady() ? getMiniappUi() : null
+					if (readyUi && (!id || String(readyUi.storeId || '') === id)) {
+						this.miniappUi = readyUi
+						return
+					}
+					if (!id) {
+						this.miniappUi = applyStoreMiniappUi(null)
+						return
+					}
+					const data = await getStoreListApi({
+						storeId: id,
+						pageNum: 1,
+						pageSize: 1
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					this.miniappUi = applyStoreMiniappUi(list[0])
+				} catch (error) {
+					console.error('获取小程序权限失败', error)
+					this.miniappUi = applyStoreMiniappUi(null)
+				}
 			},
 			async loadOrder() {
 				if (!this.orderNo) {
@@ -165,6 +213,7 @@
 				try {
 					const data = await queryMallOrderApi(this.orderNo)
 					this.order = data?.order || null
+					await this.loadMiniappUi(this.order?.storeId)
 				} catch (e) {
 					console.error('加载商城订单失败', e)
 					this.order = null

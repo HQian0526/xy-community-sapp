@@ -1,3 +1,5 @@
+import { getMiniappUi, isBookingMiniapp } from '@/common/miniappUi.js'
+
 export const CART_STORAGE_KEY = 'mallCartMap'
 export const CART_PRODUCTS_KEY = 'mallCartProducts'
 
@@ -82,9 +84,13 @@ export function addCartQuantity(product, quantity = 1) {
 	if (!product || product.id === undefined || product.id === null) {
 		return { ok: false, reason: 'invalid' }
 	}
-	const qty = Math.max(1, Number(quantity) || 1)
+	const booking = isBookingMiniapp()
+	if (booking) {
+		clearCartMap()
+	}
+	const qty = booking ? 1 : Math.max(1, Number(quantity) || 1)
 	const storeId = String(product.storeId || '')
-	if (storeId) {
+	if (!booking && storeId) {
 		const foreign = getCartItems().find(
 			(item) => item.storeId && String(item.storeId) !== storeId
 		)
@@ -93,10 +99,13 @@ export function addCartQuantity(product, quantity = 1) {
 		}
 	}
 	const map = getCartMap()
-	const current = Number(map[product.id] || 0)
-	const next = current + qty
+	const current = booking ? 0 : Number(map[product.id] || 0)
+	const next = booking ? 1 : current + qty
 	const stock = Number(product.has)
-	if (Number.isFinite(stock) && stock >= 0 && next > stock) {
+	const checkStock = getMiniappUi()?.showStock !== false
+		&& Number.isFinite(stock)
+		&& stock >= 0
+	if (checkStock && next > stock) {
 		return { ok: false, reason: 'stock', stock, count: current }
 	}
 	rememberCartProduct(product)

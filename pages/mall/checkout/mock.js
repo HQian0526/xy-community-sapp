@@ -1,8 +1,3 @@
-export const checkoutInfo = {
-	storeName: '小店',
-	deliveryTip: '预计 30 分钟内送达'
-}
-
 export function getDefaultContact() {
 	const personInfo = uni.getStorageSync('personInfo')
 	return {
