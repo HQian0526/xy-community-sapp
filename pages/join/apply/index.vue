@@ -197,10 +197,16 @@
 	}
 
 	.submit-btn {
+		width: 100%;
 		height: 88rpx;
 		line-height: 88rpx;
 		font-size: 30rpx;
 		font-weight: 600;
+		text-align: center;
+		background-color: #00a896;
+		color: #fff;
+		border-radius: 44rpx;
+		box-sizing: border-box;
 	}
 
 	.submit-btn--disabled {

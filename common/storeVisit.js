@@ -195,12 +195,13 @@ export function clearEntryStoreId() {
 	return entryStoreId
 }
 
-/** 商家从别人店切回自己的店：清掉扫码进店状态 */
-export function switchToOwnStore() {
+/** 商家/员工从别人店切回自己的店：清掉扫码进店状态 */
+export function switchToOwnStore(user) {
 	entryStoreId = ''
 	lockOwnStore = true
-	const own = getOwnMerchantStoreId()
+	const own = getWorkplaceStoreId(user)
 	if (own) {
+		setOwnMerchantStoreId(own)
 		rememberViewStoreId(own)
 	}
 	return own
@@ -242,8 +243,54 @@ export function setOwnMerchantStoreId(id) {
 	return ownMerchantStoreId
 }
 
+/** 用 getUserInfo 的 lastStoreId / ownedStores / 员工任职店，落到当前经营店 */
+export function applyOwnedWorkplace(user) {
+	if (!user) return getOwnMerchantStoreId()
+	if (Number(user.identityType) === IDENTITY_MERCHANT) {
+		const last = normalizeStoreId(user.lastStoreId)
+		if (last) {
+			return setOwnMerchantStoreId(last)
+		}
+		const owned = Array.isArray(user.ownedStores) ? user.ownedStores : []
+		for (let i = 0; i < owned.length; i++) {
+			const id = normalizeStoreId(owned[i] && owned[i].storeId)
+			if (id) {
+				return setOwnMerchantStoreId(id)
+			}
+		}
+		return getOwnMerchantStoreId()
+	}
+	if (user.staffStoreId) {
+		return setOwnMerchantStoreId(user.staffStoreId)
+	}
+	return getOwnMerchantStoreId()
+}
+
+/** 商家在自己名下分店之间切换：清掉扫码进店，记住当前经营店 */
+export function switchOwnedStore(storeId) {
+	const next = normalizeStoreId(storeId)
+	if (!next) return ''
+	entryStoreId = ''
+	lockOwnStore = true
+	setOwnMerchantStoreId(next)
+	rememberViewStoreId(next)
+	return next
+}
+
 export function getOwnMerchantStoreId() {
 	return ownMerchantStoreId
+}
+
+export function isStaffUser(user) {
+	return !!normalizeStoreId(user && user.staffStoreId)
+}
+
+/** 商家自己的店，或员工任职的店 */
+export function getWorkplaceStoreId(user) {
+	if (user && Number(user.identityType) === IDENTITY_MERCHANT) {
+		return getOwnMerchantStoreId() || normalizeStoreId(user.lastStoreId)
+	}
+	return normalizeStoreId(user && user.staffStoreId) || getOwnMerchantStoreId()
 }
 
 /**
@@ -254,10 +301,14 @@ export function resolveViewStoreId(user) {
 	if (lockStoreId) {
 		return String(defaultBindStoreId)
 	}
+	if (lockOwnStore) {
+		const own = getWorkplaceStoreId(user)
+		if (own) return own
+	}
 	const entry = getEntryStoreId()
 	if (entry) return entry
 	if (user && Number(user.identityType) === IDENTITY_MERCHANT) {
-		const own = getOwnMerchantStoreId() || normalizeStoreId(user.bindStoreId)
+		const own = getOwnMerchantStoreId() || normalizeStoreId(user.lastStoreId)
 		if (own) return own
 	}
 	const bound = user && user.bindStoreId
@@ -279,18 +330,47 @@ export function getBrowsingStoreId() {
 }
 
 /**
- * 商家扫了别人店的码：其他业务、我的按普通用户界面展示
+ * 商家/员工扫了别人店的码：其他业务、我的按普通用户界面展示
  */
 export function shouldForceOrdinaryUi(user) {
 	if (lockStoreId || lockOwnStore) {
 		return false
 	}
-	if (!user || Number(user.identityType) !== IDENTITY_MERCHANT) {
+	const workplace = getWorkplaceStoreId(user)
+	if (!workplace) return false
+	const merchant = user && Number(user.identityType) === IDENTITY_MERCHANT
+	if (!merchant && !isStaffUser(user)) {
 		return false
 	}
 	const browsing = getBrowsingStoreId()
 	if (!browsing) return false
-	const own = getOwnMerchantStoreId() || normalizeStoreId(user.bindStoreId)
-	if (!own) return false
-	return own !== browsing
+	return workplace !== browsing
+}
+
+/** 当前不在自己店时，展示「切换至我的店铺」 */
+export function canSwitchToWorkplace(user) {
+	if (lockStoreId) {
+		return false
+	}
+	const workplace = getWorkplaceStoreId(user)
+	if (!workplace) return false
+	const merchant = user && Number(user.identityType) === IDENTITY_MERCHANT
+	if (!merchant && !isStaffUser(user)) {
+		return false
+	}
+	const current = getBrowsingStoreId() || resolveViewStoreId(user)
+	return !!current && workplace !== current
+}
+
+/** 员工且当前浏览的是任职店铺：显示员工标识和特权 */
+export function isStaffAtOwnStore(user) {
+	if (!isStaffUser(user) || Number(user.identityType) === IDENTITY_MERCHANT) {
+		return false
+	}
+	if (shouldForceOrdinaryUi(user)) {
+		return false
+	}
+	const workplace = normalizeStoreId(user.staffStoreId)
+	const current = resolveViewStoreId(user)
+	return !!workplace && !!current && workplace === current
 }

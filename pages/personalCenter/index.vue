@@ -19,7 +19,10 @@
 				<image class="avatar-img" :src="headerAvatar" mode="aspectFill" />
 			</view>
 			<view class="profile-info" @click="onHeaderTap">
-				<text class="store-name">{{ headerName }}</text>
+				<view class="name-row">
+					<text class="store-name">{{ headerName }}</text>
+					<text v-if="showStaffBadge" class="staff-badge">店员</text>
+				</view>
 				<text class="store-phone">{{ headerPhone }}</text>
 			</view>
 			<text
@@ -48,6 +51,15 @@
 				class="member-entry"
 				@click="goRecharge"
 			>{{ memberEntryText }}</text>
+		</view>
+		<view
+			v-if="showOwnedStoreSwitcher"
+			class="owned-store-switch"
+			@click="handleSwitchOwnedStore"
+		>
+			<text class="owned-store-label">当前门店</text>
+			<text class="owned-store-name">{{ currentOwnedStoreName }}</text>
+			<text class="owned-store-arrow">切换</text>
 		</view>
 
 		<view class="content-wrap">
@@ -147,9 +159,24 @@
 					</up-grid-item>
 				</up-grid>
 			</view>
+
+			<view v-if="showStaffPrivilege" class="service-card staff-card">
+				<text class="section-title staff-section-title">员工特权</text>
+				<up-grid :col="4" :border="false">
+					<up-grid-item v-for="item in staffPrivilegeList" :key="item.key" :name="item.key"
+						@click="handleServiceClick(item)">
+						<view class="service-item">
+							<view class="service-icon-wrap staff-icon-wrap">
+								<up-icon :name="item.icon" size="28" color="#8a5a12"></up-icon>
+							</view>
+							<text class="service-name">{{ item.name }}</text>
+						</view>
+					</up-grid-item>
+				</up-grid>
+			</view>
 		</view>
 
-		<view class="flex-center invite" @click="goJoinApply">想为您的店铺引入小程序？点此申请</view>
+		<view class="invite" @click="goJoinApply">想为您的店铺引入小程序？点此申请</view>
 		</template>
 
 		<!-- #ifdef MP-WEIXIN -->
@@ -199,7 +226,8 @@
 		accountList,
 		serviceList,
 		ownerList,
-		businessList
+		businessList,
+		staffPrivilegeList
 	} from './mock.js'
 	import {
 		getMallPendingCountApi,
@@ -237,9 +265,17 @@
 		resolveViewStoreId,
 		getBrowsingStoreId,
 		shouldForceOrdinaryUi,
+		canSwitchToWorkplace,
+		isStaffAtOwnStore,
 		setOwnMerchantStoreId,
-		switchToOwnStore
+		switchToOwnStore,
+		switchOwnedStore,
+		applyOwnedWorkplace,
+		getOwnMerchantStoreId
 	} from '@/common/storeVisit.js'
+	import {
+		switchStoreApi
+	} from '@/common/api/personalCenter/user.js'
 	import bindPhoneMixin from '@/common/mixin/bindPhoneMixin.js'
 	import BindPhonePopup from '@/components/bind-phone-popup/bind-phone-popup.vue'
 
@@ -263,7 +299,11 @@
 					phone: '',
 					avatar: '',
 					identityType: IDENTITY_USER,
-					storeExpired: false
+					storeExpired: false,
+					staffStoreId: '',
+					staffStoreExpired: false,
+					lastStoreId: '',
+					ownedStores: []
 				},
 				storeProfile: {
 					id: null,
@@ -286,6 +326,7 @@
 				serviceList,
 				ownerList,
 				businessList,
+				staffPrivilegeList,
 				badgeCount: 0,
 				sharePopupShow: false,
 				settleTipShow: false,
@@ -313,9 +354,27 @@
 					&& !shouldForceOrdinaryUi(this.userProfile)
 			},
 			showSwitchOwnStore() {
-				return this.loggedIn
-					&& Number(this.userProfile.identityType) === IDENTITY_MERCHANT
-					&& shouldForceOrdinaryUi(this.userProfile)
+				return this.loggedIn && canSwitchToWorkplace(this.userProfile)
+			},
+			ownedStores() {
+				return Array.isArray(this.userProfile.ownedStores) ? this.userProfile.ownedStores : []
+			},
+			showOwnedStoreSwitcher() {
+				return this.loggedIn && this.isMerchant && this.ownedStores.length > 1
+			},
+			currentOwnedStoreName() {
+				const current = String(this.userProfile.lastStoreId || getOwnMerchantStoreId() || '')
+				const hit = this.ownedStores.find((item) => String(item && item.storeId) === current)
+				if (hit && hit.storeName) return hit.storeName
+				return this.storeProfile.storeName || this.storeInfo.storeName || '我的店铺'
+			},
+			showStaffBadge() {
+				return this.loggedIn && isStaffAtOwnStore(this.userProfile)
+			},
+			showStaffPrivilege() {
+				return this.showStaffBadge
+					&& this.miniappUi.enablePay !== false
+					&& this.userProfile.staffStoreExpired !== true
 			},
 			showBindPhoneEntry() {
 				return this.loggedIn && !this.isMerchant && isNeedBindPhone(this.userProfile)
@@ -469,8 +528,13 @@
 						avatar: resolveFileUrl(user.avatar || ''),
 						identityType: user.identityType == null ? IDENTITY_USER : Number(user.identityType),
 						bindStoreId: user.bindStoreId,
-						storeExpired: user.storeExpired === true
+						storeExpired: user.storeExpired === true,
+						staffStoreId: user.staffStoreId == null ? '' : String(user.staffStoreId),
+						staffStoreExpired: user.staffStoreExpired === true,
+						lastStoreId: user.lastStoreId == null ? '' : String(user.lastStoreId),
+						ownedStores: Array.isArray(user.ownedStores) ? user.ownedStores : []
 					}
+					applyOwnedWorkplace(user)
 				} catch (error) {
 					console.error('获取用户信息失败', error)
 				}
@@ -509,7 +573,8 @@
 						userId
 					})
 					const list = Array.isArray(data) ? data : (data?.list || [])
-					const store = list[0]
+					const targetId = String(this.userProfile.lastStoreId || getOwnMerchantStoreId() || '')
+					const store = list.find((item) => String(item && item.storeId) === targetId) || list[0]
 					if (!store) {
 						this.storeProfile = {
 							id: null,
@@ -620,7 +685,11 @@
 					phone: '',
 					avatar: '',
 					identityType: IDENTITY_USER,
-					storeExpired: false
+					storeExpired: false,
+					staffStoreId: '',
+					staffStoreExpired: false,
+					lastStoreId: '',
+					ownedStores: []
 				}
 				this.storeProfile = {
 					id: null,
@@ -688,7 +757,7 @@
 				return true
 			},
 			async handleSwitchToOwnStore() {
-				switchToOwnStore()
+				switchToOwnStore(this.userProfile)
 				this.userLoading = false
 				await this.initUserProfile()
 				if (this.isMerchant) {
@@ -698,6 +767,44 @@
 				uni.showToast({
 					title: '已切换到我的店铺',
 					icon: 'none'
+				})
+			},
+			handleSwitchOwnedStore() {
+				const stores = this.ownedStores
+				if (stores.length < 2) return
+				const itemList = stores.map((item) => {
+					const name = (item && item.storeName) || '未命名店铺'
+					return item && item.expired ? `${name}（已到期）` : name
+				})
+				uni.showActionSheet({
+					itemList,
+					success: async (res) => {
+						const target = stores[res.tapIndex]
+						const storeId = target && target.storeId != null ? String(target.storeId) : ''
+						if (!storeId || storeId === String(this.userProfile.lastStoreId || '')) {
+							return
+						}
+						uni.showLoading({ title: '切换中', mask: true })
+						try {
+							await switchStoreApi(storeId)
+							switchOwnedStore(storeId)
+							await ensureUserInfo({ force: true })
+							this.userLoading = false
+							await this.initUserProfile()
+							if (this.isMerchant) {
+								await this.loadSettlementSummary()
+							}
+							await this.loadPendingCount()
+							uni.showToast({
+								title: '已切换门店',
+								icon: 'none'
+							})
+						} catch (error) {
+							console.error('切换门店失败', error)
+						} finally {
+							uni.hideLoading()
+						}
+					}
 				})
 			},
 			onHeaderTap() {
@@ -926,6 +1033,41 @@
 		padding: 32rpx 32rpx 24rpx;
 	}
 
+	.owned-store-switch {
+		position: relative;
+		margin: 0 24rpx 16rpx;
+		padding: 18rpx 24rpx;
+		border-radius: 12rpx;
+		background: #fff;
+		display: flex;
+		align-items: center;
+		gap: 16rpx;
+		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+	}
+
+	.owned-store-label {
+		flex-shrink: 0;
+		font-size: 24rpx;
+		color: #999;
+	}
+
+	.owned-store-name {
+		flex: 1;
+		min-width: 0;
+		font-size: 28rpx;
+		font-weight: 600;
+		color: #333;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.owned-store-arrow {
+		flex-shrink: 0;
+		font-size: 24rpx;
+		color: $primary;
+	}
+
 	.avatar-wrap {
 		flex-shrink: 0;
 		width: 112rpx;
@@ -952,13 +1094,35 @@
 		gap: 8rpx;
 	}
 
+	.name-row {
+		display: flex;
+		align-items: center;
+		min-width: 0;
+	}
+
 	.store-name {
+		flex: 1;
+		min-width: 0;
 		font-size: 34rpx;
 		font-weight: 700;
 		color: #333;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.staff-badge {
+		flex-shrink: 0;
+		margin-left: 12rpx;
+		padding: 4rpx 14rpx;
+		border-radius: 8rpx;
+		font-size: 20rpx;
+		font-weight: 600;
+		letter-spacing: 1rpx;
+		color: #8a5a12;
+		background: linear-gradient(135deg, #f8e3b0 0%, #e8c36a 100%);
+		border: 1rpx solid #d4a84b;
+		box-shadow: 0 2rpx 6rpx rgba(212, 168, 75, 0.28);
 	}
 
 	.store-phone {
@@ -1007,6 +1171,21 @@
 		padding: 28rpx 24rpx;
 		margin-bottom: 20rpx;
 		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+	}
+
+	.staff-card {
+		background: linear-gradient(180deg, #fffaf0 0%, #ffffff 70%);
+		border: 1rpx solid #f0d9a6;
+		box-shadow: 0 2rpx 12rpx rgba(212, 168, 75, 0.12);
+	}
+
+	.staff-section-title {
+		color: #8a5a12;
+		border-left-color: #e8c36a;
+	}
+
+	.staff-icon-wrap {
+		background: linear-gradient(135deg, #f8e3b0 0%, #e8c36a 100%) !important;
 	}
 
 	.card-header {
@@ -1162,8 +1341,14 @@
 	}
 
 	.invite {
+		width: 100%;
+		display: block;
+		box-sizing: border-box;
+		padding: 8rpx 24rpx 0;
 		color: #1179ff;
 		font-size: 24rpx;
+		line-height: 1.6;
+		text-align: center;
 		text-decoration: underline;
 	}
 

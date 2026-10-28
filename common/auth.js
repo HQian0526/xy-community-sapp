@@ -13,7 +13,8 @@ import {
 import {
 	getEntryStoreId,
 	getRememberedStoreId,
-	rememberViewStoreId
+	rememberViewStoreId,
+	applyOwnedWorkplace
 } from '@/common/storeVisit.js'
 import {
 	getBindPhoneUI,
@@ -31,6 +32,9 @@ const TOKEN_KEY = 'token'
 const USER_INFO_KEY = 'userInfo'
 
 let loginPromise = null
+/** 换票失败后的冷却截止时间，避免 401 把失败放大成刷登录 */
+let loginFailedUntil = 0
+const LOGIN_COOLDOWN_MS = 15000
 /** 用户主动拒绝登录后，非 force 的闸门不再强登 */
 let loginDeclined = false
 /** 启动静默登录完成态，供首页等待，避免业务接口抢跑 */
@@ -148,6 +152,7 @@ export async function ensureUserInfo(options = {}) {
 	if (!force && userInfoFetched) {
 		const cached = getUserInfo()
 		if (cached) {
+			applyOwnedWorkplace(cached)
 			return cached
 		}
 		userInfoFetched = false
@@ -161,6 +166,7 @@ export async function ensureUserInfo(options = {}) {
 			const user = await get('/user/getUserInfo')
 			if (user) {
 				saveLoginInfo(getToken(), user)
+				applyOwnedWorkplace(user)
 			}
 			const cached = await persistBindStore(getUserInfo() || user)
 			userInfoFetched = true
@@ -170,6 +176,7 @@ export async function ensureUserInfo(options = {}) {
 			const cached = getUserInfo()
 			if (cached) {
 				userInfoFetched = true
+				applyOwnedWorkplace(cached)
 				return persistBindStore(cached)
 			}
 			return null
@@ -200,6 +207,7 @@ export async function bindPhoneByCode(code) {
 	saveLoginInfo(token, userInfo)
 	if (userInfo) {
 		userInfoFetched = true
+		applyOwnedWorkplace(userInfo)
 	}
 	const cached = await persistBindStore(getUserInfo() || userInfo)
 	return {
@@ -265,6 +273,7 @@ function doWxLogin() {
 						merged: !!payload.merged
 					}
 					saveLoginInfo(token, userInfo)
+					applyOwnedWorkplace(userInfo)
 					resolve(result)
 				} catch (error) {
 					reject(error)
@@ -288,11 +297,27 @@ function doWxLogin() {
 	})
 }
 
+export function isWxLoginCooling() {
+	return Date.now() < loginFailedUntil
+}
+
 export function wxLogin() {
+	if (isWxLoginCooling()) {
+		return Promise.reject(new Error('登录失败，请稍后重试'))
+	}
 	if (!loginPromise) {
-		loginPromise = doWxLogin().finally(() => {
-			loginPromise = null
-		})
+		loginPromise = doWxLogin()
+			.then((result) => {
+				loginFailedUntil = 0
+				return result
+			})
+			.catch((error) => {
+				loginFailedUntil = Date.now() + LOGIN_COOLDOWN_MS
+				throw error
+			})
+			.finally(() => {
+				loginPromise = null
+			})
 	}
 	return loginPromise
 }

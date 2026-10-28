@@ -32,6 +32,10 @@ export const serviceList = [
 	{ key: 'share', name: '分享小程序', icon: 'share' },
 ]
 
+export const staffPrivilegeList = [
+	{ key: 'verify', name: '会员核验', icon: 'checkmark-circle', url: '/pages/personalCenter/verify/index' },
+]
+
 export const ownerList = [
 	{ key: 'storeProfile', name: '商家资料', icon: 'integral', url: '/pages/personalCenter/storeProfile/index' },
 	{ key: 'status', name: '营业状态', icon: 'star', url: '/pages/personalCenter/businessStatus/index' },

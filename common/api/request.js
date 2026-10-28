@@ -1,6 +1,10 @@
 import {
 	API_BASE_URL
 } from './config.js'
+import {
+	getWorkplaceStoreId,
+	resolveViewStoreId
+} from '@/common/storeVisit.js'
 
 const TOKEN_KEY = 'token'
 const USER_INFO_KEY = 'userInfo'
@@ -15,6 +19,18 @@ function buildUrl(url) {
 
 function getAuthToken() {
 	return uni.getStorageSync(TOKEN_KEY) || ''
+}
+
+function resolveRequestStoreId() {
+	let user = null
+	try {
+		user = uni.getStorageSync(USER_INFO_KEY) || null
+	} catch (e) {
+		user = null
+	}
+	const workplace = getWorkplaceStoreId(user)
+	if (workplace) return workplace
+	return resolveViewStoreId(user)
 }
 
 function clearAuthStorage() {
@@ -72,6 +88,9 @@ function toastError(message) {
 function reLoginAfterUnauthorized() {
 	// 动态引入，避免与 auth.js 的静态循环依赖
 	return import('@/common/auth.js').then((auth) => {
+		if (typeof auth.isWxLoginCooling === 'function' && auth.isWxLoginCooling()) {
+			throw new Error('登录失败，请稍后重试')
+		}
 		if (typeof auth.wxLogin === 'function') {
 			return auth.wxLogin()
 		}
@@ -119,6 +138,13 @@ export function request(options = {}) {
 		const token = getAuthToken()
 		if (token) {
 			headers.Authorization = `Bearer ${token}`
+		}
+	}
+
+	if (!headers['X-Store-Id'] && !headers['x-store-id']) {
+		const storeId = resolveRequestStoreId()
+		if (storeId) {
+			headers['X-Store-Id'] = storeId
 		}
 	}
 

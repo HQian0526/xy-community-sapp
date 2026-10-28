@@ -1,37 +1,35 @@
-@for $i from 1 through 200 {
-    .w-#{$i} { width: #{$i}rpx; }
-    .h-#{$i} {
-		height: #{$i}rpx;
-		line-height: #{$i}rpx;
-	}
-}
-// 按钮
-.btn-success {
-    background-color: #00a896;
-    color: #fff;
-	border-radius: 30rpx;
+// 按钮 / 居中必须放在工具类前面，避免被后续大段样式挤掉
+.btn-success,
+.btn-success-plain,
+.btn-primary,
+.btn-primary-plain {
+	width: 100%;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	text-align: center;
+	border-radius: 44rpx;
+}
+.btn-success {
+	background-color: #00a896;
+	color: #fff;
 }
 .btn-success-plain {
-    border: 1rpx solid #00a896;
-    color: #00a896;
-	border-radius: 30rpx;
-	text-align: center;
+	border: 1rpx solid #00a896;
+	color: #00a896;
+	background-color: transparent;
 }
 .btn-primary {
-    background-color: #1179ff;
-    color: #fff;
-	border-radius: 30rpx;
-	text-align: center;
+	background-color: #1179ff;
+	color: #fff;
 }
 .btn-primary-plain {
-    border: 1rpx solid #1179ff;
-    color: #1179ff;
-	border-radius: 30rpx;
-	text-align: center;
+	border: 1rpx solid #1179ff;
+	color: #1179ff;
+	background-color: transparent;
 }
 
-// 居中
 .box-center {
 	margin: 0 auto;
 }
@@ -45,13 +43,22 @@
 	margin-left: 24rpx;
 }
 
-// flex 布局
 .flex {
 	display: flex;
 }
 .flex-center {
+	width: 100%;
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	gap: 8rpx;
+	text-align: center;
+	box-sizing: border-box;
+}
+
+@for $i from 1 through 200 {
+	.w-#{$i} { width: #{$i}rpx; }
+	.h-#{$i} {
+		height: #{$i}rpx;
+		line-height: #{$i}rpx;
+	}
 }

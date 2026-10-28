@@ -60,3 +60,13 @@ export function updateUserApi(data) {
 export function updateProfileApi(data) {
 	return put('/user/updateProfile', data)
 }
+
+/**
+ * 商家切换当前经营门店
+ * @param {string|number} lastStoreId
+ */
+export function switchStoreApi(lastStoreId) {
+	return put('/user/switchStore', {
+		lastStoreId
+	})
+}

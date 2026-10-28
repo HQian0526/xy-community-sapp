@@ -59,7 +59,7 @@
 
 <script>
 	import { requireLogin, getUserInfo } from '@/common/auth.js'
-	import { shouldForceOrdinaryUi } from '@/common/storeVisit.js'
+	import { shouldForceOrdinaryUi, isStaffAtOwnStore } from '@/common/storeVisit.js'
 	import { getMiniappUi } from '@/common/miniappUi.js'
 	import {
 		formatMemberBalance,
@@ -95,8 +95,9 @@
 			if (!(await requireLogin({ force: true }))) return
 			const user = getUserInfo()
 			const merchantUi = Number(user?.identityType) === 2 && !shouldForceOrdinaryUi(user)
-			if (!merchantUi) {
-				uni.showToast({ title: '仅商家可用', icon: 'none' })
+			const staffUi = isStaffAtOwnStore(user)
+			if (!merchantUi && !staffUi) {
+				uni.showToast({ title: '仅本店商家或员工可用', icon: 'none' })
 				setTimeout(() => uni.navigateBack(), 800)
 				return
 			}

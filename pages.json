@@ -44,7 +44,7 @@
 		{
 			"path": "pages/otherBusiness/index",
 			"style": {
-				"navigationBarTitleText": "其他业务",
+				"navigationBarTitleText": "本店介绍",
 				"enablePullDownRefresh": true,
 				"app-plus": {
 					"bounce": "vertical",
@@ -1282,17 +1282,17 @@
 				"text": "逛店"
 			},
 			{
+				"pagePath": "pages/otherBusiness/index",
+				"iconPath": "static/tarbar/tarbar4.png",
+				"selectedIconPath": "/static/tarbar/tarbar4-active.png",
+				"text": "本店介绍"
+			},
+			{
 				"pagePath": "pages/personalCenter/storeOrder/index",
 				"iconPath": "static/tarbar/tarbar1.png",
 				"selectedIconPath": "/static/tarbar/tarbar1-active.png",
 				"text": "订单"
 			},
-			// {
-			// 	"pagePath": "pages/otherBusiness/index",
-			// 	"iconPath": "static/tarbar/tarbar1.png",
-			// 	"selectedIconPath": "/static/tarbar/tarbar1-active.png",
-			// 	"text": "其他业务"
-			// },
 			{
 				"pagePath": "pages/personalCenter/index",
 				"iconPath": "static/tarbar/tarbar3.png",
