@@ -1,7 +1,7 @@
 {
-    "name" : "xy-community-sapp",
+    "name" : "萤小铺",
     "appid" : "__UNI__F9592B1",
-    "description" : "应用描述",
+    "description" : "萤小铺 - 通用线上经营小程序",
     "versionName" : "1.0.0",
     "versionCode" : "100",
     "transformPx" : false,

@@ -101,8 +101,14 @@
 				setTimeout(() => uni.navigateBack(), 800)
 				return
 			}
-			if (getMiniappUi()?.enablePay === false) {
+			const ui = getMiniappUi()
+			if (ui?.enablePay === false) {
 				uni.showToast({ title: '当前店铺未接入支付', icon: 'none' })
+				setTimeout(() => uni.navigateBack(), 800)
+				return
+			}
+			if (ui?.enableRecharge === false) {
+				uni.showToast({ title: '当前店铺未接入储值', icon: 'none' })
 				setTimeout(() => uni.navigateBack(), 800)
 			}
 		},

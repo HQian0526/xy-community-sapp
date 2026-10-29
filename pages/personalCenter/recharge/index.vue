@@ -68,6 +68,7 @@
 	import {
 		resolveViewStoreId
 	} from '@/common/storeVisit.js'
+	import { getMiniappUi } from '@/common/miniappUi.js'
 	import {
 		MIN_RECHARGE_AMOUNT,
 		RECHARGE_PRESETS,
@@ -111,6 +112,13 @@
 			if (!(await requireLogin({ force: true }))) return
 			const phone = await ensurePhoneBound({ required: true })
 			if (!phone?.bound) return
+			// 店铺未开放储值时不允许进入（防止旧路径或分享直达）
+			const ui = getMiniappUi()
+			if (ui?.enablePay === false || ui?.enableRecharge === false) {
+				uni.showToast({ title: '当前店铺未开放储值', icon: 'none' })
+				setTimeout(() => uni.navigateBack(), 800)
+				return
+			}
 			await this.loadMine()
 		},
 		methods: {

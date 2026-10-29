@@ -1,6 +1,17 @@
 <template>
 	<view class="mall-root">
 		<view class="mall-page">
+			<!-- 储值引导：店铺接入支付时展示，置于最顶部 -->
+			<view v-if="showRechargeBar" class="recharge-bar" @click="goRechargePage">
+				<view class="recharge-bar-main">
+					<up-icon name="gift" size="16" color="#c9a227"></up-icon>
+					<text class="recharge-bar-text">储值可享会员价，点击去储值</text>
+				</view>
+				<view class="recharge-bar-action">
+					<text class="recharge-bar-btn">去储值</text>
+					<up-icon name="arrow-right" size="12" color="#c9a227"></up-icon>
+				</view>
+			</view>
 			<view v-if="mallUiReady && showPromoBar" class="promo-bar">
 				<view class="promo-bar-main">
 					<up-icon name="volume" size="16" color="#00a896"></up-icon>
@@ -93,6 +104,20 @@
 									item.id === categoryList[categoryList.length - 1]?.id
 							}"
 						>
+							<!-- 分类分隔头：滚动到新分类时提示以下是该分类的商品 -->
+							<view
+								v-if="item.children && item.children.length"
+								class="cate-section"
+							>
+								<view class="cate-section-main">
+									<view class="cate-section-head">
+										<view class="cate-section-bar"></view>
+										<text class="cate-section-title">{{ item.name }}</text>
+									</view>
+									<text class="cate-section-count">{{ item.children.length }} 件</text>
+								</view>
+								<view class="cate-section-line"></view>
+							</view>
 							<view
 								v-if="!item.productsLoaded && !(item.children && item.children.length)"
 								class="cate-loading"
@@ -425,6 +450,10 @@
 			showPromoBar() {
 				return this.showPrice && !!this.promoBarLabel
 			},
+			/** 储值引导栏：店铺已接入支付且开放储值时展示 */
+			showRechargeBar() {
+				return this.mallUiReady && this.miniappUi.enablePay !== false && this.miniappUi.enableRecharge !== false
+			},
 			promoBarLabel() {
 				const promoText = promoBarText(this.activePromo)
 				if (promoText) {
@@ -715,6 +744,15 @@
 					})
 				})
 			},
+			/** 点击储值引导：直达储值页（需登录 + 手机号） */
+			async goRechargePage() {
+				if (!(await requireLogin({ force: true }))) return
+				const phoneResult = await ensurePhoneBound({ required: true })
+				if (!phoneResult.bound) return
+				uni.navigateTo({
+					url: '/pages/personalCenter/recharge/index'
+				})
+			},
 			/** 清空搜索关键词，回到分类浏览 */
 			handleSearchClear() {
 				this.searchKeyword = ''
@@ -948,6 +986,50 @@
 		gap: 16rpx;
 	}
 
+	/* 储值引导栏：黑金配色，置于页面最顶部 */
+	.recharge-bar {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16rpx;
+		padding: 14rpx 24rpx;
+		margin-bottom: 16rpx;
+		background: linear-gradient(90deg, #fff9e6 0%, #fdf1d2 100%);
+	}
+
+	.recharge-bar-main {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		align-items: center;
+		gap: 8rpx;
+	}
+
+	.recharge-bar-text {
+		flex: 1;
+		min-width: 0;
+		font-size: 24rpx;
+		font-weight: 600;
+		color: #8a6a12;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.recharge-bar-action {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		gap: 4rpx;
+	}
+
+	.recharge-bar-btn {
+		font-size: 24rpx;
+		font-weight: 700;
+		color: #8a6a12;
+	}
+
 	.promo-bar-main {
 		flex: 1;
 		min-width: 0;
@@ -1147,6 +1229,56 @@
 		flex-direction: column;
 		gap: 0;
 		padding: 0;
+	}
+
+	/* 分类分隔头：滚动到不同分类时明确提示分类切换 */
+	.cate-section {
+		padding: 24rpx 0 12rpx;
+		background-color: #fff;
+	}
+
+	.cate-section-main {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.cate-section-head {
+		display: flex;
+		align-items: center;
+		min-width: 0;
+	}
+
+	.cate-section-bar {
+		flex-shrink: 0;
+		width: 6rpx;
+		height: 26rpx;
+		border-radius: 3rpx;
+		background-color: #00a896;
+		margin-right: 10rpx;
+	}
+
+	.cate-section-title {
+		font-size: 30rpx;
+		font-weight: 700;
+		color: #1f2937;
+		line-height: 1.2;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.cate-section-count {
+		flex-shrink: 0;
+		margin-left: 12rpx;
+		font-size: 22rpx;
+		color: #9ca3af;
+	}
+
+	.cate-section-line {
+		margin-top: 12rpx;
+		height: 1rpx;
+		background: linear-gradient(to right, #e5e7eb, rgba(229, 231, 235, 0));
 	}
 
 	.product-list--with-cart {

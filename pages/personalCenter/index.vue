@@ -21,7 +21,11 @@
 			<view class="profile-info" @click="onHeaderTap">
 				<view class="name-row">
 					<text class="store-name">{{ headerName }}</text>
-					<text v-if="showStaffBadge" class="staff-badge">店员</text>
+					<view v-if="showHeaderBadges" class="badge-group">
+						<text v-if="showOwnerBadge" class="owner-badge">店长</text>
+						<text v-if="showStaffBadge" class="staff-badge">店员</text>
+						<text v-if="showVipBadge" class="vip-badge">VIP</text>
+					</view>
 				</view>
 				<text class="store-phone">{{ headerPhone }}</text>
 			</view>
@@ -238,7 +242,8 @@
 		getStoreMemberMineApi
 	} from '@/common/api/mall/member.js'
 	import {
-		DEFAULT_SHARE
+		DEFAULT_SHARE,
+		buildStoreHomeSharePath
 	} from '@/common/share/config.js'
 	import {
 		requireLogin,
@@ -371,9 +376,21 @@
 			showStaffBadge() {
 				return this.loggedIn && isStaffAtOwnStore(this.userProfile)
 			},
+			/** 店长（商家账号本人，且在自己店内）：与店员标识同样式 */
+			showOwnerBadge() {
+				return this.loggedIn && this.isMerchant
+			},
+			/** 储值会员标识：仅店铺开放储值时展示 */
+			showVipBadge() {
+				return this.loggedIn && this.rechargeEnabled && this.memberInfo.member
+			},
+			/** 是否有任一标识需要展示，避免空容器占位 */
+			showHeaderBadges() {
+				return this.showOwnerBadge || this.showStaffBadge || this.showVipBadge
+			},
 			showStaffPrivilege() {
 				return this.showStaffBadge
-					&& this.miniappUi.enablePay !== false
+					&& this.rechargeEnabled
 					&& this.userProfile.staffStoreExpired !== true
 			},
 			showBindPhoneEntry() {
@@ -404,7 +421,7 @@
 			},
 			displayBusinessList() {
 				const list = this.businessList || []
-				if (this.miniappUi.enablePay === false) {
+				if (!this.rechargeEnabled) {
 					return list.filter((item) => item.key !== 'verify')
 				}
 				return list
@@ -416,8 +433,12 @@
 				}
 				return list
 			},
+			/** 店铺是否开放储值（需已接入支付且开启储值） */
+			rechargeEnabled() {
+				return this.miniappUi.enablePay !== false && this.miniappUi.enableRecharge !== false
+			},
 			showMemberEntry() {
-				return this.miniappUi.enablePay !== false
+				return this.rechargeEnabled
 			},
 			displayServiceList() {
 				const list = this.serviceList || []
@@ -455,7 +476,7 @@
 				if (this.memberInfo.member) {
 					return `会员余额：¥${formatMemberBalance(this.memberInfo.balance)}`
 				}
-				return '储值享会员价'
+				return '储值'
 			}
 		},
 		onLoad(options = {}) {
@@ -471,7 +492,8 @@
 					await this.loadSettlementSummary()
 				}
 				await this.loadPendingCount()
-				if (!this.isMerchant && this.loggedIn) {
+				// 店员、店长、普通用户都可能有储值会员身份，统一查询
+				if (this.loggedIn) {
 					await this.loadMemberInfo()
 				}
 			} finally {
@@ -649,7 +671,7 @@
 				}
 			},
 			async loadMemberInfo() {
-				if (!this.loggedIn || this.isMerchant) {
+				if (!this.loggedIn) {
 					this.memberInfo = { member: false, balance: 0 }
 					return
 				}
@@ -842,7 +864,7 @@
 				if (item?.key === 'coupon' && this.miniappUi.enablePay === false) {
 					return
 				}
-				if (item?.key === 'verify' && this.miniappUi.enablePay === false) {
+				if (item?.key === 'verify' && !this.rechargeEnabled) {
 					return
 				}
 				if (this.isPublicService(item)) {
@@ -905,9 +927,10 @@
 			},
 			handleShareMiniProgram() {
 				// #ifdef MP-WEIXIN
+				// 分享到店铺首页，带上当前浏览店铺，接收人点开即进入该店逛店页
 				this.shareConfig = {
 					title: DEFAULT_SHARE.title,
-					path: '/pages/personalCenter/index',
+					path: buildStoreHomeSharePath(this.userProfile),
 					imageUrl: DEFAULT_SHARE.imageUrl
 				}
 				this.sharePopupShow = true
@@ -1097,12 +1120,21 @@
 	.name-row {
 		display: flex;
 		align-items: center;
+		gap: 12rpx;
 		min-width: 0;
 	}
 
+	.badge-group {
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+		gap: 8rpx;
+	}
+
 	.store-name {
-		flex: 1;
-		min-width: 0;
+		/* 不再 flex:1 撑满整行，否则标识会被推到最右侧、与昵称之间留出空白 */
+		flex: 0 1 auto;
+		max-width: 340rpx;
 		font-size: 34rpx;
 		font-weight: 700;
 		color: #333;
@@ -1113,7 +1145,6 @@
 
 	.staff-badge {
 		flex-shrink: 0;
-		margin-left: 12rpx;
 		padding: 4rpx 14rpx;
 		border-radius: 8rpx;
 		font-size: 20rpx;
@@ -1123,6 +1154,36 @@
 		background: linear-gradient(135deg, #f8e3b0 0%, #e8c36a 100%);
 		border: 1rpx solid #d4a84b;
 		box-shadow: 0 2rpx 6rpx rgba(212, 168, 75, 0.28);
+	}
+
+	/* 店长标识：与店员标识同一套样式，仅文案与配色区分 */
+	.owner-badge {
+		flex-shrink: 0;
+		padding: 4rpx 14rpx;
+		border-radius: 8rpx;
+		font-size: 20rpx;
+		font-weight: 600;
+		letter-spacing: 1rpx;
+		color: #8a5a12;
+		background: linear-gradient(135deg, #f8e3b0 0%, #e8c36a 100%);
+		border: 1rpx solid #d4a84b;
+		box-shadow: 0 2rpx 6rpx rgba(212, 168, 75, 0.28);
+	}
+
+	/* 储值会员标识：黑金质感，比店员/店长更"尊贵" */
+	.vip-badge {
+		flex-shrink: 0;
+		padding: 4rpx 14rpx;
+		border-radius: 8rpx;
+		font-size: 20rpx;
+		font-weight: 700;
+		font-style: italic;
+		letter-spacing: 1rpx;
+		color: #f7e3a1;
+		background: linear-gradient(135deg, #2b2b2b 0%, #4a4a4a 55%, #1f1f1f 100%);
+		border: 1rpx solid #c9a227;
+		box-shadow: 0 2rpx 8rpx rgba(201, 162, 39, 0.35);
+		text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.45);
 	}
 
 	.store-phone {
@@ -1206,12 +1267,16 @@
 	.member-entry {
 		flex-shrink: 0;
 		max-width: 240rpx;
-		padding: 10rpx 20rpx;
-		border-radius: 28rpx;
-		background: rgba(0, 168, 150, 0.12);
-		color: #00a896;
-		font-size: 22rpx;
-		font-weight: 600;
+		padding: 14rpx 32rpx;
+		border-radius: 32rpx;
+		/* 黑金质感，呼应头部 VIP 标识 */
+		background: linear-gradient(135deg, #2b2b2b 0%, #4a4a4a 55%, #1f1f1f 100%);
+		border: 1rpx solid #c9a227;
+		box-shadow: 0 4rpx 12rpx rgba(201, 162, 39, 0.32);
+		color: #f7e3a1;
+		font-size: 26rpx;
+		font-weight: 700;
+		letter-spacing: 2rpx;
 		line-height: 1.3;
 		text-align: center;
 	}

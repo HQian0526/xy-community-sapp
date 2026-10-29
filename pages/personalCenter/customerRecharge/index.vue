@@ -57,7 +57,7 @@
 <script>
 	import { requireLogin, getUserInfo } from '@/common/auth.js'
 	import { shouldForceOrdinaryUi } from '@/common/storeVisit.js'
-	import { getMiniappUi, isStorePayEnabled, syncMerchantMiniappUi } from '@/common/miniappUi.js'
+	import { getMiniappUi, isStoreRechargeEnabled, syncMerchantMiniappUi } from '@/common/miniappUi.js'
 	import {
 		assistStoreMemberRechargeApi,
 		formatMemberBalance,
@@ -116,8 +116,8 @@
 			} catch (error) {
 				console.error('同步店铺支付权限失败', error)
 			}
-			if (!isStorePayEnabled()) {
-				uni.showToast({ title: '当前店铺未接入支付', icon: 'none' })
+			if (!isStoreRechargeEnabled()) {
+				uni.showToast({ title: '当前店铺未接入储值', icon: 'none' })
 				setTimeout(() => uni.navigateBack(), 800)
 				return
 			}

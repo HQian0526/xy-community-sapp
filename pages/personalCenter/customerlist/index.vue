@@ -65,7 +65,7 @@
 	import { getWindowLayout } from '@/common/systemInfo.js'
 	import { getUserInfo, requireLogin } from '@/common/auth.js'
 	import { resolveFileUrl } from '@/common/api/config.js'
-	import { isStorePayEnabled, syncMerchantMiniappUi } from '@/common/miniappUi.js'
+	import { isStoreRechargeEnabled, syncMerchantMiniappUi } from '@/common/miniappUi.js'
 	import {
 		getCustomerListApi,
 		mapCustomerItem
@@ -134,7 +134,7 @@
 				} catch (error) {
 					console.error('同步店铺支付权限失败', error)
 				}
-				this.enablePay = isStorePayEnabled()
+				this.enablePay = isStoreRechargeEnabled()
 			},
 			clearSearchTimer() {
 				if (this.searchTimer) {
@@ -202,10 +202,10 @@
 				const name = action?.name || ''
 				this.closeActionSheet()
 				if (name === '储值') {
-					if (!isStorePayEnabled()) {
+					if (!isStoreRechargeEnabled()) {
 						this.enablePay = false
 						uni.showToast({
-							title: '当前店铺未接入支付',
+							title: '当前店铺未接入储值',
 							icon: 'none'
 						})
 						return
@@ -234,7 +234,7 @@
 				}
 				if (!this.enablePay) {
 					uni.showToast({
-						title: '当前店铺未接入支付',
+						title: '当前店铺未接入储值',
 						icon: 'none'
 					})
 					return

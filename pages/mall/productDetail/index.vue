@@ -97,6 +97,7 @@
 		isMiniappUiReady,
 		mallMiniappUi
 	} from '@/common/miniappUi.js'
+	import { buildProductShareConfig } from '@/common/share/config.js'
 
 	function splitImages(raw) {
 		return String(raw || '')
@@ -183,6 +184,10 @@
 		},
 		methods: {
 			formatMoney,
+			/** 分享配置：有商品时分享当前商品，商品未加载完成则分享本店首页 */
+			buildShareConfig() {
+				return buildProductShareConfig(this.product, this.storeId)
+			},
 			finishLoading() {
 				if (this.productLoaded && this.uiLoaded) {
 					this.loading = false

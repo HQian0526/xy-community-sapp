@@ -15,6 +15,7 @@ export function mallMiniappUi() {
 		showQuantity: true,
 		showCart: true,
 		enablePay: true,
+		enableRecharge: true,
 		orderBtnText: '立即购买',
 		homeTabText: '逛店',
 		listBtnText: '预定',
@@ -32,6 +33,7 @@ export function bookingMiniappUi() {
 		showQuantity: false,
 		showCart: false,
 		enablePay: true,
+		enableRecharge: true,
 		orderBtnText: '立即预约',
 		homeTabText: '预约',
 		listBtnText: '预定',
@@ -65,6 +67,15 @@ export function isStorePayEnabled(ui) {
 		return false
 	}
 	return target?.enablePay === true
+}
+
+/** 是否接入储值：需已拉到配置，且支付与储值同时开启。 */
+export function isStoreRechargeEnabled(ui) {
+	const target = ui || current
+	if (!ui && !ready) {
+		return false
+	}
+	return target?.enablePay !== false && target?.enableRecharge === true
 }
 
 /** 按本店最新配置刷新展示权限，避免顾客列表等页用到默认 enablePay=true。 */
@@ -164,6 +175,10 @@ export function applyStoreMiniappUi(store) {
 		showQuantity: flagOn(store?.showQuantity, base.showQuantity),
 		showCart: flagOn(store?.showCart, base.showCart),
 		enablePay: flagOn(store?.enablePay, base.enablePay),
+		// 储值依附支付：未接入支付时一律关闭
+		enableRecharge: flagOn(store?.enablePay, base.enablePay)
+			? flagOn(store?.enableRecharge, true)
+			: false,
 		orderBtnText: clipText(store?.orderBtnText, base.orderBtnText, 16),
 		homeTabText: clipText(store?.homeTabText, base.homeTabText, 4),
 		listBtnText: clipText(store?.listBtnText, base.listBtnText, 6),

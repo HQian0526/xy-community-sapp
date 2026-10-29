@@ -35,8 +35,9 @@
 				<view v-for="item in order.items || []" :key="item.id" class="goods-item">
 					<image
 						class="goods-img"
-						:src="item.productImg || '/static/image-wrong.png'"
+						:src="goodsImage(item)"
 						mode="aspectFill"
+						@error="onGoodsImageError($event, item)"
 					/>
 					<view class="goods-info">
 						<text class="goods-name">{{ item.productName }}</text>
@@ -96,6 +97,7 @@
 	import { requireLogin } from '@/common/auth.js'
 	import { queryMallOrderApi } from '@/common/api/mall/order.js'
 	import { getStoreListApi } from '@/common/api/personalCenter/store.js'
+	import { resolveFileUrl } from '@/common/api/config.js'
 	import { formatMoney } from './checkout/mock.js'
 	import {
 		applyStoreMiniappUi,
@@ -170,6 +172,15 @@
 			formatMoney,
 			displayMoney(value) {
 				return this.zeroAmount ? '0.00' : formatMoney(value)
+			},
+			/** 订单项图片：取多图第一张并拼 CDN 前缀，异常回退占位图 */
+			goodsImage(item) {
+				const raw = String(item?.productImg || '').split(',')[0].trim()
+				if (!raw) return '/static/image-wrong.png'
+				return resolveFileUrl(raw)
+			},
+			onGoodsImageError(event, item) {
+				if (item) item.productImg = ''
 			},
 			formatTime(value) {
 				if (!value) return '-'

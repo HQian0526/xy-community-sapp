@@ -8,7 +8,12 @@ export default {
 	},
 	// #ifdef MP-WEIXIN
 	onShareAppMessage() {
-		return resolveShareConfig(this.shareConfig || {})
+		// 页面可通过 buildShareConfig() 动态生成分享内容（如商品详情页分享当前商品），
+		// 未提供时回退到静态 shareConfig / 当前店铺首页。
+		const dynamic = typeof this.buildShareConfig === 'function'
+			? this.buildShareConfig()
+			: null
+		return resolveShareConfig(dynamic || this.shareConfig || {})
 	},
 	// #endif
 	methods: {

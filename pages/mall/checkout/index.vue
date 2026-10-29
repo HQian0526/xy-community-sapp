@@ -85,8 +85,8 @@
 					<text class="summary-label">合计</text>
 					<text class="summary-total">¥{{ formatMoney(payTotal) }}</text>
 				</view>
-				<view v-if="miniappUi.enablePay && preview?.memberPriced" class="member-tip member-tip--ok">本单已按会员价，将从余额全额扣除</view>
-				<view v-else-if="miniappUi.enablePay && preview?.memberPriceUnavailable" class="member-tip">
+				<view v-if="rechargeEnabled && preview?.memberPriced" class="member-tip member-tip--ok">本单已按会员价，将从余额全额扣除</view>
+				<view v-else-if="rechargeEnabled && preview?.memberPriceUnavailable" class="member-tip">
 					<text>余额不足，本单将按原价微信支付。储值满额后可享会员价。</text>
 					<text class="member-tip-link" @click="goRecharge">去储值</text>
 				</view>
@@ -233,6 +233,10 @@
 			},
 			showPrice() {
 				return this.miniappUi.enablePay !== false
+			},
+			/** 店铺是否开放储值：会员价相关提示只在开放储值时出现 */
+			rechargeEnabled() {
+				return this.miniappUi.enablePay !== false && this.miniappUi.enableRecharge !== false
 			},
 			showFeeSummary() {
 				return this.showPrice && !this.isBooking

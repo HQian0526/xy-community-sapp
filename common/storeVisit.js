@@ -136,10 +136,20 @@ export function collectEnterQuery() {
 	return bags
 }
 
+/** 已处理过的进入标识（scene + storeId），避免热启动回前台时重复套用同一个分享/扫码店铺 */
+let appliedEntryKey = ''
+
 /** 商家主动切回自己的店后，忽略本次扫码带来的 entry，直到下一次真正扫码 */
 let lockOwnStore = false
 
 const SCAN_LAUNCH_SCENES = [1011, 1012, 1013, 1025, 1047, 1048, 1049, 1124]
+
+/**
+ * 分享卡片进入的 scene：
+ * 1007 单人聊天消息卡片、1008 群聊消息卡片、1044 带 shareTicket 的群聊卡片、
+ * 1036 App 分享的消息卡片、1090 右上角菜单转发。这些渠道同样应尊重分享带来的店铺。
+ */
+const SHARE_LAUNCH_SCENES = [1007, 1008, 1036, 1044, 1090]
 
 function parseWxLaunchScene(input) {
 	if (!input || typeof input !== 'object') return 0
@@ -199,6 +209,8 @@ export function clearEntryStoreId() {
 export function switchToOwnStore(user) {
 	entryStoreId = ''
 	lockOwnStore = true
+	// 清掉进入记录，保证之后再点同一张分享卡片仍能进入分享的店铺
+	appliedEntryKey = ''
 	const own = getWorkplaceStoreId(user)
 	if (own) {
 		setOwnMerchantStoreId(own)
@@ -207,16 +219,36 @@ export function switchToOwnStore(user) {
 	return own
 }
 
+/** 生成一次进入的唯一标识 */
+function entryKeyOf(scene, storeId) {
+	return `${scene || 0}:${normalizeStoreId(storeId)}`
+}
+
+/**
+ * 处理小程序启动/回前台带来的店铺参数。
+ *
+ * 优先级：扫码、分享卡片这类「用户主动带来的店铺」> 商家「切回自己店」的锁定（lockOwnStore）。
+ * 也就是：商家即使刚切回自己的店，只要点开别人分享的卡片，仍应进入分享的店铺，
+ * 之后可在「我的」页通过「切换至我的店铺」回到自家店。
+ */
 export function applyLaunchQuery(query, meta = {}) {
 	if (lockStoreId) {
 		return ''
 	}
 	const explicitId = parseIdFromInput(query)
+	const wxScene = parseWxLaunchScene(query)
+	const fromAppShow = meta.source === 'appShow'
+	const isSceneEnter = fromAppShow
+		&& (SCAN_LAUNCH_SCENES.indexOf(wxScene) !== -1 || SHARE_LAUNCH_SCENES.indexOf(wxScene) !== -1)
+
 	if (lockOwnStore) {
-		const wxScene = parseWxLaunchScene(query)
-		const fromAppShow = meta.source === 'appShow'
-		const isScanEnter = fromAppShow && SCAN_LAUNCH_SCENES.indexOf(wxScene) !== -1
-		if (explicitId && isScanEnter) {
+		if (explicitId && isSceneEnter) {
+			// 同一次进入已处理过（例如只是切到后台再回来），不重复覆盖商家已切回的店铺
+			const key = entryKeyOf(wxScene, explicitId)
+			if (key === appliedEntryKey) {
+				return ''
+			}
+			appliedEntryKey = key
 			lockOwnStore = false
 			setEntryStoreId(explicitId)
 			return explicitId
@@ -224,6 +256,9 @@ export function applyLaunchQuery(query, meta = {}) {
 		return ''
 	}
 	if (explicitId) {
+		if (isSceneEnter) {
+			appliedEntryKey = entryKeyOf(wxScene, explicitId)
+		}
 		setEntryStoreId(explicitId)
 		return explicitId
 	}
@@ -272,6 +307,7 @@ export function switchOwnedStore(storeId) {
 	if (!next) return ''
 	entryStoreId = ''
 	lockOwnStore = true
+	appliedEntryKey = ''
 	setOwnMerchantStoreId(next)
 	rememberViewStoreId(next)
 	return next
