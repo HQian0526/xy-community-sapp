@@ -12,6 +12,14 @@
 					<up-icon name="arrow-right" size="12" color="#c9a227"></up-icon>
 				</view>
 			</view>
+			<view v-if="homeNotice" class="notice-bar">
+				<text class="notice-badge">公告</text>
+				<view class="notice-track">
+					<view class="notice-marquee" :style="{ animationDuration: noticeDuration }">
+						<text class="notice-text">{{ homeNotice }}</text>
+					</view>
+				</view>
+			</view>
 			<view v-if="mallUiReady && showPromoBar" class="promo-bar">
 				<view class="promo-bar-main">
 					<up-icon name="volume" size="16" color="#00a896"></up-icon>
@@ -361,6 +369,7 @@
 				cartBarBottom: '66px',
 				queryStoreId: '',
 				deliveryFee: 0,
+				homeNotice: '',
 				activePromo: null,
 				couponTemplates: [],
 				couponShow: false,
@@ -453,6 +462,11 @@
 			/** 储值引导栏：店铺已接入支付且开放储值时展示 */
 			showRechargeBar() {
 				return this.mallUiReady && this.miniappUi.enablePay !== false && this.miniappUi.enableRecharge !== false
+			},
+			noticeDuration() {
+				const len = String(this.homeNotice || '').length
+				const seconds = Math.min(48, Math.max(12, (len + 16) * 0.32))
+				return `${seconds}s`
 			},
 			promoBarLabel() {
 				const promoText = promoBarText(this.activePromo)
@@ -547,6 +561,7 @@
 				const storeId = this.queryStoreId
 				if (!storeId) {
 					this.deliveryFee = 0
+					this.homeNotice = ''
 					this.miniappUi = applyStoreMiniappUi(null)
 					this.mallUiReady = true
 					uni.setNavigationBarTitle({ title: this.miniappUi.homeTabText || '逛店' })
@@ -561,6 +576,7 @@
 					const list = Array.isArray(data) ? data : (data?.list || [])
 					const store = list[0]
 					this.deliveryFee = parseDeliveryFee(store)
+					this.homeNotice = String(store?.homeNotice || '').trim().replace(/\s+/g, ' ')
 					this.miniappUi = applyStoreMiniappUi(store)
 					this.mallUiReady = true
 					uni.setNavigationBarTitle({ title: this.miniappUi.homeTabText || '逛店' })
@@ -568,6 +584,7 @@
 				} catch (error) {
 					console.error('获取店铺配送费失败', error)
 					this.deliveryFee = 0
+					this.homeNotice = ''
 					this.miniappUi = applyStoreMiniappUi(null)
 					this.mallUiReady = true
 					uni.setNavigationBarTitle({ title: this.miniappUi.homeTabText || '逛店' })
@@ -1028,6 +1045,53 @@
 		font-size: 24rpx;
 		font-weight: 700;
 		color: #8a6a12;
+	}
+
+	.notice-bar {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		gap: 12rpx;
+		height: 64rpx;
+		margin: 0 16rpx 12rpx;
+		padding: 0 16rpx 0 12rpx;
+		border-radius: 12rpx;
+		background: #fff;
+		overflow: hidden;
+	}
+
+	.notice-badge {
+		flex-shrink: 0;
+		padding: 2rpx 10rpx;
+		border-radius: 8rpx;
+		background: #fff1e8;
+		color: #d46b08;
+		font-size: 20rpx;
+		font-weight: 700;
+		line-height: 32rpx;
+	}
+
+	.notice-track {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+	}
+
+	.notice-marquee {
+		display: inline-block;
+		padding-left: 100%;
+		white-space: nowrap;
+		animation-name: home-notice-scroll;
+		animation-timing-function: linear;
+		animation-iteration-count: infinite;
+	}
+
+	.notice-text {
+		display: inline-block;
+		font-size: 24rpx;
+		line-height: 64rpx;
+		color: #8c4a12;
+		white-space: nowrap;
 	}
 
 	.promo-bar-main {
@@ -1670,5 +1734,15 @@
 	page {
 		height: 100%;
 		background-color: #f5f5f5;
+	}
+
+	@keyframes home-notice-scroll {
+		0% {
+			transform: translateX(0);
+		}
+
+		100% {
+			transform: translateX(-100%);
+		}
 	}
 </style>

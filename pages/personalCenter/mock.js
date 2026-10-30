@@ -4,7 +4,9 @@ export const storeInfo = {
 	phone: '',
 	status: '营业中',
 	pendingAmount: 0,
-	todayIncome: 0
+	monthSales: 0,
+	todayIncome: 0,
+	platformCollect: true
 }
 
 // 商家端

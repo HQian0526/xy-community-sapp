@@ -72,11 +72,12 @@
 				<view class="account-card">
 					<view class="card-header">
 						<text class="card-title">订单管理</text>
+						<text v-if="storeInfo.platformCollect" class="header-recharge" @click.stop="goStoreRecharge">去储值</text>
 					</view>
-					<view class="account-row">
-						<view class="account-item">
+					<view class="account-row" :class="{ 'account-row-grid': storeInfo.platformCollect }">
+						<view v-if="storeInfo.platformCollect" class="account-item">
 							<view class="account-label-row">
-								<text class="account-label">待结算金额</text>
+								<text class="account-label">店铺余额</text>
 								<view class="settle-help" @click.stop="openSettleTip">
 									<text class="settle-help-mark">?</text>
 								</view>
@@ -86,7 +87,14 @@
 								<text class="amount">{{ formatMoney(storeInfo.pendingAmount) }}</text>
 							</view>
 						</view>
-						<view class="account-item account-item-right">
+						<view class="account-item">
+							<text class="account-label">本月销售额</text>
+							<view class="account-value">
+								<text class="currency">¥</text>
+								<text class="amount">{{ formatMoney(storeInfo.monthSales) }}</text>
+							</view>
+						</view>
+						<view class="account-item">
 							<text class="account-label">今日收入</text>
 							<view class="account-value">
 								<text class="currency">¥</text>
@@ -215,8 +223,10 @@
 			@close="closeSettleTip"
 		>
 			<view class="settle-tip-popup">
-				<text class="settle-tip-title">待结算金额</text>
-				<text class="settle-tip-text">每月1日和15日自动结算</text>
+				<text class="settle-tip-title">店铺余额</text>
+				<text class="settle-tip-text">店铺余额即待结算金额，每月1日和15日自动结算给商户。</text>
+				<text class="settle-tip-text">计算公式：店铺余额 = 用户储值 + 用户直付 − 退款 + 店长储值</text>
+				<text class="settle-tip-note">注：接入支付的小程序官方会收取0.6-1%的手续费，具体费率以官方为准，与萤小铺(本小程序)无关，望悉知。</text>
 				<view class="settle-tip-btn" @click="closeSettleTip">知道了</view>
 			</view>
 		</u-popup>
@@ -644,11 +654,15 @@
 			async loadSettlementSummary() {
 				try {
 					const data = await getMallSettlementSummaryApi()
+					this.storeInfo.platformCollect = data?.platformCollect !== false
 					this.storeInfo.pendingAmount = Number(data?.pendingAmount || 0)
+					this.storeInfo.monthSales = Number(data?.monthSales || 0)
 					this.storeInfo.todayIncome = Number(data?.todayIncome || 0)
 				} catch (error) {
 					console.error('获取结算汇总失败', error)
+					this.storeInfo.platformCollect = true
 					this.storeInfo.pendingAmount = 0
+					this.storeInfo.monthSales = 0
 					this.storeInfo.todayIncome = 0
 				}
 			},
@@ -694,6 +708,16 @@
 					url: '/pages/personalCenter/recharge/index'
 				})
 			},
+			goStoreRecharge() {
+				const storeId = this.storeProfile && this.storeProfile.storeId
+				if (!storeId) {
+					uni.showToast({ title: '未找到当前店铺', icon: 'none' })
+					return
+				}
+				uni.navigateTo({
+					url: `/pages/personalCenter/storeRecharge/index?storeId=${encodeURIComponent(storeId)}`
+				})
+			},
 			formatMoney(value) {
 				return Number(value || 0).toFixed(2)
 			},
@@ -726,7 +750,9 @@
 					storeType: null,
 					storeTime: ''
 				}
+				this.storeInfo.platformCollect = true
 				this.storeInfo.pendingAmount = 0
+				this.storeInfo.monthSales = 0
 				this.storeInfo.todayIncome = 0
 				this.visitStore = { storeName: '', avatar: '' }
 			},
@@ -1264,6 +1290,13 @@
 		border-left: 6rpx solid $primary;
 	}
 
+	.header-recharge {
+		font-size: 28rpx;
+		font-weight: 600;
+		color: #00a896;
+		line-height: 1;
+	}
+
 	.member-entry {
 		flex-shrink: 0;
 		max-width: 240rpx;
@@ -1284,14 +1317,27 @@
 	.account-row {
 		display: flex;
 		align-items: flex-start;
+		justify-content: center;
+		margin-bottom: 8rpx;
+	}
+
+	.account-row-grid {
+		justify-content: space-between;
+	}
+
+	.account-row-grid .account-item {
+		flex: 1;
+		width: auto;
 	}
 
 	.account-item {
 		flex: 1;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
+		align-items: center;
 		gap: 12rpx;
-		margin-left: 40rpx;
+		text-align: center;
 	}
 
 	.account-item-right {
@@ -1301,6 +1347,7 @@
 	.account-label-row {
 		display: flex;
 		align-items: center;
+		justify-content: center;
 		gap: 8rpx;
 	}
 
@@ -1331,6 +1378,7 @@
 	.account-value {
 		display: flex;
 		align-items: baseline;
+		justify-content: center;
 	}
 
 	.currency {
@@ -1341,7 +1389,7 @@
 	}
 
 	.amount {
-		font-size: 44rpx;
+		font-size: 36rpx;
 		font-weight: 700;
 		color: $primary;
 		line-height: 1;
@@ -1507,25 +1555,34 @@
 	}
 
 	.settle-tip-popup {
-		width: 520rpx;
+		width: 600rpx;
 		padding: 48rpx 40rpx 40rpx;
 		box-sizing: border-box;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		align-items: stretch;
 	}
 
 	.settle-tip-title {
 		font-size: 32rpx;
 		font-weight: 600;
 		color: #333;
+		text-align: center;
 	}
 
 	.settle-tip-text {
 		margin-top: 24rpx;
 		font-size: 28rpx;
 		color: #666;
-		text-align: center;
+		text-align: left;
+		line-height: 1.6;
+	}
+
+	.settle-tip-note {
+		margin-top: 24rpx;
+		font-size: 26rpx;
+		color: #c47a12;
+		text-align: left;
 		line-height: 1.6;
 	}
 

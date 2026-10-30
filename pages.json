@@ -263,6 +263,12 @@
 			"style": {
 				"navigationBarTitleText": "会员储值"
 			}
+		},
+		{
+			"path": "pages/personalCenter/storeRecharge/index",
+			"style": {
+				"navigationBarTitleText": "店铺储值"
+			}
 		}
 		// #ifdef H5
 		, {

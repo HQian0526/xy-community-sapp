@@ -191,3 +191,43 @@ export async function waitMallOrderPaid(orderNo, {
 	}
 	return last
 }
+
+export function rechargeStoreBalanceApi(data) {
+	return post('/mallOrder/storeBalance/recharge', data || {}, {
+		loading: true,
+		loadingText: '请稍等...'
+	})
+}
+
+export function queryStoreBalanceRechargeApi(rechargeNo) {
+	return get('/mallOrder/storeBalance/query', {
+		rechargeNo
+	})
+}
+
+export function mockConfirmStoreBalanceRechargeApi(rechargeNo) {
+	return post('/mallOrder/storeBalance/mockConfirm', {
+		rechargeNo
+	}, {
+		loading: true,
+		loadingText: '确认支付中...'
+	})
+}
+
+export async function waitStoreBalanceRechargePaid(rechargeNo, {
+	times = 5,
+	intervalMs = 800
+} = {}) {
+	let last = null
+	for (let i = 0; i < times; i++) {
+		last = await queryStoreBalanceRechargeApi(rechargeNo)
+		const status = Number(last?.recharge?.payStatus)
+		if (status === 1 || status === 2) {
+			return last
+		}
+		if (i < times - 1) {
+			await new Promise((r) => setTimeout(r, intervalMs))
+		}
+	}
+	return last
+}

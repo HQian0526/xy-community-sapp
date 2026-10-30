@@ -131,6 +131,7 @@ export function request(options = {}) {
 
 	const headers = {
 		'Content-Type': 'application/json',
+		'X-Client': 'miniapp',
 		...header
 	}
 
@@ -278,7 +279,9 @@ export function uploadFile(filePath, options = {}) {
 		return Promise.reject(new Error(message))
 	}
 
-	const header = {}
+	const header = {
+		'X-Client': 'miniapp',
+	}
 	const token = getAuthToken()
 	if (token) {
 		header.Authorization = `Bearer ${token}`
