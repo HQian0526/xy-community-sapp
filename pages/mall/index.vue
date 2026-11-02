@@ -675,11 +675,46 @@
 							this.loadCategoryProducts(index)
 						}
 					})
+					await this.loadOrphanProducts()
 				} catch (error) {
 					console.error('获取商品分类失败', error)
 					this.categoryList = []
 				} finally {
 					this.categoryLoading = false
+				}
+			},
+			/**
+			 * 兜底：分类被删除（或商品未归类）时，商品不会出现在任何分类下，
+			 * 这里把它们收进"其他"分组，避免上架商品在逛店/预约页凭空消失。
+			 */
+			async loadOrphanProducts() {
+				if (!this.queryStoreId) return
+				const knownIds = this.categoryList
+					.map((item) => String(item.catagoryId || ''))
+					.filter(Boolean)
+				try {
+					const data = await getProductListApi({
+						storeId: this.queryStoreId,
+						productStatus: 1
+					})
+					const list = Array.isArray(data) ? data : (data?.list || [])
+					const orphans = list
+						.filter((item) => Number(item.productStatus) !== 0)
+						.filter((item) => !knownIds.includes(String(item.catagoryId || '')))
+						.sort((a, b) => (Number(a.orderNum) || 0) - (Number(b.orderNum) || 0))
+						.map((item) => mapProductItem(item, '其他', this.queryStoreId))
+					if (!orphans.length) return
+					this.categoryList.push({
+						id: '__uncategorized__',
+						catagoryId: '',
+						storeId: this.queryStoreId,
+						name: '其他',
+						children: orphans,
+						productsLoaded: true,
+						productsLoading: false
+					})
+				} catch (error) {
+					console.error('获取未分类商品失败', error)
 				}
 			},
 			/** 分类切换只预加载商品，避免 v-model 回写导致左侧菜单整列重绘闪白 */
