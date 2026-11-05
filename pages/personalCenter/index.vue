@@ -8,11 +8,10 @@
 		</view>
 		<template v-else>
 		<view v-if="showRentExpireNotice" class="rent-notice-wrap">
-			<up-notice-bar
-				:text="rentExpireNoticeText"
-				direction="row"
-				icon="volume"
-			></up-notice-bar>
+			<view class="rent-notice">
+				<up-icon name="volume" size="16" color="#f9ae3d"></up-icon>
+				<text class="rent-notice-text">{{ rentExpireNoticeText }}</text>
+			</view>
 		</view>
 		<view class="profile-section">
 			<view class="avatar-wrap" @click="onHeaderTap">
@@ -102,9 +101,13 @@
 							</view>
 						</view>
 					</view>
-					<up-grid :col="4" :border="false">
-						<up-grid-item v-for="item in displayBusinessList" :key="item.key" :name="item.key"
-							@click="handleServiceClick(item)">
+					<view class="func-grid">
+						<view
+							v-for="item in displayBusinessList"
+							:key="item.key"
+							class="func-grid-item"
+							@click="handleServiceClick(item)"
+						>
 							<view class="service-item">
 								<view class="service-icon-square">
 									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
@@ -113,23 +116,27 @@
 									{{ item.name }}
 								</view>
 							</view>
-						</up-grid-item>
-					</up-grid>
+						</view>
+					</view>
 				</view>
 
 				<view class="service-card">
 					<text class="section-title">商家服务</text>
-					<up-grid :col="4" :border="false">
-						<up-grid-item v-for="item in displayOwnerList" :key="item.key" :name="item.key"
-							@click="handleServiceClick(item)">
+					<view class="func-grid">
+						<view
+							v-for="item in displayOwnerList"
+							:key="item.key"
+							class="func-grid-item"
+							@click="handleServiceClick(item)"
+						>
 							<view class="service-item">
 								<view class="service-icon-wrap">
 									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
 								</view>
 								<text class="service-name">{{ item.name }}</text>
 							</view>
-						</up-grid-item>
-					</up-grid>
+						</view>
+					</view>
 				</view>
 			</template>
 
@@ -139,9 +146,13 @@
 					<view class="card-header">
 						<text class="card-title">我的订单</text>
 					</view>
-					<up-grid :col="4" :border="false">
-						<up-grid-item v-for="item in displayAccountList" :key="item.key" :name="item.key"
-							@click="handleServiceClick(item)">
+					<view class="func-grid">
+						<view
+							v-for="item in displayAccountList"
+							:key="item.key"
+							class="func-grid-item"
+							@click="handleServiceClick(item)"
+						>
 							<view class="service-item">
 								<view class="service-icon-square">
 									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
@@ -152,39 +163,47 @@
 										:value="badgeCount"></up-badge>
 								</view>
 							</view>
-						</up-grid-item>
-					</up-grid>
+						</view>
+					</view>
 				</view>
 			</template>
 
 			<view class="service-card">
 				<text class="section-title">基础服务</text>
-				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in displayServiceList" :key="item.key" :name="item.key"
-						@click="handleServiceClick(item)">
+				<view class="func-grid">
+					<view
+						v-for="item in displayServiceList"
+						:key="item.key"
+						class="func-grid-item"
+						@click="handleServiceClick(item)"
+					>
 						<view class="service-item">
 							<view class="service-icon-wrap">
 								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
 							</view>
 							<text class="service-name">{{ item.name }}</text>
 						</view>
-					</up-grid-item>
-				</up-grid>
+					</view>
+				</view>
 			</view>
 
 			<view v-if="showStaffPrivilege" class="service-card staff-card">
 				<text class="section-title staff-section-title">员工特权</text>
-				<up-grid :col="4" :border="false">
-					<up-grid-item v-for="item in staffPrivilegeList" :key="item.key" :name="item.key"
-						@click="handleServiceClick(item)">
+				<view class="func-grid">
+					<view
+						v-for="item in staffPrivilegeList"
+						:key="item.key"
+						class="func-grid-item"
+						@click="handleServiceClick(item)"
+					>
 						<view class="service-item">
 							<view class="service-icon-wrap staff-icon-wrap">
 								<up-icon :name="item.icon" size="28" color="#8a5a12"></up-icon>
 							</view>
 							<text class="service-name">{{ item.name }}</text>
 						</view>
-					</up-grid-item>
-				</up-grid>
+					</view>
+				</view>
 			</view>
 		</view>
 
@@ -192,7 +211,7 @@
 		</template>
 
 		<!-- #ifdef MP-WEIXIN -->
-		<u-popup :show="sharePopupShow" mode="center" round="16" closeOnClickOverlay @close="closeSharePopup">
+		<u-popup v-if="sharePopupShow" :show="sharePopupShow" mode="center" round="16" closeOnClickOverlay @close="closeSharePopup">
 			<view class="share-popup">
 				<text class="share-popup-title">分享小程序</text>
 				<!-- <text class="share-popup-desc">邀请好友一起使用</text> -->
@@ -201,6 +220,7 @@
 		</u-popup>
 		<!-- #endif -->
 		<u-popup
+			v-if="contactStoreShow"
 			:show="contactStoreShow"
 			mode="bottom"
 			round="16"
@@ -216,6 +236,7 @@
 			</view>
 		</u-popup>
 		<u-popup
+			v-if="settleTipShow"
 			:show="settleTipShow"
 			mode="center"
 			round="16"
@@ -351,6 +372,7 @@
 				contactStoreLoading: false,
 				userLoading: false,
 				pageLoading: true,
+				pageBooted: false,
 				loginLoading: false,
 				hasLogin: false,
 				memberInfo: {
@@ -494,7 +516,12 @@
 		},
 		async onShow() {
 			applyLaunchQuery()
-			this.pageLoading = true
+			// 仅首次进入走整页 loading；从其他 tab 切回来静默刷新，
+			// 避免整页内容销毁重建（小程序重挂带插槽组件时 scoped slot 差量更新会读到 null）
+			const firstShow = !this.pageBooted
+			if (firstShow) {
+				this.pageLoading = true
+			}
 			try {
 				await waitBootstrapAuth()
 				await this.initUserProfile()
@@ -507,6 +534,7 @@
 					await this.loadMemberInfo()
 				}
 			} finally {
+				this.pageBooted = true
 				this.pageLoading = false
 			}
 		},
@@ -1075,6 +1103,22 @@
 		overflow: hidden;
 	}
 
+	.rent-notice {
+		display: flex;
+		align-items: center;
+		gap: 12rpx;
+		padding: 16rpx 20rpx;
+		background: #fdf6ec;
+	}
+
+	.rent-notice-text {
+		flex: 1;
+		min-width: 0;
+		font-size: 24rpx;
+		color: #f9ae3d;
+		line-height: 1.4;
+	}
+
 	.profile-section {
 		position: relative;
 		display: flex;
@@ -1408,6 +1452,16 @@
 		margin-bottom: 16rpx;
 		padding-left: 16rpx;
 		border-left: 6rpx solid $primary;
+	}
+
+	.func-grid {
+		display: flex;
+		flex-wrap: wrap;
+	}
+
+	.func-grid-item {
+		width: 25%;
+		box-sizing: border-box;
 	}
 
 	.service-item {

@@ -163,6 +163,19 @@
 			}
 		},
 		{
+			"path": "pages/personalCenter/contract/index",
+			"style": {
+				"navigationBarTitleText": "店铺合同",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/personalCenter/contract/detail",
+			"style": {
+				"navigationBarTitleText": "合同详情"
+			}
+		},
+		{
 			"path": "pages/personalCenter/finance/index",
 			"style": {
 				"navigationBarTitleText": "流水查询",

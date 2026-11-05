@@ -44,6 +44,7 @@ export const ownerList = [
 	// { key: 'otherBusiness', name: '其他业务', icon: 'more-circle', url: '/pages/personalCenter/otherBusinessSetting/index' },
 	{ key: 'customerlist', name: '顾客列表', icon: 'man-add', url: '/pages/personalCenter/customerlist/index' },
 	{ key: 'blacklist', name: '黑名单', icon: 'close-circle', url: '/pages/personalCenter/blacklist/index' },
+	{ key: 'contract', name: '店铺合同', icon: 'file-text', url: '/pages/personalCenter/contract/index' },
 	{ key: 'agreement', name: '服务协议', icon: 'question-circle', url: '/pages/personalCenter/businessAgreement/index' },
 	// { key: 'change', name: '店铺转让', icon: 'pushpin', url: '/pages/personalCenter/transfer/index' },
 	{ key: 'help', name: '联系客服', icon: 'kefu-ermai', url: '/pages/personalCenter/contactService/index' },

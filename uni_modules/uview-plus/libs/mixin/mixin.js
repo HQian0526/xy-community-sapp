@@ -221,7 +221,9 @@ export const mixin = defineMixin({
                 // #ifndef APP-NVUE
                 uni.createSelectorQuery()
                     .in(this)[all ? 'selectAll' : 'select'](selector)
-                    .boundingClientRect((rect) => {
+                    .boundingClientRect()
+                    .exec((res) => {
+                        const rect = res && res[0]
                         if (all && Array.isArray(rect) && rect.length) {
                             resolve(rect)
                         }
@@ -229,7 +231,6 @@ export const mixin = defineMixin({
                             resolve(rect)
                         }
                     })
-                    .exec()
                 // #endif
                 
                 // #ifdef APP-NVUE

@@ -1,5 +1,5 @@
 <template>
-	<u-popup :show="visible" mode="center" round="16" :closeOnClickOverlay="closable" @close="handleClose">
+	<u-popup v-if="visible" :show="visible" mode="center" round="16" :closeOnClickOverlay="closable" @close="handleClose">
 		<view class="bind-phone-popup">
 			<text class="title">授权手机号</text>
 			<text class="desc">下单、订单查询、售后等服务需要手机号授权</text>

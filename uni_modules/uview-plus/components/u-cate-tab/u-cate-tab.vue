@@ -10,7 +10,7 @@
 			>
 				<view class="u-cate-tab__menu-inner">
 					<view
-						v-for="(item, index) in tabList"
+						v-for="(item, index) in (tabList || [])"
 						:id="'menu' + index"
 						:key="item.id || item.catagoryId || index"
 						class="u-cate-tab__item"
@@ -19,7 +19,7 @@
 					>
 						<slot name="tabItem" :item="item">
 						</slot>
-						<text v-if="!$slots['tabItem']" class="u-line-1">{{item[tabKeyName]}}</text>
+						<text v-if="!$slots.tabItem" class="u-line-1">{{item[tabKeyName]}}</text>
 					</view>
 				</view>
 			</scroll-view>
@@ -30,17 +30,17 @@
                 	</slot>
 				</view>
 				<view class="u-cate-tab__page-view">
-					<template :key="index" v-for="(item , index) in tabList">
+					<template :key="index" v-for="(item , index) in (tabList || [])">
 						<view v-if="mode == 'follow' || ( mode == 'tab' && index == innerCurrent)"
 							class="u-cate-tab__page-item" :id="'item' + index">
 							<slot name="itemList" :item="item">
 							</slot>
-							<template v-if="!$slots['itemList']">
+							<template v-if="!$slots.itemList">
 								<view class="item-title">
 									<text>{{item[tabKeyName]}}</text>
 								</view>
 								<view class="item-container">
-									<template v-for="(item1, index1) in item.children" :key="index1">
+									<template v-for="(item1, index1) in (item.children || [])" :key="index1">
 										<slot name="pageItem" :pageItem="item1">
 											<view class="thumb-box" >
 												<image class="item-menu-image" :src="item1.icon" mode=""></image>
@@ -131,7 +131,11 @@
 		},
 		mounted() {
 			this.innerCurrent = this.current;
-			this.getMenuItemTop()
+			this.$nextTick(() => {
+				sleep(30).then(() => {
+					this.getMenuItemTop()
+				})
+			})
 		},
 		methods: {
 			addUnit,
@@ -161,21 +165,21 @@
 			},
 			// 获取一个目标元素的高度
 			getElRect(elClass, dataVal) {
-				return new Promise((resolve, reject) => {
-					const query = uni.createSelectorQuery().in(this);
-					query.select('.' + elClass).fields({
-						size: true
-					}, res => {
-						// 如果节点尚未生成，res值为null，循环调用执行
-						if (!res) {
-							setTimeout(() => {
-								this.getElRect(elClass);
-							}, 10);
-							return;
-						}
-						this[dataVal] = res.height;
-						resolve();
-					}).exec();
+				return new Promise((resolve) => {
+					uni.createSelectorQuery().in(this)
+						.select('.' + elClass)
+						.fields({ size: true })
+						.exec((res) => {
+							const rect = res && res[0]
+							if (!rect) {
+								resolve()
+								return
+							}
+							if (dataVal) {
+								this[dataVal] = rect.height
+							}
+							resolve()
+						})
 				})
 			},
 			// 观测元素相交状态
@@ -214,28 +218,24 @@
 			},
 			// 获取右边菜单每个item到顶部的距离
 			async getMenuItemTop() {
-				// await this.$nextTick();
-				// console.log('getMenuItemTop')
-				return new Promise(resolve => {
-					let selectorQuery = uni.createSelectorQuery().in(this);
-					selectorQuery.selectAll('.u-cate-tab__page-item').boundingClientRect((rects) => {
-						// 如果节点尚未生成，rects值为[](因为用selectAll，所以返回的是数组)，循环调用执行
-						if(!rects.length) {
-							setTimeout(() => {
-								this.getMenuItemTop();
-							}, 100);
-							return ;
-						}
-						// console.log(rects)
-                        this.rects = rects;
-						this.arr = [];
-						rects.forEach((rect) => {
-							// 这里减去rects[0].top，是因为第一项顶部可能不是贴到导航栏(比如有个搜索框的情况)
-							this.arr.push(rect.top - rects[0].top);
+				if (!this.tabList || !this.tabList.length) {
+					this.arr = []
+					return
+				}
+				return new Promise((resolve) => {
+					uni.createSelectorQuery().in(this)
+						.selectAll('.u-cate-tab__page-item')
+						.boundingClientRect()
+						.exec((res) => {
+							const rects = res && res[0]
+							if (!Array.isArray(rects) || !rects.length) {
+								resolve()
+								return
+							}
+							this.rects = rects
+							this.arr = rects.map((rect) => rect.top - rects[0].top)
+							resolve()
 						})
-						// console.log(this.arr)
-                        resolve();
-					}).exec()
 				})
 			},
 			// 右边菜单滚动

@@ -122,43 +122,24 @@ function clipText(value, fallback, max) {
 	return text.slice(0, max)
 }
 
-let tabBarPendingReveal = false
-let tabBarRevealTimer = null
+/**
+ * 保留调用点，但不再隐藏 tabBar。
+ * hideTabBar 期间点击 tab 会让基础库的 tabBar 点击任务读到空列表
+ * （clickCheckTask 读取 null[0]，渲染层再对空值做遍历），开发工具里会持续报错。
+ * 现在只按配置更新首页 tab 文案，tabBar 始终可见。
+ */
+export function hideHomeTabBarUntilReady() {}
 
-export function hideHomeTabBarUntilReady() {
-	tabBarPendingReveal = true
-	if (tabBarRevealTimer) {
-		clearTimeout(tabBarRevealTimer)
-	}
-	uni.hideTabBar({
-		animation: false,
-		fail() {}
-	})
-	tabBarRevealTimer = setTimeout(() => {
-		revealHomeTabBarIfPending()
-	}, 8000)
-}
-
-function revealHomeTabBarIfPending() {
-	if (!tabBarPendingReveal) return
-	tabBarPendingReveal = false
-	if (tabBarRevealTimer) {
-		clearTimeout(tabBarRevealTimer)
-		tabBarRevealTimer = null
-	}
-	uni.showTabBar({
-		animation: false,
-		fail() {}
-	})
-}
+let lastHomeTabText = ''
 
 export function syncHomeTabBar(text) {
 	const title = clipText(text, '逛店', 4)
+	if (title === lastHomeTabText) return
+	lastHomeTabText = title
 	uni.setTabBarItem({
 		index: 0,
 		text: title,
-		complete: revealHomeTabBarIfPending,
-		fail: revealHomeTabBarIfPending
+		fail() {}
 	})
 }
 

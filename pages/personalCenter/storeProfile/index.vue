@@ -227,7 +227,7 @@
 		min-height: 100vh;
 		background-color: #f5f5f5;
 		padding: 24rpx;
-		padding-bottom: calc(180rpx + env(safe-area-inset-bottom));
+		padding-bottom: 180rpx;
 		box-sizing: border-box;
 	}
 
@@ -300,7 +300,9 @@
 		left: 0;
 		right: 0;
 		bottom: 0;
-		padding: 24rpx 48rpx calc(24rpx + env(safe-area-inset-bottom));
+		padding: 24rpx 48rpx;
+		padding-bottom: calc(24rpx + constant(safe-area-inset-bottom));
+		padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
 		background-color: #fff;
 		box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
 	}

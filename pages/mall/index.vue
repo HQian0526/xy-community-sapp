@@ -44,7 +44,7 @@
 			</view>
 
 			<view v-else-if="isSearching" class="search-result-wrap">
-				<scroll-view scroll-y class="search-result-scroll" :style="{ height: contentHeight }">
+				<scroll-view scroll-y class="search-result-scroll">
 					<view v-if="searchPending" class="page-loading">
 						<up-loading-icon color="#00a896"></up-loading-icon>
 						<text class="loading-text">加载中...</text>
@@ -53,15 +53,12 @@
 					<view class="search-result-header">
 						<text class="search-result-tip">找到 {{ searchResults.length }} 件相关商品</text>
 					</view>
-					<u-empty
-						v-if="!searchResults.length"
-						text="未找到相关商品"
-						mode="search"
-						marginTop="80"
-					></u-empty>
+					<view v-if="!searchResults.length" class="cate-empty">
+						<text class="cate-empty-text">未找到相关商品</text>
+					</view>
 					<view v-else class="product-list" :class="{ 'product-list--with-cart': showCartBar }">
 						<view
-							v-for="product in searchResults"
+							v-for="product in (searchResults || [])"
 							:key="product.id"
 							class="product-card"
 							@click="goProductDetail(product)"
@@ -73,14 +70,16 @@
 							/>
 							<view class="product-info">
 								<text class="product-name">{{ product.name }}</text>
-								<text class="product-desc">{{ product.remark || '' }}</text>
+								<view class="product-desc">{{ product.remark || '' }}</view>
 								<text v-if="miniappUi.showStock" class="product-stock">库存 {{ product.has }}{{ product.unit }}</text>
 								<view class="product-bottom" :class="{ 'product-bottom--action-only': !showPrice }">
-									<view v-if="showPrice" class="product-price">
-										<text v-if="product.hasMemberPrice" class="price-label">会员价：</text>
-										<text class="price-symbol" :class="{ 'price-symbol--member': product.hasMemberPrice }">¥</text>
-										<text class="price-value" :class="{ 'price-value--member': product.hasMemberPrice }">{{ product.price }}</text>
-										<text v-if="product.hasMemberPrice" class="price-original">¥{{ product.originalPrice }}</text>
+									<view v-if="showPrice" class="product-price" :class="{ 'product-price--stack': product.hasMemberPrice }">
+										<text v-if="product.hasMemberPrice" class="price-original">原价：¥{{ product.originalPrice }}</text>
+										<view class="price-main">
+											<text v-if="product.hasMemberPrice" class="price-label">储值价：</text>
+											<text class="price-symbol" :class="{ 'price-symbol--member': product.hasMemberPrice }">¥</text>
+											<text class="price-value" :class="{ 'price-value--member': product.hasMemberPrice }">{{ product.price }}</text>
+										</view>
 									</view>
 									<view
 										class="book-btn"
@@ -98,75 +97,104 @@
 			</view>
 
 			<view v-else-if="!categoryList.length" class="page-loading">
-				<u-empty text="店家暂未上架商品" mode="list" marginTop="60"></u-empty>
+				<view class="cate-empty">
+					<text class="cate-empty-text">店家暂未上架商品</text>
+				</view>
 			</view>
 
 			<view v-else class="cate-tab-wrap">
-				<up-cate-tab mode="follow" :height="contentHeight" :tabList="categoryList" @update:current="onCateChange">
-					<template #itemList="{ item }">
+				<view class="cate-layout">
+					<scroll-view scroll-y class="cate-menu" :show-scrollbar="false" :scroll-into-view="menuIntoView">
 						<view
-							class="product-list"
-							:class="{
-								'product-list--with-cart':
-									showCartBar &&
-									item.id === categoryList[categoryList.length - 1]?.id
-							}"
+							v-for="(item, index) in categoryList"
+							:id="'menu' + index"
+							:key="item.id || index"
+							class="cate-menu-item"
+							:class="{ 'cate-menu-item--active': currentCate === index }"
+							@tap="selectCate(index)"
 						>
-							<!-- 分类分隔头：滚动到新分类时提示以下是该分类的商品 -->
+							<text class="cate-menu-text">{{ item.name }}</text>
+						</view>
+					</scroll-view>
+					<scroll-view
+						scroll-y
+						class="cate-right"
+						:scroll-into-view="cateIntoView"
+						scroll-with-animation
+					>
+						<view class="cate-right-inner">
 							<view
-								v-if="item.children && item.children.length"
-								class="cate-section"
+								v-for="(item, index) in categoryList"
+								:id="'cate' + index"
+								:key="item.id || index"
+								class="cate-page-item"
 							>
-								<view class="cate-section-main">
-									<view class="cate-section-head">
-										<view class="cate-section-bar"></view>
-										<text class="cate-section-title">{{ item.name }}</text>
-									</view>
-									<text class="cate-section-count">{{ item.children.length }} 件</text>
-								</view>
-								<view class="cate-section-line"></view>
-							</view>
-							<view
-								v-if="!item.productsLoaded && !(item.children && item.children.length)"
-								class="cate-loading"
-							>
-								<up-loading-icon color="#00a896"></up-loading-icon>
-								<text class="loading-text">加载中...</text>
-							</view>
-							<u-empty
-								v-else-if="item.productsLoaded && !(item.children && item.children.length)"
-								text="该分类暂无商品"
-								mode="list"
-								marginTop="60"
-							></u-empty>
-							<view v-for="product in (item.children || [])" :key="product.id" class="product-card"
-								@click="goProductDetail(product)">
-								<image class="product-img" :src="product.icon || '/static/image-wrong.png'"
-									mode="aspectFill" />
-								<view class="product-info">
-									<text class="product-name">{{ product.name }}</text>
-									<text class="product-desc">{{ product.remark || '' }}</text>
-									<text v-if="miniappUi.showStock" class="product-stock">库存 {{ product.has }}{{ product.unit }}</text>
-									<view class="product-bottom" :class="{ 'product-bottom--action-only': !showPrice }">
-										<view v-if="showPrice" class="product-price">
-											<text v-if="product.hasMemberPrice" class="price-label">会员价：</text>
-											<text class="price-symbol" :class="{ 'price-symbol--member': product.hasMemberPrice }">¥</text>
-											<text class="price-value" :class="{ 'price-value--member': product.hasMemberPrice }">{{ product.price }}</text>
-											<text v-if="product.hasMemberPrice" class="price-original">¥{{ product.originalPrice }}</text>
+								<view
+									class="product-list"
+									:class="{ 'product-list--with-cart': showCartBar && index === categoryList.length - 1 }"
+								>
+									<view
+										v-if="item.children && item.children.length"
+										class="cate-section"
+									>
+										<view class="cate-section-main">
+											<view class="cate-section-head">
+												<view class="cate-section-bar"></view>
+												<text class="cate-section-title">{{ item.name }}</text>
+											</view>
+											<text class="cate-section-count">{{ item.children.length }} 件</text>
 										</view>
-										<view
-											class="book-btn"
-											:class="{ disabled: isProductSoldOut(product) }"
-											@click.stop="handleBookNow(product)"
-										>
-											<text class="book-btn-text">{{ miniappUi.listBtnText }}</text>
+										<view class="cate-section-line"></view>
+									</view>
+									<view
+										v-if="!item.productsLoaded && !(item.children && item.children.length)"
+										class="cate-loading"
+									>
+										<up-loading-icon color="#00a896"></up-loading-icon>
+										<text class="loading-text">加载中...</text>
+									</view>
+									<view
+										v-else-if="item.productsLoaded && !(item.children && item.children.length)"
+										class="cate-empty"
+									>
+										<text class="cate-empty-text">该分类暂无商品</text>
+									</view>
+									<view
+										v-for="product in (item.children || [])"
+										:key="product.id"
+										class="product-card"
+										@click="goProductDetail(product)"
+									>
+										<image class="product-img" :src="product.icon || '/static/image-wrong.png'"
+											mode="aspectFill" />
+										<view class="product-info">
+											<text class="product-name">{{ product.name }}</text>
+											<view class="product-desc">{{ product.remark || '' }}</view>
+											<text v-if="miniappUi.showStock" class="product-stock">库存 {{ product.has }}{{ product.unit }}</text>
+											<view class="product-bottom" :class="{ 'product-bottom--action-only': !showPrice }">
+												<view v-if="showPrice" class="product-price" :class="{ 'product-price--stack': product.hasMemberPrice }">
+													<text v-if="product.hasMemberPrice" class="price-original">原价：¥{{ product.originalPrice }}</text>
+													<view class="price-main">
+														<text v-if="product.hasMemberPrice" class="price-label">储值价：</text>
+														<text class="price-symbol" :class="{ 'price-symbol--member': product.hasMemberPrice }">¥</text>
+														<text class="price-value" :class="{ 'price-value--member': product.hasMemberPrice }">{{ product.price }}</text>
+													</view>
+												</view>
+												<view
+													class="book-btn"
+													:class="{ disabled: isProductSoldOut(product) }"
+													@click.stop="handleBookNow(product)"
+												>
+													<text class="book-btn-text">{{ miniappUi.listBtnText }}</text>
+												</view>
+											</view>
 										</view>
 									</view>
 								</view>
 							</view>
 						</view>
-					</template>
-				</up-cate-tab>
+					</scroll-view>
+				</view>
 			</view>
 
 			<view v-if="showCartBar" class="cart-bar" :style="{ bottom: cartBarBottom }">
@@ -186,7 +214,7 @@
 		</view>
 
 		<view class="cart-popup-host">
-			<u-popup :show="cartShow" mode="bottom" round="16" closeOnClickOverlay @close="closeCartPopup">
+			<u-popup v-if="cartShow" :show="cartShow" mode="bottom" round="16" closeOnClickOverlay @close="closeCartPopup">
 				<view class="cart-popup">
 					<view class="cart-popup-header">
 						<text class="cart-popup-title">购物车</text>
@@ -195,14 +223,14 @@
 					</view>
 
 					<scroll-view scroll-y class="cart-popup-list">
-						<view v-for="item in cartItems" :key="item.id" class="cart-item">
+						<view v-for="item in (cartItems || [])" :key="item.id" class="cart-item">
 							<image class="cart-item-img" :src="item.icon || '/static/image-wrong.png'"
 								mode="aspectFill" />
 							<view class="cart-item-info">
 								<text class="cart-item-name">{{ item.name }}</text>
 								<view class="cart-item-bottom">
 									<view v-if="showPrice" class="cart-item-price">
-										<text v-if="item.hasMemberPrice" class="price-label">会员价：</text>
+										<text v-if="item.hasMemberPrice" class="price-label">储值价：</text>
 										<text class="price-symbol" :class="{ 'price-symbol--member': item.hasMemberPrice }">¥</text>
 										<text class="price-value" :class="{ 'price-value--member': item.hasMemberPrice }">{{ item.price }}</text>
 										<text v-if="item.hasMemberPrice" class="price-original">¥{{ item.originalPrice }}</text>
@@ -231,7 +259,7 @@
 				</view>
 			</u-popup>
 		</view>
-		<u-popup :show="couponShow" mode="bottom" round="16" closeOnClickOverlay @close="closeCouponPopup">
+		<u-popup v-if="couponShow" :show="couponShow" mode="bottom" round="16" closeOnClickOverlay @close="closeCouponPopup">
 			<view class="coupon-popup">
 				<view class="coupon-popup-header">
 					<text class="coupon-popup-title">店铺优惠券</text>
@@ -239,7 +267,7 @@
 				</view>
 				<scroll-view scroll-y class="coupon-popup-list">
 					<view v-if="!couponTemplates.length" class="coupon-empty">暂无可领优惠券</view>
-					<view v-for="item in couponTemplates" :key="item.id" class="coupon-card">
+					<view v-for="item in (couponTemplates || [])" :key="item.id" class="coupon-card">
 						<view class="coupon-amount">
 							<text class="coupon-unit">¥</text>
 							<text class="coupon-value">{{ formatCouponAmount(item.discountAmount) }}</text>
@@ -358,14 +386,16 @@
 				categoryList: [],
 				categoryLoading: true,
 				pageBootstrapping: false,
+				mallBooted: false,
 				mallRefreshSeq: 0,
 				bookingBusy: false,
 				currentCate: 0,
+				menuIntoView: '',
+				cateIntoView: '',
 				searchKeyword: '',
 				socialName: '地址',
 				cartMap: {},
 				cartShow: false,
-				contentHeight: '100%',
 				cartBarBottom: '66px',
 				queryStoreId: '',
 				deliveryFee: 0,
@@ -388,23 +418,30 @@
 		/** 进入页面：同步购物车后加载分类商品（游客可浏览，不弹登录/手机号） */
 		async onShow() {
 			applyLaunchQuery()
-			this.mallUiReady = false
-			this.categoryList = []
+			const firstShow = !this.mallBooted
 			this.searchKeyword = ''
-			this.categoryLoading = true
 			this.cartShow = false
-			resetMiniappUi()
-			this.miniappUi = getMiniappUi()
 			this.cartMap = getCartMap()
-			this.$nextTick(() => {
-				this.updateCateTabHeight()
-			})
+			if (firstShow) {
+				// 仅首次进入清空并走整页 loading；
+				// 之后从其他 tab 切回来直接静默刷新，避免整棵分类树销毁重建
+				// （小程序重挂带插槽的组件时，uni-app 的 scoped slot 差量更新会读到 null）
+				this.mallUiReady = false
+				this.categoryList = []
+				this.categoryLoading = true
+				resetMiniappUi()
+				this.miniappUi = getMiniappUi()
+				this.$nextTick(() => {
+					this.updateCateTabHeight()
+				})
+			}
 			await new Promise((resolve) => this.$nextTick(resolve))
 			const seq = ++this.mallRefreshSeq
 			if (this.pageBootstrapping) return
 			this.pageBootstrapping = true
 			try {
 				await this.refreshMallCatalog(seq)
+				this.mallBooted = true
 			} finally {
 				this.pageBootstrapping = false
 				if (seq !== this.mallRefreshSeq) {
@@ -510,8 +547,10 @@
 				await this.ensureMallStoreId()
 				if (seq !== this.mallRefreshSeq) return
 				this.syncCartWithStore(this.queryStoreId)
-				this.mallUiReady = false
-				if (String(prevStoreId || '') !== String(this.queryStoreId || '')) {
+				const storeChanged = String(prevStoreId || '') !== String(this.queryStoreId || '')
+				if (storeChanged) {
+					// 换店才整页重来；同店刷新保持列表挂载，避免分类树销毁重建
+					this.mallUiReady = false
 					hideHomeTabBarUntilReady()
 					uni.setNavigationBarTitle({ title: ' ' })
 					this.currentCate = 0
@@ -528,10 +567,11 @@
 					this.$nextTick(() => this.updateCateTabHeight())
 					return
 				}
-				await Promise.all([
-					this.loadCategoryList(),
-					this.loadPromoAndCoupons()
-				])
+				const tasks = [this.loadPromoAndCoupons()]
+				if (storeChanged || !this.categoryList.length) {
+					tasks.unshift(this.loadCategoryList())
+				}
+				await Promise.all(tasks)
 				if (seq !== this.mallRefreshSeq) return
 				this.$nextTick(() => this.updateCateTabHeight())
 			},
@@ -654,7 +694,7 @@
 					}
 					const data = await getCatagoryListApi(params)
 					const list = Array.isArray(data) ? data : (data?.list || [])
-					this.categoryList = list
+					const nextList = list
 						.slice()
 						.sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0))
 						.map((item) => ({
@@ -666,6 +706,32 @@
 							productsLoaded: false,
 							productsLoading: false
 						}))
+					// 原地合并：分类 id 不变时保留已有对象，避免整组节点销毁重建
+					const prevMap = {}
+					this.categoryList.forEach((item) => {
+						prevMap[String(item.catagoryId || '')] = item
+					})
+					const merged = nextList.map((item) => {
+						const prev = prevMap[String(item.catagoryId || '')]
+						if (!prev) return item
+						return {
+							...item,
+							children: Array.isArray(prev.children) ? prev.children : [],
+							productsLoaded: !!prev.productsLoaded,
+							productsLoading: !!prev.productsLoading
+						}
+					})
+					const sameOrder = merged.length === this.categoryList.length
+						&& merged.every((item, index) => String(item.catagoryId || '') === String(this.categoryList[index]?.catagoryId || ''))
+					if (sameOrder) {
+						merged.forEach((item, index) => {
+							const prev = this.categoryList[index]
+							if (prev.name !== item.name) this.$set(prev, 'name', item.name)
+							if (prev.storeId !== item.storeId) this.$set(prev, 'storeId', item.storeId)
+						})
+					} else {
+						this.categoryList = merged
+					}
 					if (this.currentCate >= this.categoryList.length) {
 						this.currentCate = 0
 					}
@@ -703,7 +769,17 @@
 						.filter((item) => !knownIds.includes(String(item.catagoryId || '')))
 						.sort((a, b) => (Number(a.orderNum) || 0) - (Number(b.orderNum) || 0))
 						.map((item) => mapProductItem(item, '其他', this.queryStoreId))
-					if (!orphans.length) return
+					if (!orphans.length) {
+						const existsIndex = this.categoryList.findIndex((item) => item.id === '__uncategorized__')
+						if (existsIndex >= 0) this.categoryList.splice(existsIndex, 1)
+						return
+					}
+					const existsIndex = this.categoryList.findIndex((item) => item.id === '__uncategorized__')
+					if (existsIndex >= 0) {
+						this.$set(this.categoryList[existsIndex], 'children', orphans)
+						this.$set(this.categoryList[existsIndex], 'storeId', this.queryStoreId)
+						return
+					}
 					this.categoryList.push({
 						id: '__uncategorized__',
 						catagoryId: '',
@@ -717,7 +793,17 @@
 					console.error('获取未分类商品失败', error)
 				}
 			},
-			/** 分类切换只预加载商品，避免 v-model 回写导致左侧菜单整列重绘闪白 */
+			selectCate(index) {
+				this.currentCate = index
+				this.menuIntoView = ''
+				this.cateIntoView = ''
+				this.$nextTick(() => {
+					this.menuIntoView = 'menu' + index
+					this.cateIntoView = 'cate' + index
+				})
+				this.onCateChange(index)
+			},
+			/** 分类切换只预加载商品 */
 			onCateChange(index) {
 				this.loadCategoryProducts(index)
 				this.loadCategoryProducts(index + 1)
@@ -764,37 +850,11 @@
 				setCartMap(this.cartMap)
 			},
 			/** 按搜索栏下方实际剩余高度计算分类列表，避免模拟器里 windowHeight 偏小只占上半屏 */
-			updateCateTabHeight(retry = 0) {
+			updateCateTabHeight() {
 				const sys = getWindowLayout()
 				const windowBottom = typeof sys.windowBottom === 'number' ? sys.windowBottom : 50
 				const gap = uni.upx2px(16)
 				this.cartBarBottom = `${windowBottom + gap}px`
-
-				this.$nextTick(() => {
-					const query = uni.createSelectorQuery().in(this)
-					query.select('.cate-tab-wrap').boundingClientRect()
-					query.select('.search-result-wrap').boundingClientRect()
-					query.select('.search-wrap').boundingClientRect()
-					query.selectViewport().boundingClientRect()
-					query.exec((res) => {
-						const wrapRect = (res && (res[0] || res[1])) || null
-						const searchRect = (res && res[2]) || null
-						const viewportRect = (res && res[3]) || null
-						let height = 0
-						if (wrapRect && wrapRect.height > 80) {
-							height = wrapRect.height
-						} else if (viewportRect && searchRect) {
-							height = viewportRect.height - searchRect.bottom
-						}
-						if (height > 80) {
-							this.contentHeight = `${Math.floor(height)}px`
-							return
-						}
-						if (retry < 8) {
-							setTimeout(() => this.updateCateTabHeight(retry + 1), 50)
-						}
-					})
-				})
 			},
 			/** 点击储值引导：直达储值页（需登录 + 手机号） */
 			async goRechargePage() {
@@ -1282,6 +1342,7 @@
 
 	.search-result-scroll {
 		flex: 1;
+		height: 100%;
 		min-height: 0;
 		padding: 0 24rpx;
 		box-sizing: border-box;
@@ -1293,34 +1354,85 @@
 		overflow: hidden;
 	}
 
-	.cate-tab-wrap ::v-deep .u-cate-tab__wrap {
+	.cate-layout {
+		height: 100%;
+		display: flex;
+		flex-direction: row;
+		overflow: hidden;
 		background-color: #f5f5f5;
 	}
 
-	.cate-tab-wrap ::v-deep .u-cate-tab__right-box {
-		margin-left: 16rpx;
-		margin-right: 16rpx;
+	.cate-menu {
+		flex-shrink: 0;
+		width: 200rpx;
+		height: 100%;
+		background-color: #f6f6f6;
+	}
+
+	.cate-menu-item {
+		height: 110rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+		background-color: #f6f6f6;
+	}
+
+	.cate-menu-text {
+		font-size: 26rpx;
+		color: #444;
+		line-height: 1;
+	}
+
+	.cate-menu-item--active {
+		position: relative;
+		background-color: #fff;
+	}
+
+	.cate-menu-item--active .cate-menu-text {
+		font-size: 30rpx;
+		font-weight: 600;
+		color: #000;
+	}
+
+	.cate-menu-item--active::before {
+		content: "";
+		position: absolute;
+		left: 0;
+		top: 39rpx;
+		height: 32rpx;
+		border-left: 8rpx solid #00a896;
+	}
+
+	.cate-right {
+		flex: 1;
+		height: 100%;
+		margin: 0 16rpx;
 		border-radius: 16rpx;
 		overflow: hidden;
 		background-color: #fff;
 	}
 
-	.cate-tab-wrap ::v-deep .u-cate-tab__page-view {
+	.cate-right-inner {
 		padding: 0 24rpx;
 		box-sizing: border-box;
 		background-color: #fff;
 	}
 
-	.cate-tab-wrap ::v-deep .u-cate-tab__page-item {
-		margin-bottom: 0;
-		padding: 0;
-		border: none;
-		border-radius: 0;
-		background-color: #fff;
+	.cate-page-item:last-child {
+		min-height: 70%;
 	}
 
-	.cate-tab-wrap ::v-deep .u-cate-tab__page-item:last-child {
-		min-height: 0;
+	.cate-empty {
+		padding: 80rpx 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.cate-empty-text {
+		font-size: 26rpx;
+		color: #999;
 	}
 
 	.product-list {
@@ -1415,17 +1527,18 @@
 		flex: 1;
 		min-width: 0;
 		margin-left: 20rpx;
+		height: 160rpx;
 		display: flex;
 		flex-direction: column;
-		justify-content: space-between;
-		min-height: 160rpx;
+		overflow: hidden;
 	}
 
 	.product-name {
-		font-size: 28rpx;
+		flex-shrink: 0;
+		font-size: 26rpx;
 		font-weight: 500;
 		color: #333;
-		line-height: 1.4;
+		line-height: 1.2;
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
@@ -1433,27 +1546,34 @@
 	}
 
 	.product-desc {
-		min-height: 32rpx;
-		font-size: 22rpx;
+		flex-shrink: 0;
+		max-height: 48rpx;
+		margin-top: 2rpx;
+		font-size: 20rpx;
 		color: #999;
-		margin-top: 8rpx;
-		line-height: 1.4;
-		display: -webkit-box;
-		-webkit-box-orient: vertical;
-		-webkit-line-clamp: 1;
+		line-height: 24rpx;
 		overflow: hidden;
+		text-overflow: ellipsis;
+		word-break: break-all;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		/* autoprefixer: ignore next */
+		-webkit-box-orient: vertical;
 	}
 
 	.product-stock {
-		margin-top: 6rpx;
-		font-size: 22rpx;
+		flex-shrink: 0;
+		margin-top: 0;
+		font-size: 20rpx;
 		color: #999;
-		line-height: 1.4;
+		line-height: 1.2;
 	}
 
 	.product-bottom {
+		flex-shrink: 0;
 		display: flex;
-		align-items: center;
+		align-items: flex-end;
 		justify-content: space-between;
 		margin-top: auto;
 	}
@@ -1467,11 +1587,23 @@
 		align-items: baseline;
 		min-width: 0;
 		flex: 1;
-		margin-right: 12rpx;
+		margin-right: 16rpx;
+	}
+
+	.product-price--stack {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.price-main {
+		display: flex;
+		align-items: baseline;
+		min-width: 0;
+		flex-wrap: wrap;
 	}
 
 	.price-label {
-		font-size: 22rpx;
+		font-size: 20rpx;
 		color: #00a896;
 		font-weight: 600;
 		margin-right: 4rpx;
@@ -1479,15 +1611,16 @@
 	}
 
 	.price-symbol {
-		font-size: 22rpx;
+		font-size: 20rpx;
 		color: #ff6034;
 		font-weight: 600;
 	}
 
 	.price-value {
-		font-size: 32rpx;
+		font-size: 28rpx;
 		color: #ff6034;
 		font-weight: 700;
+		line-height: 1.15;
 	}
 
 	.price-symbol--member,
@@ -1496,18 +1629,24 @@
 	}
 
 	.price-original {
-		font-size: 22rpx;
+		font-size: 20rpx;
 		color: #bbb;
 		text-decoration: line-through;
 		margin-left: 8rpx;
+		line-height: 1.2;
+	}
+
+	.product-price--stack .price-original {
+		margin-left: 0;
+		margin-bottom: 0;
 	}
 
 	.book-btn {
 		flex-shrink: 0;
 		min-width: 96rpx;
-		height: 52rpx;
+		height: 48rpx;
 		padding: 0 20rpx;
-		border-radius: 26rpx;
+		border-radius: 24rpx;
 		background-color: #00a896;
 		display: flex;
 		align-items: center;
