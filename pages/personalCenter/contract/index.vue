@@ -1,5 +1,5 @@
 <template>
-	<view class="contract-page">
+	<view class="contract-page" :style="themeCssVars">
 		<view class="notice-bar">
 			<text class="notice-badge">公告</text>
 			<view class="notice-track">
@@ -14,15 +14,15 @@
 				mode="button"
 				:list="sectionList"
 				:current="currentSection"
-				activeColor="#00a896"
+				:activeColor="themePrimary"
 				inactiveColor="#ffffff"
-				bgColor="#00a896"
+				:bgColor="themePrimary"
 				@change="handleSectionChange"
 			></up-subsection>
 		</view>
 
 		<view v-if="loading && !list.length" class="empty-wrap">
-			<up-loading-icon color="#00a896"></up-loading-icon>
+			<up-loading-icon :color="themePrimary"></up-loading-icon>
 			<text class="loading-text">加载中...</text>
 		</view>
 		<view v-else-if="!list.length" class="empty-wrap">
@@ -253,7 +253,7 @@
 	}
 
 	.is-pending {
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.is-done {

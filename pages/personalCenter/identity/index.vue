@@ -1,5 +1,5 @@
 <template>
-	<view class="identity-page">
+	<view class="identity-page" :style="themeCssVars">
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="220rpx">
 				<uni-forms-item label="真实姓名" name="realName" required>
@@ -28,7 +28,7 @@
 							mode="aspectFill"
 						/>
 						<view v-else class="id-placeholder">
-							<up-icon name="camera-fill" size="32" color="#00a896"></up-icon>
+							<up-icon name="camera-fill" size="32" :color="themePrimary"></up-icon>
 							<text class="id-tip">上传人像面</text>
 						</view>
 					</view>
@@ -43,7 +43,7 @@
 							mode="aspectFill"
 						/>
 						<view v-else class="id-placeholder">
-							<up-icon name="camera-fill" size="32" color="#00a896"></up-icon>
+							<up-icon name="camera-fill" size="32" :color="themePrimary"></up-icon>
 							<text class="id-tip">上传国徽面</text>
 						</view>
 					</view>
@@ -135,7 +135,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.identity-page {
 		min-height: 100vh;

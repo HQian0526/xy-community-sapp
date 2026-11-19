@@ -1,5 +1,5 @@
 <template>
-	<view class="recharge-page">
+	<view class="recharge-page" :style="themeCssVars">
 		<view class="balance-card">
 			<text class="balance-label">当前店铺余额</text>
 			<view class="balance-value">
@@ -45,7 +45,7 @@
 				<text class="submit-label">应付</text>
 				<text class="submit-amount">¥{{ payAmountText }}</text>
 			</view>
-			<view class="submit-btn" :class="{ disabled: !canPay || paying }" @click="handlePay">微信支付</view>
+			<view class="submit-btn" :class="{ disabled: !canPay || paying }" @click="handlePay">确认储值</view>
 		</view>
 	</view>
 </template>
@@ -217,14 +217,14 @@
 	.currency {
 		font-size: 32rpx;
 		font-weight: 600;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.amount {
 		margin-left: 6rpx;
 		font-size: 56rpx;
 		font-weight: 700;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.balance-tip {
@@ -253,7 +253,7 @@
 	}
 
 	.preset-item.active {
-		border-color: #00a896;
+		border-color: var(--xy-primary, #00a896);
 		background: #f3fbf9;
 	}
 
@@ -321,7 +321,7 @@
 		margin-left: 8rpx;
 		font-size: 36rpx;
 		font-weight: 700;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.submit-btn {
@@ -330,7 +330,7 @@
 		line-height: 80rpx;
 		text-align: center;
 		border-radius: 40rpx;
-		background: #00a896;
+		background: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 30rpx;
 		font-weight: 600;

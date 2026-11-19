@@ -1,5 +1,5 @@
 <template>
-	<view class="customer-page">
+	<view class="customer-page" :style="themeCssVars">
 		<view class="search-wrap">
 			<up-search
 				v-model="keyword"
@@ -14,7 +14,7 @@
 		</view>
 
 		<view v-if="loading && !customerList.length" class="empty-wrap">
-			<up-loading-icon color="#00a896"></up-loading-icon>
+			<up-loading-icon :color="themePrimary"></up-loading-icon>
 			<text class="loading-text">加载中...</text>
 		</view>
 
@@ -91,7 +91,7 @@
 			actionList() {
 				const list = []
 				if (this.enablePay) {
-					list.push({ name: '储值', color: '#00a896' })
+					list.push({ name: '储值', color: this.themePrimary })
 				}
 				list.push({ name: '拉黑', color: '#fa3534' })
 				return list

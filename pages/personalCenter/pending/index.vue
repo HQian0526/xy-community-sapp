@@ -1,5 +1,5 @@
 <template>
-	<view class="pending-page">
+	<view class="pending-page" :style="themeCssVars">
 		<view v-if="displayList.length" class="order-list">
 			<view
 				v-for="item in displayList"
@@ -99,7 +99,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.pending-page {
 		min-height: 100vh;

@@ -1,5 +1,5 @@
 <template>
-	<view class="complete-page">
+	<view class="complete-page" :style="themeCssVars">
 		<view v-if="taskInfo.companyName" class="task-brief">
 			<text class="task-name">{{ taskInfo.companyName }}</text>
 			<text class="task-code">工单编码：{{ taskInfo.orderCode }}</text>
@@ -20,7 +20,7 @@
 							</view>
 						</view>
 						<view v-if="formData.photos.length < maxPhotos" class="photo-add" @click="choosePhotos">
-							<up-icon name="camera-fill" size="32" color="#00a896"></up-icon>
+							<up-icon name="camera-fill" size="32" :color="themePrimary"></up-icon>
 							<text class="photo-tip">上传照片</text>
 						</view>
 					</view>
@@ -118,7 +118,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.complete-page {
 		min-height: 100vh;

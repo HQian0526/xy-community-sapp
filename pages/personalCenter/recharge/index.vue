@@ -1,5 +1,5 @@
 <template>
-	<view class="recharge-page">
+	<view class="recharge-page" :style="themeCssVars">
 		<view class="balance-card">
 			<text class="balance-label">{{ memberInfo.member ? '会员余额' : '储值后成为本店会员' }}</text>
 			<view class="balance-value">
@@ -53,7 +53,7 @@
 				class="submit-btn"
 				:class="{ disabled: !canPay || paying }"
 				@click="handlePay"
-			>微信支付</view>
+			>确认储值</view>
 		</view>
 	</view>
 </template>
@@ -239,13 +239,13 @@
 
 	.currency {
 		font-size: 32rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 	}
 
 	.amount {
 		font-size: 56rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 700;
 		margin-left: 4rpx;
 	}
@@ -282,7 +282,7 @@
 	}
 
 	.preset-item.active {
-		border-color: #00a896;
+		border-color: var(--xy-primary, #00a896);
 		background: rgba(0, 168, 150, 0.08);
 	}
 
@@ -325,7 +325,7 @@
 
 	.custom-prefix {
 		font-size: 32rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 	}
 
@@ -360,14 +360,14 @@
 	.submit-amount {
 		font-size: 36rpx;
 		font-weight: 700;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.submit-btn {
 		min-width: 240rpx;
 		height: 80rpx;
 		border-radius: 40rpx;
-		background: #00a896;
+		background: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 30rpx;
 		font-weight: 600;

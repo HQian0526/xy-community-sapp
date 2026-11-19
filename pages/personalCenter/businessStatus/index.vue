@@ -1,5 +1,5 @@
 <template>
-	<view class="status-page">
+	<view class="status-page" :style="themeCssVars">
 		<view class="status-card">
 			<text class="status-label">当前状态</text>
 			<view class="status-value-wrap">
@@ -399,7 +399,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.status-page {
 		min-height: 100vh;

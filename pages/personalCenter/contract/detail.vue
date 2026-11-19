@@ -1,7 +1,7 @@
 <template>
-	<view class="detail-page">
+	<view class="detail-page" :style="themeCssVars">
 		<view v-if="loading" class="empty-wrap">
-			<up-loading-icon color="#00a896"></up-loading-icon>
+			<up-loading-icon :color="themePrimary"></up-loading-icon>
 			<text class="loading-text">加载中...</text>
 		</view>
 		<template v-else-if="detail">
@@ -289,7 +289,7 @@
 	}
 
 	.accent {
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.signer-row {
@@ -323,7 +323,7 @@
 
 	.signer-status {
 		font-size: 24rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.content {
@@ -438,7 +438,7 @@
 
 	.pad-btn-ok {
 		flex: 1.4;
-		background: #00a896;
+		background: var(--xy-primary, #00a896);
 		color: #fff;
 	}
 </style>

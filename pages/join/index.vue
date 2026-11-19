@@ -1,5 +1,5 @@
 <template>
-	<view class="join-page">
+	<view class="join-page" :style="themeCssVars">
 		<!-- iOS 小程序不要用 flex+height:0 的 scroll-view，内容高度会被裁成 0 -->
 		<view class="preview-wrap">
 			<image
@@ -13,7 +13,7 @@
 			/>
 
 			<view v-if="!imageLoaded && !loadError" class="loading-box loading-overlay">
-				<up-loading-icon color="#00a896"></up-loading-icon>
+				<up-loading-icon :color="themePrimary"></up-loading-icon>
 				<text class="loading-text">图片加载中...</text>
 			</view>
 
@@ -139,7 +139,7 @@
 	}
 
 	.error-text {
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.poster-img {
@@ -171,7 +171,7 @@
 		font-size: 30rpx;
 		font-weight: 600;
 		text-align: center;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		color: #fff;
 		border-radius: 44rpx;
 		box-sizing: border-box;

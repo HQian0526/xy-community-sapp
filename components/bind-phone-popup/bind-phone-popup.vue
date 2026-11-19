@@ -1,6 +1,6 @@
 <template>
 	<u-popup v-if="visible" :show="visible" mode="center" round="16" :closeOnClickOverlay="closable" @close="handleClose">
-		<view class="bind-phone-popup">
+		<view class="bind-phone-popup" :style="themeCssVars">
 			<text class="title">授权手机号</text>
 			<text class="desc">下单、订单查询、售后等服务需要手机号授权</text>
 
@@ -162,7 +162,7 @@
 		height: 88rpx;
 		line-height: 88rpx;
 		border-radius: 44rpx;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 30rpx;
 		font-weight: 600;

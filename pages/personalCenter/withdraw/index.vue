@@ -1,5 +1,5 @@
 <template>
-	<view class="withdraw-page">
+	<view class="withdraw-page" :style="themeCssVars">
 		<view class="balance-card">
 			<text class="balance-label">可提现金额（元）</text>
 			<view class="balance-value">
@@ -184,7 +184,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.withdraw-page {
 		min-height: 100vh;
@@ -195,7 +195,7 @@
 	}
 
 	.balance-card {
-		background: linear-gradient(135deg, $primary 0%, #33b9ab 100%);
+		background: linear-gradient(135deg, $primary 0%, var(--xy-primary-dark, #008f7f) 100%);
 		border-radius: 16rpx;
 		padding: 40rpx 32rpx;
 		margin-bottom: 20rpx;

@@ -1,5 +1,5 @@
 <template>
-	<view class="cart-page">
+	<view class="cart-page" :style="themeCssVars">
 		<view v-if="!cartItems.length" class="empty-wrap">
 			<u-empty text="购物车是空的" mode="car"></u-empty>
 			<view class="empty-btn" @click="goMall">去逛店</view>
@@ -376,7 +376,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.cart-page {
 		min-height: 100vh;
@@ -486,7 +486,7 @@
 
 	.price-label {
 		font-size: 22rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 		margin-right: 4rpx;
 	}
@@ -505,7 +505,7 @@
 
 	.price-symbol--member,
 	.price-value--member {
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.price-original {

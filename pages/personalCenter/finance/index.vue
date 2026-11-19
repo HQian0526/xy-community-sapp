@@ -1,5 +1,5 @@
 <template>
-	<view class="finance-page">
+	<view class="finance-page" :style="themeCssVars">
 		<view class="date-bar" @click="openDatePicker">
 			<text class="date-text">{{ dateLabel }}</text>
 			<u-icon name="arrow-down" size="14" color="#666"></u-icon>
@@ -22,9 +22,9 @@
 				mode="button"
 				:list="sectionList"
 				:current="currentSection"
-				activeColor="#00a896"
+				:activeColor="themePrimary"
 				inactiveColor="#ffffff"
-				bgColor="#00a896"
+				:bgColor="themePrimary"
 				@change="handleSectionChange"
 			></up-subsection>
 		</view>
@@ -53,7 +53,7 @@
 			</view>
 			<view class="list-footer">
 				<view v-if="loadingMore" class="footer-loading">
-					<u-loading-icon mode="circle" size="16" color="#00a896"></u-loading-icon>
+					<u-loading-icon mode="circle" size="16" :color="themePrimary"></u-loading-icon>
 					<text class="footer-loading-text">加载中...</text>
 				</view>
 				<text v-else-if="noMore">已经到底了～</text>
@@ -70,7 +70,7 @@
 			mode="date"
 			:minDate="minDate"
 			:maxDate="maxDate"
-			confirmColor="#00a896"
+			:confirmColor="themePrimary"
 			title="选择日期"
 			@confirm="onDateConfirm"
 			@cancel="dateShow = false"
@@ -223,7 +223,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.finance-page {
 		min-height: 100vh;

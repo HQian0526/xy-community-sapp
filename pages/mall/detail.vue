@@ -1,5 +1,5 @@
 <template>
-	<view class="order-detail-page">
+	<view class="order-detail-page" :style="themeCssVars">
 		<view v-if="loading" class="empty-wrap">
 			<u-loading-icon mode="circle" size="36"></u-loading-icon>
 			<text class="loading-text">加载中...</text>
@@ -237,7 +237,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.order-detail-page {
 		min-height: 100vh;

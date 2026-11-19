@@ -1,5 +1,5 @@
 <template>
-	<view class="agreement-page">
+	<view class="agreement-page" :style="themeCssVars">
 		<scroll-view class="agreement-scroll" scroll-y>
 			<view class="agreement-card">
 				<view
@@ -28,7 +28,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.agreement-page {
 		height: 100vh;

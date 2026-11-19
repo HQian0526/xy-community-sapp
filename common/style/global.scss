@@ -12,12 +12,12 @@
 	border-radius: 44rpx;
 }
 .btn-success {
-	background-color: #00a896;
-	color: #fff;
+	background-color: var(--xy-primary, #00a896);
+	color: var(--xy-on-primary, #fff);
 }
 .btn-success-plain {
-	border: 1rpx solid #00a896;
-	color: #00a896;
+	border: 1rpx solid var(--xy-primary, #00a896);
+	color: var(--xy-primary, #00a896);
 	background-color: transparent;
 }
 .btn-primary {

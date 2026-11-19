@@ -1,9 +1,9 @@
 <template>
-	<view class="intro-page">
+	<view class="intro-page" :style="themeCssVars">
 		<view class="header-bg"></view>
 
 		<view v-if="pageLoading" class="page-loading">
-			<up-loading-icon color="#00a896"></up-loading-icon>
+			<up-loading-icon :color="themePrimary"></up-loading-icon>
 			<text class="loading-text">加载中...</text>
 		</view>
 
@@ -29,17 +29,44 @@
 				<view class="section-card">
 					<view class="section-head">
 						<view class="section-icon">
-							<up-icon name="file-text" size="18" color="#00a896"></up-icon>
+							<up-icon name="file-text" size="18" :color="themePrimary"></up-icon>
 						</view>
 						<text class="section-title">店铺简介</text>
 					</view>
 					<text class="intro-text" :class="{ 'is-empty': !introText }">{{ introText || '店家暂未填写简介' }}</text>
 				</view>
 
+				<view v-if="showLocationModule" class="section-card">
+					<view class="section-head">
+						<view class="section-icon">
+							<up-icon name="map-fill" size="18" :color="themePrimary"></up-icon>
+						</view>
+						<text class="section-title">店铺位置</text>
+						<text v-if="distanceText" class="distance-text">{{ distanceText }}</text>
+					</view>
+					<text class="section-body">{{ locationAddress || '店家暂未填写地址' }}</text>
+					<map
+						v-if="hasLocationPoint"
+						class="store-map"
+						:latitude="storeLatitude"
+						:longitude="storeLongitude"
+						:markers="locationMarkers"
+						:scale="16"
+						:enable-scroll="false"
+						:enable-zoom="false"
+						@tap="handleNavigate"
+					></map>
+					<view
+						v-if="hasLocationPoint"
+						class="nav-btn"
+						@click.stop="handleNavigate"
+					>一键导航</view>
+				</view>
+
 				<view v-if="showHoursModule" class="section-card">
 					<view class="section-head">
 						<view class="section-icon">
-							<up-icon name="clock" size="18" color="#00a896"></up-icon>
+							<up-icon name="clock" size="18" :color="themePrimary"></up-icon>
 						</view>
 						<text class="section-title">营业时间</text>
 					</view>
@@ -49,7 +76,7 @@
 				<view v-if="showActivityModule" class="section-card">
 					<view class="section-head">
 						<view class="section-icon">
-							<up-icon name="gift" size="18" color="#00a896"></up-icon>
+							<up-icon name="gift" size="18" :color="themePrimary"></up-icon>
 						</view>
 						<text class="section-title">店铺活动</text>
 					</view>
@@ -67,7 +94,7 @@
 				>
 					<view class="section-head contact-head">
 						<view class="section-icon">
-							<up-icon name="phone" size="18" color="#00a896"></up-icon>
+							<up-icon name="phone" size="18" :color="themePrimary"></up-icon>
 						</view>
 						<text class="section-title">咨询 / 合作 / 联系电话</text>
 					</view>
@@ -134,6 +161,9 @@
 		resolveFileUrl
 	} from '@/common/api/config.js'
 	import {
+		applyStoreMiniappUi
+	} from '@/common/miniappUi.js'
+	import {
 		getActivePromoApi,
 		promoBarText
 	} from '@/common/api/mall/promo.js'
@@ -145,6 +175,28 @@
 	function flagOn(value) {
 		if (value === undefined || value === null || value === '') return true
 		return Number(value) === 1
+	}
+
+	function toCoord(value) {
+		if (value === undefined || value === null || value === '') return null
+		const num = Number(value)
+		return Number.isFinite(num) ? num : null
+	}
+
+	function formatDistance(km) {
+		if (!Number.isFinite(km) || km < 0) return ''
+		if (km < 0.05) return '离我不足50m'
+		if (km < 1) return `离我${Math.round(km * 1000)}m`
+		return `离我${km.toFixed(1)}km`
+	}
+
+	function haversineKm(lat1, lng1, lat2, lng2) {
+		const toRad = (deg) => (deg * Math.PI) / 180
+		const dLat = toRad(lat2 - lat1)
+		const dLng = toRad(lng2 - lng1)
+		const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+			+ Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+		return 2 * 6371 * Math.asin(Math.sqrt(a))
 	}
 
 	export default {
@@ -166,6 +218,9 @@
 					storeName: '',
 					avatar: '',
 					intro: '',
+					address: '',
+					longitude: null,
+					latitude: null,
 					contactPhone: '',
 					activityNotice: '',
 					businessHours: '',
@@ -174,11 +229,13 @@
 					showHours: 1,
 					showActivity: 1,
 					showContact: 1,
-					showOtherBusiness: 1
+					showOtherBusiness: 1,
+					showLocation: 1
 				},
 				pageLoading: true,
 				businessList: [],
-				promoText: ''
+				promoText: '',
+				distanceText: ''
 			}
 		},
 		computed: {
@@ -222,6 +279,33 @@
 			},
 			showOtherBusinessModule() {
 				return flagOn(this.storeProfile.showOtherBusiness) && this.businessList.length > 0
+			},
+			storeLatitude() {
+				return toCoord(this.storeProfile.latitude)
+			},
+			storeLongitude() {
+				return toCoord(this.storeProfile.longitude)
+			},
+			hasLocationPoint() {
+				return this.storeLatitude != null && this.storeLongitude != null
+			},
+			locationAddress() {
+				return String(this.storeProfile.address || '').trim()
+			},
+			showLocationModule() {
+				return flagOn(this.storeProfile.showLocation)
+					&& (this.hasLocationPoint || !!this.locationAddress)
+			},
+			locationMarkers() {
+				if (!this.hasLocationPoint) return []
+				return [{
+					id: 1,
+					latitude: this.storeLatitude,
+					longitude: this.storeLongitude,
+					title: this.headerName,
+					width: 28,
+					height: 28
+				}]
 			}
 		},
 		onLoad(options = {}) {
@@ -323,6 +407,9 @@
 					storeName: '',
 					avatar: '',
 					intro: '',
+					address: '',
+					longitude: null,
+					latitude: null,
 					contactPhone: '',
 					activityNotice: '',
 					businessHours: '',
@@ -331,7 +418,8 @@
 					showHours: 1,
 					showActivity: 1,
 					showContact: 1,
-					showOtherBusiness: 1
+					showOtherBusiness: 1,
+					showLocation: 1
 				}
 			},
 			mapStoreProfile(store) {
@@ -340,6 +428,9 @@
 					storeName: store.storeName || '',
 					avatar: resolveFileUrl(store.avatar || ''),
 					intro: store.intro || '',
+					address: store.address || '',
+					longitude: toCoord(store.longitude),
+					latitude: toCoord(store.latitude),
 					contactPhone: store.contactPhone || '',
 					activityNotice: store.activityNotice || '',
 					businessHours: store.businessHours || '',
@@ -351,7 +442,8 @@
 					showHours: flagOn(store.showHours) ? 1 : 0,
 					showActivity: flagOn(store.showActivity) ? 1 : 0,
 					showContact: flagOn(store.showContact) ? 1 : 0,
-					showOtherBusiness: flagOn(store.showOtherBusiness) ? 1 : 0
+					showOtherBusiness: flagOn(store.showOtherBusiness) ? 1 : 0,
+					showLocation: flagOn(store.showLocation) ? 1 : 0
 				}
 			},
 			async fetchStoreInfo(params = {}) {
@@ -361,6 +453,7 @@
 					if (params.storeId) query.storeId = params.storeId
 					if (!query.userId && !query.storeId) {
 						this.storeProfile = this.emptyStoreProfile()
+						this.distanceText = ''
 						return
 					}
 					const data = await getStoreListApi(query)
@@ -374,11 +467,17 @@
 					const store = matched || list[0]
 					if (!store) {
 						this.storeProfile = this.emptyStoreProfile()
+						this.distanceText = ''
 						return
 					}
 					this.storeProfile = this.mapStoreProfile(store)
+					this.updateDistance()
 					if (params.userId && store.storeId) {
 						setOwnMerchantStoreId(store.storeId)
+					}
+					const viewingId = String(this.queryStoreId || resolveViewStoreId(this.userProfile) || '')
+					if (!params.userId || String(store.storeId) === viewingId) {
+						applyStoreMiniappUi(store)
 					}
 				} catch (error) {
 					console.error('获取商户信息失败', error)
@@ -413,6 +512,53 @@
 					this.promoText = ''
 				}
 			},
+			updateDistance() {
+				if (!flagOn(this.storeProfile.showLocation) || !this.hasLocationPoint) {
+					this.distanceText = ''
+					return
+				}
+				this.distanceText = '定位中...'
+				uni.getLocation({
+					type: 'gcj02',
+					isHighAccuracy: false,
+					success: (res) => {
+						const km = haversineKm(
+							Number(res.latitude),
+							Number(res.longitude),
+							this.storeLatitude,
+							this.storeLongitude
+						)
+						this.distanceText = formatDistance(km)
+					},
+					fail: () => {
+						this.distanceText = '开启定位后可查看距离'
+					}
+				})
+			},
+			handleNavigate() {
+				if (!this.hasLocationPoint) {
+					uni.showToast({
+						title: '店家暂未标注位置',
+						icon: 'none'
+					})
+					return
+				}
+				uni.openLocation({
+					latitude: this.storeLatitude,
+					longitude: this.storeLongitude,
+					name: this.headerName,
+					address: this.locationAddress || this.headerName,
+					scale: 16,
+					fail: (err) => {
+						const msg = String(err?.errMsg || '')
+						if (msg.includes('cancel') || msg.includes('取消')) return
+						uni.showToast({
+							title: '无法打开导航',
+							icon: 'none'
+						})
+					}
+				})
+			},
 			handleCallStore() {
 				const phone = this.contactPhone
 				if (!phone) {
@@ -439,7 +585,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.intro-page {
 		min-height: 100vh;
@@ -454,7 +600,7 @@
 		left: 0;
 		right: 0;
 		height: 280rpx;
-		background: linear-gradient(180deg, #e8f8f6 0%, #f2fbfb 60%, #f5f5f5 100%);
+		background: linear-gradient(180deg, var(--xy-primary-light, #e5f7f4) 0%, #f5f5f5 100%);
 	}
 
 	.page-loading {
@@ -484,7 +630,7 @@
 		height: 112rpx;
 		border-radius: 50%;
 		overflow: hidden;
-		background: linear-gradient(135deg, $primary 0%, #33b9ab 100%);
+		background: linear-gradient(135deg, $primary 0%, var(--xy-primary-dark, #008f7f) 100%);
 		padding: 4rpx;
 	}
 
@@ -581,6 +727,33 @@
 		font-size: 28rpx;
 		font-weight: 600;
 		color: #333;
+	}
+
+	.distance-text {
+		margin-left: auto;
+		font-size: 24rpx;
+		color: $primary;
+		font-weight: 600;
+	}
+
+	.store-map {
+		width: 100%;
+		height: 280rpx;
+		margin-top: 16rpx;
+		border-radius: 12rpx;
+		overflow: hidden;
+	}
+
+	.nav-btn {
+		margin-top: 20rpx;
+		height: 72rpx;
+		line-height: 72rpx;
+		text-align: center;
+		border-radius: 12rpx;
+		background: $primary;
+		color: #fff;
+		font-size: 28rpx;
+		font-weight: 600;
 	}
 
 	.intro-text,

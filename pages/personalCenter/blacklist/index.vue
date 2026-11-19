@@ -1,7 +1,7 @@
 <template>
-	<view class="blacklist-page">
+	<view class="blacklist-page" :style="themeCssVars">
 		<view v-if="loading && !blacklist.length" class="empty-wrap">
-			<up-loading-icon color="#00a896"></up-loading-icon>
+			<up-loading-icon :color="themePrimary"></up-loading-icon>
 			<text class="loading-text">加载中...</text>
 		</view>
 
@@ -62,7 +62,7 @@
 				currentItem: null,
 				defaultAvatar: storeInfo.avatar,
 				actionList: [
-					{ name: '解除拉黑', color: '#00a896' }
+					{ name: '解除拉黑', color: this.themePrimary }
 				]
 			}
 		},

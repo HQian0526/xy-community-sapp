@@ -1,5 +1,5 @@
 <template>
-	<view class="detail-page">
+	<view class="detail-page" :style="themeCssVars">
 		<view v-if="loading" class="empty-wrap">
 			<u-loading-icon mode="circle" size="36"></u-loading-icon>
 			<text class="loading-text">加载中...</text>
@@ -14,7 +14,7 @@
 				class="gallery"
 				:indicator-dots="images.length > 1"
 				indicator-color="rgba(255,255,255,0.45)"
-				indicator-active-color="#00a896"
+				:indicator-active-color="themePrimary"
 				:circular="images.length > 1"
 			>
 				<swiper-item v-for="(img, index) in images" :key="index" @click="previewImage(index)">
@@ -182,6 +182,12 @@
 			this.loadProduct()
 			this.loadMiniappUi()
 		},
+		onShow() {
+			const readyUi = isMiniappUiReady() ? getMiniappUi() : null
+			if (readyUi && (!this.storeId || String(readyUi.storeId || '') === String(this.storeId))) {
+				this.miniappUi = readyUi
+			}
+		},
 		methods: {
 			formatMoney,
 			/** 分享配置：有商品时分享当前商品，商品未加载完成则分享本店首页 */
@@ -323,7 +329,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.detail-page {
 		min-height: 100vh;
@@ -371,7 +377,7 @@
 
 	.price-label {
 		font-size: 26rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 		margin-right: 6rpx;
 	}
@@ -391,7 +397,7 @@
 
 	.price-symbol--member,
 	.price-value--member {
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.price-original {

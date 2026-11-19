@@ -102,9 +102,10 @@
         "usingComponents" : true,
         "permission" : {
             "scope.userLocation" : {
-                "desc" : "演示定位能力"
+                "desc" : "用于计算您与店铺的距离"
             }
         },
+        "requiredPrivateInfos" : [ "getLocation" ],
         "uniStatistics" : {
             "enable" : false
         },

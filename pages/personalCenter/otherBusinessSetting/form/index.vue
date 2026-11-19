@@ -1,5 +1,5 @@
 <template>
-	<view class="form-page">
+	<view class="form-page" :style="themeCssVars">
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="160rpx">
 				<uni-forms-item label="业务名称" name="name" required>

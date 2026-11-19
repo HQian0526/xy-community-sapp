@@ -1,5 +1,5 @@
 <template>
-	<view class="report-page">
+	<view class="report-page" :style="themeCssVars">
 		<view class="summary-card">
 			<view class="summary-item">
 				<text class="summary-label">{{ year }}年累计收入</text>
@@ -161,7 +161,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 	$bar: #ff6034;
 
 	.report-page {
@@ -323,7 +323,7 @@
 
 	.ucharts-bar--active {
 		opacity: 0.85;
-		background: linear-gradient(180deg, $primary 0%, #00a896 100%);
+		background: linear-gradient(180deg, $primary 0%, var(--xy-primary, #00a896) 100%);
 	}
 
 	.ucharts-cate {

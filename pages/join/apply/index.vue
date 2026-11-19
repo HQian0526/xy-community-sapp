@@ -1,5 +1,5 @@
 <template>
-	<view class="apply-page">
+	<view class="apply-page" :style="themeCssVars">
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="160rpx">
 				<uni-forms-item label="姓名" name="name" required>
@@ -143,7 +143,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.apply-page {
 		min-height: 100vh;
@@ -203,7 +203,7 @@
 		font-size: 30rpx;
 		font-weight: 600;
 		text-align: center;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		color: #fff;
 		border-radius: 44rpx;
 		box-sizing: border-box;

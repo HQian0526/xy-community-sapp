@@ -2,6 +2,7 @@ import App from './App'
 import store from './store'
 	import uviewPlus from '@/uni_modules/uview-plus'
 	import shareMixin from '@/common/mixin/shareMixin.js'
+	import themeMixin from '@/common/mixin/themeMixin.js'
 
 // #ifndef VUE3
 import Vue from 'vue'
@@ -13,6 +14,7 @@ Vue.prototype.$backgroundAudioData = {
 	playTime: 0,
 	formatedPlayTime: '00:00:00'
 }
+Vue.mixin(themeMixin)
 App.mpType = 'app'
 const app = new Vue({
 	store,
@@ -34,6 +36,7 @@ export function createApp() {
 	app.use(uviewPlus);
 	// #ifdef MP-WEIXIN
 	app.mixin(shareMixin)
+	app.mixin(themeMixin)
 	// #endif
 	app.config.globalProperties.$adpid = "1111111111"
 	app.config.globalProperties.$backgroundAudioData = {

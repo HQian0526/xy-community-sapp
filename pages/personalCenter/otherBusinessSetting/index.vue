@@ -1,5 +1,5 @@
 <template>
-	<view class="business-page">
+	<view class="business-page" :style="themeCssVars">
 		<view v-if="businessList.length" class="business-list">
 			<view v-for="item in businessList" :key="item.id" class="business-card">
 				<view class="card-main">
@@ -104,7 +104,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.business-page {
 		min-height: 100vh;

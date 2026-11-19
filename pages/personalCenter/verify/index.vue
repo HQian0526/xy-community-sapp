@@ -1,5 +1,5 @@
 <template>
-	<view class="verify-page">
+	<view class="verify-page" :style="themeCssVars">
 		<view class="form-card">
 			<text class="card-title">顾客手机号</text>
 			<view class="phone-row">
@@ -201,7 +201,7 @@
 						title: '确认核验',
 						content: `将从「${nickname}」的储值余额扣除 ¥${amountText}`,
 						confirmText: '确认扣除',
-						confirmColor: '#00a896',
+						confirmColor: this.themePrimary,
 						success: (res) => resolve(!!res.confirm),
 						fail: () => resolve(false)
 					})
@@ -289,7 +289,7 @@
 		height: 64rpx;
 		line-height: 64rpx;
 		border-radius: 32rpx;
-		background: #00a896;
+		background: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 26rpx;
 		font-weight: 600;
@@ -328,7 +328,7 @@
 
 	.currency {
 		font-size: 26rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 		margin-right: 4rpx;
 	}
@@ -336,7 +336,7 @@
 	.balance {
 		font-size: 40rpx;
 		font-weight: 700;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.info-tip {
@@ -348,7 +348,7 @@
 
 	.amount-prefix {
 		font-size: 32rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 		margin-right: 12rpx;
 	}
@@ -357,7 +357,7 @@
 		margin-top: 40rpx;
 		height: 88rpx;
 		border-radius: 44rpx;
-		background: #00a896;
+		background: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 32rpx;
 		font-weight: 600;

@@ -14,6 +14,9 @@
 	import {
 		hideHomeTabBarUntilReady
 	} from '@/common/miniappUi.js'
+	import {
+		applyNativeChrome
+	} from '@/common/theme.js'
 	// #ifdef APP
 	import checkUpdate from '@/uni_modules/uni-upgrade-center-app/utils/check-update';
 	// #endif
@@ -62,6 +65,7 @@
 		},
 		onShow: function(options) {
 			applyLaunchQuery(options, { source: 'appShow' })
+			applyNativeChrome()
 		},
 		onHide: function() {
 		},
@@ -117,7 +121,6 @@
 		background-color: #efeff4;
 		height: 100%;
 		font-size: 28rpx;
-		/* line-height: 1.8; */
 	}
 
 	.fix-pc-padding {

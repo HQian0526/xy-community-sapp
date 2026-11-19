@@ -1,5 +1,5 @@
 <template>
-	<view class="person-info-page">
+	<view class="person-info-page" :style="themeCssVars">
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="200rpx">
 				<uni-forms-item label="昵称" name="realName" required>
@@ -12,7 +12,7 @@
 				</uni-forms-item>
 
 				<uni-forms-item label="性别" name="sex">
-					<up-radio-group v-model="formData.sex" placement="row" activeColor="#00a896">
+					<up-radio-group v-model="formData.sex" placement="row" :activeColor="themePrimary">
 						<up-radio :name="1" label="男"></up-radio>
 						<up-radio :name="0" label="女"></up-radio>
 					</up-radio-group>
@@ -223,7 +223,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.person-info-page {
 		min-height: 100vh;

@@ -1,5 +1,5 @@
 <template>
-	<view class="checkout-page">
+	<view class="checkout-page" :style="themeCssVars">
 		<view v-if="pageLoading" class="empty-wrap">
 			<u-loading-icon mode="circle" size="36"></u-loading-icon>
 			<text class="loading-text">加载中...</text>
@@ -515,7 +515,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.checkout-page {
 		min-height: 100vh;
@@ -604,7 +604,7 @@
 
 	.price-label {
 		font-size: 22rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 		margin-right: 4rpx;
 	}
@@ -623,7 +623,7 @@
 
 	.price-symbol--member,
 	.price-value--member {
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.member-tip {
@@ -638,12 +638,12 @@
 
 	.member-tip--ok {
 		background: rgba(0, 168, 150, 0.08);
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.member-tip-link {
 		margin-left: 12rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 	}
 
@@ -857,7 +857,7 @@
 	.coupon-picked {
 		flex-shrink: 0;
 		font-size: 24rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 	}
 

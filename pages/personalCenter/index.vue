@@ -1,9 +1,9 @@
 <template>
-	<view class="personal-page">
+	<view class="personal-page" :style="themeCssVars">
 		<view class="header-bg"></view>
 
 		<view v-if="pageLoading" class="page-loading">
-			<up-loading-icon color="#00a896"></up-loading-icon>
+			<up-loading-icon :color="themePrimary"></up-loading-icon>
 			<text class="loading-text">加载中...</text>
 		</view>
 		<template v-else>
@@ -110,7 +110,7 @@
 						>
 							<view class="service-item">
 								<view class="service-icon-square">
-									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+									<up-icon :name="item.icon" size="28" :color="themePrimary"></up-icon>
 								</view>
 								<view class="service-name">
 									{{ item.name }}
@@ -131,7 +131,7 @@
 						>
 							<view class="service-item">
 								<view class="service-icon-wrap">
-									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+									<up-icon :name="item.icon" size="28" :color="themePrimary"></up-icon>
 								</view>
 								<text class="service-name">{{ item.name }}</text>
 							</view>
@@ -155,7 +155,7 @@
 						>
 							<view class="service-item">
 								<view class="service-icon-square">
-									<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+									<up-icon :name="item.icon" size="28" :color="themePrimary"></up-icon>
 								</view>
 								<view class="service-name">
 									{{ item.name }}
@@ -179,7 +179,7 @@
 					>
 						<view class="service-item">
 							<view class="service-icon-wrap">
-								<up-icon :name="item.icon" size="28" color="#00a896"></up-icon>
+								<up-icon :name="item.icon" size="28" :color="themePrimary"></up-icon>
 							</view>
 							<text class="service-name">{{ item.name }}</text>
 						</view>
@@ -545,6 +545,7 @@
 				try {
 					if (!isLoggedIn()) {
 						this.resetGuestProfile()
+						await this.fetchVisitStoreInfo(resolveViewStoreId(null))
 						return
 					}
 					this.hasLogin = true
@@ -566,11 +567,10 @@
 							storeTime: ''
 						}
 					}
-					if (!this.isMerchant) {
-						await this.fetchVisitStoreInfo(
-							getBrowsingStoreId() || resolveViewStoreId(this.userProfile)
-						)
-					} else {
+					await this.fetchVisitStoreInfo(
+						getBrowsingStoreId() || resolveViewStoreId(this.userProfile)
+					)
+					if (this.isMerchant && !shouldForceOrdinaryUi(this.userProfile)) {
 						this.visitStore = { storeName: '', avatar: '' }
 					}
 				} finally {
@@ -666,9 +666,6 @@
 					}
 					if (store.storeId) {
 						setOwnMerchantStoreId(store.storeId)
-					}
-					if (!shouldForceOrdinaryUi(this.userProfile)) {
-						this.miniappUi = applyStoreMiniappUi(store)
 					}
 					this.storeInfo.storeName = this.storeProfile.storeName || this.storeInfo.storeName
 					this.storeInfo.status = getStoreOpenLabel(this.storeProfile)
@@ -1066,7 +1063,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.personal-page {
 		min-height: 100vh;
@@ -1093,7 +1090,7 @@
 		left: 0;
 		right: 0;
 		height: 320rpx;
-		background: linear-gradient(180deg, #e8f8f6 0%, #f2fbfb 60%, #f5f5f5 100%);
+		background: linear-gradient(180deg, var(--xy-primary-light, #e5f7f4) 0%, #f5f5f5 100%);
 	}
 
 	.rent-notice-wrap {
@@ -1167,7 +1164,7 @@
 		height: 112rpx;
 		border-radius: 50%;
 		overflow: hidden;
-		background: linear-gradient(135deg, $primary 0%, #33b9ab 100%);
+		background: linear-gradient(135deg, $primary 0%, var(--xy-primary-dark, #008f7f) 100%);
 		padding: 4rpx;
 	}
 
@@ -1337,7 +1334,7 @@
 	.header-recharge {
 		font-size: 28rpx;
 		font-weight: 600;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		line-height: 1;
 	}
 
@@ -1547,7 +1544,7 @@
 		width: 100%;
 		height: 88rpx;
 		line-height: 88rpx;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 30rpx;
 		font-weight: 600;
@@ -1601,7 +1598,7 @@
 		height: 88rpx;
 		line-height: 88rpx;
 		text-align: center;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 30rpx;
 		font-weight: 600;
@@ -1646,7 +1643,7 @@
 		height: 80rpx;
 		line-height: 80rpx;
 		text-align: center;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 28rpx;
 		font-weight: 600;

@@ -1,5 +1,5 @@
 <template>
-	<view class="business-page">
+	<view class="business-page" :style="themeCssVars">
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="220rpx">
 				<uni-forms-item label="法人姓名" name="legalName" required>
@@ -28,7 +28,7 @@
 							mode="aspectFill"
 						/>
 						<view v-else class="file-placeholder">
-							<up-icon name="camera-fill" size="32" color="#00a896"></up-icon>
+							<up-icon name="camera-fill" size="32" :color="themePrimary"></up-icon>
 							<text class="file-tip">上传营业执照</text>
 						</view>
 					</view>
@@ -51,7 +51,7 @@
 							class="extra-add"
 							@click="chooseExtraFiles"
 						>
-							<up-icon name="plus" size="28" color="#00a896"></up-icon>
+							<up-icon name="plus" size="28" :color="themePrimary"></up-icon>
 							<text class="file-tip">添加图片</text>
 						</view>
 					</view>
@@ -161,7 +161,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.business-page {
 		min-height: 100vh;

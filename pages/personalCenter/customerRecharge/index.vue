@@ -1,5 +1,5 @@
 <template>
-	<view class="recharge-page">
+	<view class="recharge-page" :style="themeCssVars">
 		<view class="info-card">
 			<view class="info-row">
 				<text class="info-label">昵称</text>
@@ -189,7 +189,7 @@
 						title: '确认储值',
 						content: `将为「${nickname}」储值 ¥${amountText}，储值后成为本店储值会员`,
 						confirmText: '确认储值',
-						confirmColor: '#00a896',
+						confirmColor: this.themePrimary,
 						success: (res) => resolve(!!res.confirm),
 						fail: () => resolve(false)
 					})
@@ -272,7 +272,7 @@
 
 	.amount-prefix {
 		font-size: 32rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 		margin-right: 12rpx;
 	}
@@ -326,7 +326,7 @@
 
 	.currency {
 		font-size: 26rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 		margin-right: 4rpx;
 	}
@@ -334,7 +334,7 @@
 	.balance {
 		font-size: 40rpx;
 		font-weight: 700;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.info-tip {
@@ -345,14 +345,14 @@
 	}
 
 	.info-tip.ok {
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.submit-btn {
 		margin-top: 40rpx;
 		height: 88rpx;
 		border-radius: 44rpx;
-		background: #00a896;
+		background: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 32rpx;
 		font-weight: 600;

@@ -1,5 +1,5 @@
 <template>
-	<view class="contact-page">
+	<view class="contact-page" :style="themeCssVars">
 		<view class="preview-wrap">
 			<view class="contact-card" :class="{ 'contact-card--show': contentVisible }">
 				<text class="slogan">{{ contactInfo.slogan }}</text>
@@ -7,7 +7,7 @@
 				<view class="divider"></view>
 				<view class="qrcode-wrap">
 					<view v-if="!qrVisible" class="qrcode-placeholder">
-						<up-loading-icon color="#00a896" size="28"></up-loading-icon>
+						<up-loading-icon :color="themePrimary" size="28"></up-loading-icon>
 					</view>
 					<view class="qrcode-inner" :class="{ 'qrcode-inner--show': qrVisible }">
 						<!-- 原二维码生成器逻辑，改为静态图片展示
@@ -176,7 +176,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.contact-page {
 		min-height: 100vh;

@@ -1,5 +1,5 @@
 <template>
-	<view class="transfer-page">
+	<view class="transfer-page" :style="themeCssVars">
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="180rpx">
 				<uni-forms-item label="姓名" name="name" required>
@@ -187,7 +187,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.transfer-page {
 		min-height: 100vh;

@@ -6,7 +6,10 @@ export const shareInfo = {
 	desc: '好友下单，你赚佣金'
 }
 
+import { getTheme } from '@/common/theme.js'
+
 export function getPosterJson(info) {
+	const primary = getTheme().primary
 	return {
 		css: {
 			width: '600rpx',
@@ -21,7 +24,7 @@ export function getPosterJson(info) {
 					top: '0rpx',
 					width: '600rpx',
 					height: '820rpx',
-					background: 'linear-gradient(180deg, #00a896 0%, #33b9ab 35%, #ffffff 100%)'
+					background: `linear-gradient(180deg, ${primary} 0%, ${primary} 35%, #ffffff 100%)`
 				}
 			},
 			{

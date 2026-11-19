@@ -1,5 +1,5 @@
 <template>
-	<view class="store-profile-page">
+	<view class="store-profile-page" :style="themeCssVars">
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="200rpx">
 				<uni-forms-item label="店铺照片" name="avatar">
@@ -11,7 +11,7 @@
 							mode="aspectFill"
 						/>
 						<view v-else class="photo-placeholder">
-							<up-icon name="camera-fill" size="32" color="#00a896"></up-icon>
+							<up-icon name="camera-fill" size="32" :color="themePrimary"></up-icon>
 							<text class="photo-tip">上传店铺照片</text>
 						</view>
 					</view>
@@ -221,7 +221,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.store-profile-page {
 		min-height: 100vh;

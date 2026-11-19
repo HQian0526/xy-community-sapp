@@ -1,13 +1,13 @@
 <template>
-	<view class="coupon-page">
+	<view class="coupon-page" :style="themeCssVars">
 		<view class="filter-wrap">
 			<up-subsection
 				mode="button"
 				:list="sectionList"
 				:current="currentSection"
-				activeColor="#00a896"
+				:activeColor="themePrimary"
 				inactiveColor="#ffffff"
-				bgColor="#00a896"
+				:bgColor="themePrimary"
 				@change="handleSectionChange"
 			></up-subsection>
 		</view>
@@ -150,7 +150,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 	$page-bg: #f5f5f5;
 
 	.coupon-page {

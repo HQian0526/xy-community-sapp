@@ -1,5 +1,5 @@
 <template>
-	<view class="finished-page">
+	<view class="finished-page" :style="themeCssVars">
 		<view v-if="displayList.length" class="order-list">
 			<view
 				v-for="item in displayList"
@@ -113,7 +113,7 @@
 </script>
 
 <style lang="scss" scoped>
-	$primary: #00a896;
+	$primary: var(--xy-primary, #00a896);
 
 	.finished-page {
 		min-height: 100vh;

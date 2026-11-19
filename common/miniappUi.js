@@ -1,5 +1,6 @@
 import { getStoreListApi } from '@/common/api/personalCenter/store.js'
 import { getOwnMerchantStoreId } from '@/common/storeVisit.js'
+import { applyTheme, DEFAULT_THEME_CODE, normalizeThemeCode } from '@/common/theme.js'
 
 /** 小程序展示权限：不落本地缓存，每次进店以接口为准。 */
 
@@ -20,7 +21,8 @@ export function mallMiniappUi() {
 		homeTabText: '逛店',
 		listBtnText: '预定',
 		showSaleNum: true,
-		showDeliveryFee: true
+		showDeliveryFee: true,
+		themeCode: DEFAULT_THEME_CODE
 	}
 }
 
@@ -38,7 +40,8 @@ export function bookingMiniappUi() {
 		homeTabText: '预约',
 		listBtnText: '预定',
 		showSaleNum: false,
-		showDeliveryFee: false
+		showDeliveryFee: false,
+		themeCode: DEFAULT_THEME_CODE
 	}
 }
 
@@ -112,7 +115,8 @@ export function formatOrderPayAmount(amount, order, ui = current) {
 }
 
 export function resetMiniappUi() {
-	current = mallMiniappUi()
+	const prevTheme = current && current.themeCode ? current.themeCode : DEFAULT_THEME_CODE
+	current = { ...mallMiniappUi(), themeCode: prevTheme }
 	ready = false
 	return current
 }
@@ -148,6 +152,10 @@ export function applyStoreMiniappUi(store) {
 		? MINIAPP_TYPE_BOOKING
 		: MINIAPP_TYPE_MALL
 	const base = type === MINIAPP_TYPE_BOOKING ? bookingMiniappUi() : mallMiniappUi()
+	const incomingTheme = store?.themeCode
+	const themeCode = incomingTheme == null || String(incomingTheme).trim() === ''
+		? (current.themeCode || DEFAULT_THEME_CODE)
+		: normalizeThemeCode(incomingTheme)
 	current = {
 		storeId: store?.storeId == null ? '' : String(store.storeId),
 		miniappType: type,
@@ -164,9 +172,13 @@ export function applyStoreMiniappUi(store) {
 		homeTabText: clipText(store?.homeTabText, base.homeTabText, 4),
 		listBtnText: clipText(store?.listBtnText, base.listBtnText, 6),
 		showSaleNum: flagOn(store?.showSaleNum, base.showSaleNum),
-		showDeliveryFee: flagOn(store?.showDeliveryFee, base.showDeliveryFee)
+		showDeliveryFee: flagOn(store?.showDeliveryFee, base.showDeliveryFee),
+		themeCode
 	}
 	ready = true
 	syncHomeTabBar(current.homeTabText)
+	if (store && (store.storeId != null || store.id != null || incomingTheme)) {
+		applyTheme(current.themeCode)
+	}
 	return current
 }

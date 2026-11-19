@@ -1,5 +1,5 @@
 <template>
-	<view class="mall-root">
+	<view class="mall-root" :style="themeCssVars">
 		<view class="mall-page">
 			<!-- 储值引导：店铺接入支付时展示，置于最顶部 -->
 			<view v-if="showRechargeBar" class="recharge-bar" @click="goRechargePage">
@@ -22,7 +22,7 @@
 			</view>
 			<view v-if="mallUiReady && showPromoBar" class="promo-bar">
 				<view class="promo-bar-main">
-					<up-icon name="volume" size="16" color="#00a896"></up-icon>
+					<up-icon name="volume" size="16" :color="themePrimary"></up-icon>
 					<text class="promo-bar-text">{{ promoBarLabel }}</text>
 				</view>
 				<text v-if="couponTemplates.length" class="promo-bar-action" @click="openCouponPopup">领券</text>
@@ -39,14 +39,14 @@
 			</view>
 
 			<view v-if="mallPageLoading" class="page-loading">
-				<up-loading-icon color="#00a896"></up-loading-icon>
+				<up-loading-icon :color="themePrimary"></up-loading-icon>
 				<text class="loading-text">加载中...</text>
 			</view>
 
 			<view v-else-if="isSearching" class="search-result-wrap">
 				<scroll-view scroll-y class="search-result-scroll">
 					<view v-if="searchPending" class="page-loading">
-						<up-loading-icon color="#00a896"></up-loading-icon>
+						<up-loading-icon :color="themePrimary"></up-loading-icon>
 						<text class="loading-text">加载中...</text>
 					</view>
 					<template v-else>
@@ -150,7 +150,7 @@
 										v-if="!item.productsLoaded && !(item.children && item.children.length)"
 										class="cate-loading"
 									>
-										<up-loading-icon color="#00a896"></up-loading-icon>
+										<up-loading-icon :color="themePrimary"></up-loading-icon>
 										<text class="loading-text">加载中...</text>
 									</view>
 									<view
@@ -350,8 +350,7 @@
 		applyStoreMiniappUi,
 		getMiniappUi,
 		hideHomeTabBarUntilReady,
-		mallMiniappUi,
-		resetMiniappUi
+		mallMiniappUi
 	} from '@/common/miniappUi.js'
 
 	/** 把接口商品字段转成列表展示结构 */
@@ -429,7 +428,6 @@
 				this.mallUiReady = false
 				this.categoryList = []
 				this.categoryLoading = true
-				resetMiniappUi()
 				this.miniappUi = getMiniappUi()
 				this.$nextTick(() => {
 					this.updateCateTabHeight()
@@ -1201,7 +1199,7 @@
 		flex: 1;
 		min-width: 0;
 		font-size: 24rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 		overflow: hidden;
 		white-space: nowrap;
@@ -1212,7 +1210,7 @@
 		flex-shrink: 0;
 		padding: 6rpx 18rpx;
 		border-radius: 24rpx;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 22rpx;
 		font-weight: 600;
@@ -1313,7 +1311,7 @@
 		flex-shrink: 0;
 		padding: 10rpx 22rpx;
 		border-radius: 28rpx;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		color: #fff;
 		font-size: 24rpx;
 		font-weight: 600;
@@ -1401,7 +1399,7 @@
 		left: 0;
 		top: 39rpx;
 		height: 32rpx;
-		border-left: 8rpx solid #00a896;
+		border-left: 8rpx solid var(--xy-primary, #00a896);
 	}
 
 	.cate-right {
@@ -1465,7 +1463,7 @@
 		width: 6rpx;
 		height: 26rpx;
 		border-radius: 3rpx;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		margin-right: 10rpx;
 	}
 
@@ -1604,7 +1602,7 @@
 
 	.price-label {
 		font-size: 20rpx;
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 		font-weight: 600;
 		margin-right: 4rpx;
 		flex-shrink: 0;
@@ -1625,7 +1623,7 @@
 
 	.price-symbol--member,
 	.price-value--member {
-		color: #00a896;
+		color: var(--xy-primary, #00a896);
 	}
 
 	.price-original {
@@ -1647,7 +1645,7 @@
 		height: 48rpx;
 		padding: 0 20rpx;
 		border-radius: 24rpx;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -1690,7 +1688,7 @@
 		position: relative;
 		width: 80rpx;
 		height: 80rpx;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		border-radius: 50%;
 		display: flex;
 		align-items: center;
@@ -1733,7 +1731,7 @@
 	.cart-submit {
 		height: 72rpx;
 		padding: 0 40rpx;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		border-radius: 36rpx;
 		font-size: 28rpx;
 		font-weight: 600;
@@ -1851,8 +1849,8 @@
 	}
 
 	.stepper-btn--plus {
-		background-color: #00a896;
-		border-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
+		border-color: var(--xy-primary, #00a896);
 	}
 
 	.stepper-count {
@@ -1894,7 +1892,7 @@
 	.cart-popup-submit {
 		height: 72rpx;
 		padding: 0 48rpx;
-		background-color: #00a896;
+		background-color: var(--xy-primary, #00a896);
 		border-radius: 36rpx;
 		font-size: 28rpx;
 		font-weight: 600;

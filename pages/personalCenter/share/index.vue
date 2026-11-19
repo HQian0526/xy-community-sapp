@@ -1,5 +1,5 @@
 <template>
-	<view class="share-page">
+	<view class="share-page" :style="themeCssVars">
 		<view class="preview-wrap">
 			<image
 				v-if="posterPath"
@@ -9,7 +9,7 @@
 				show-menu-by-longpress
 			/>
 			<view v-else class="loading-box">
-				<up-loading-icon color="#00a896"></up-loading-icon>
+				<up-loading-icon :color="themePrimary"></up-loading-icon>
 				<text class="loading-text">海报生成中...</text>
 			</view>
 		</view>
