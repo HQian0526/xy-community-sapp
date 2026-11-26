@@ -1,5 +1,6 @@
 <template>
 	<view class="verify-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="form-card">
 			<text class="card-title">顾客手机号</text>
 			<view class="phone-row">

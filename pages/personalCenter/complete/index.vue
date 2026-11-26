@@ -1,5 +1,6 @@
 <template>
 	<view class="complete-page" :style="themeCssVars">
+		<xy-navbar />
 		<view v-if="taskInfo.companyName" class="task-brief">
 			<text class="task-name">{{ taskInfo.companyName }}</text>
 			<text class="task-code">工单编码：{{ taskInfo.orderCode }}</text>

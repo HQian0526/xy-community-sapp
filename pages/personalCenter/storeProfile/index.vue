@@ -1,5 +1,6 @@
 <template>
 	<view class="store-profile-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="200rpx">
 				<uni-forms-item label="店铺照片" name="avatar">

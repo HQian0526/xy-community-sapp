@@ -1,5 +1,6 @@
 <template>
 	<view class="finished-page" :style="themeCssVars">
+		<xy-navbar />
 		<view v-if="displayList.length" class="order-list">
 			<view
 				v-for="item in displayList"

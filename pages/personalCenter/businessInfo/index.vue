@@ -1,5 +1,6 @@
 <template>
 	<view class="business-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="220rpx">
 				<uni-forms-item label="法人姓名" name="legalName" required>

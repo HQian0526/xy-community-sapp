@@ -1,5 +1,6 @@
 <template>
 	<view class="pending-page" :style="themeCssVars">
+		<xy-navbar :title="navTitle" />
 		<view v-if="displayList.length" class="order-list">
 			<view
 				v-for="item in displayList"
@@ -54,19 +55,23 @@
 	export default {
 		data() {
 			return {
-				orders: []
+				orders: [],
+				pendingTitle: '待处理'
 			}
 		},
 		computed: {
 			displayList() {
 				return this.orders
+			},
+			navTitle() {
+				return this.pendingTitle
 			}
 		},
 		async onShow() {
 			if (!(await requireLogin({ force: true }))) return
 			const user = getUserInfo()
 			const merchantUi = Number(user?.identityType) === 2 && !shouldForceOrdinaryUi(user)
-			uni.setNavigationBarTitle({ title: merchantUi ? '待处理' : '进行中' })
+			this.pendingTitle = merchantUi ? '待处理' : '进行中'
 			this.loadOrders()
 		},
 		onPullDownRefresh() {

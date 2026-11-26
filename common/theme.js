@@ -1,6 +1,7 @@
 /** 小程序预置主题。主色只换品牌色，成功/警告/错误语义色不跟主题绑死。 */
 
 export const DEFAULT_THEME_CODE = 'teal'
+const THEME_STORAGE_KEY = 'xy_theme_v1'
 
 export const THEME_PRESETS = {
 	teal: {
@@ -19,6 +20,15 @@ export const THEME_PRESETS = {
 		primary: '#e67e22',
 		primaryDark: '#c96a16',
 		primaryLight: '#fdebd8',
+		onPrimary: '#ffffff'
+	},
+	apricot: {
+		code: 'apricot',
+		name: '暖橘',
+		hint: '宠物、烘焙、轻食',
+		primary: '#e07a3d',
+		primaryDark: '#b86432',
+		primaryLight: '#fbefe8',
 		onPrimary: '#ffffff'
 	},
 	red: {
@@ -50,24 +60,104 @@ export const THEME_PRESETS = {
 	}
 }
 
-const TAB_ACTIVE_ICONS = [
-	{ index: 0, file: 'tarbar2-active.png' },
-	{ index: 1, file: 'tarbar4-active.png' },
-	{ index: 2, file: 'tarbar1-active.png' },
-	{ index: 3, file: 'tarbar3-active.png' }
-]
+export function parseHexColor(input) {
+	const raw = String(input || '').trim().toLowerCase()
+	if (/^#?[0-9a-f]{3}$/.test(raw)) {
+		const h = raw.replace('#', '')
+		return `#${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`
+	}
+	if (/^#?[0-9a-f]{6}$/.test(raw)) {
+		return `#${raw.replace('#', '')}`
+	}
+	return ''
+}
 
-let current = THEME_PRESETS[DEFAULT_THEME_CODE]
-let appliedCode = ''
+function hexToRgb(hex) {
+	const h = hex.replace('#', '')
+	return [
+		parseInt(h.slice(0, 2), 16),
+		parseInt(h.slice(2, 4), 16),
+		parseInt(h.slice(4, 6), 16)
+	]
+}
+
+function toHex(n) {
+	const v = Math.max(0, Math.min(255, Math.round(n)))
+	return v.toString(16).padStart(2, '0')
+}
+
+function rgbToHex(r, g, b) {
+	return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
+function mixWhite(r, g, b, amount) {
+	return rgbToHex(
+		r + (255 - r) * amount,
+		g + (255 - g) * amount,
+		b + (255 - b) * amount
+	)
+}
+
+function luminance(r, g, b) {
+	return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+}
+
+export function buildThemeFromPrimary(primary, code) {
+	let hex = parseHexColor(primary) || THEME_PRESETS[DEFAULT_THEME_CODE].primary
+	let [r, g, b] = hexToRgb(hex)
+	if (luminance(r, g, b) > 0.86) {
+		r *= 0.72
+		g *= 0.72
+		b *= 0.72
+		hex = rgbToHex(r, g, b)
+	}
+	const onPrimary = luminance(r, g, b) > 0.62 ? '#1c2b28' : '#ffffff'
+	return {
+		code: code || hex,
+		name: '自定义',
+		hint: hex,
+		primary: hex,
+		primaryDark: rgbToHex(r * 0.82, g * 0.82, b * 0.82),
+		primaryLight: mixWhite(r, g, b, 0.88),
+		onPrimary
+	}
+}
+
+function readCachedTheme() {
+	try {
+		const raw = uni.getStorageSync(THEME_STORAGE_KEY)
+		if (!raw) return null
+		const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+		const code = obj && (obj.code || obj.primary)
+		if (!code) return null
+		return getThemeByCode(code)
+	} catch (e) {
+		return null
+	}
+}
+
+function persist(theme) {
+	try {
+		uni.setStorageSync(THEME_STORAGE_KEY, {
+			code: theme.code,
+			primary: theme.primary
+		})
+	} catch (e) {}
+}
+
+let current = readCachedTheme() || THEME_PRESETS[DEFAULT_THEME_CODE]
 const listeners = []
 
 export function normalizeThemeCode(code) {
 	const key = String(code || '').trim().toLowerCase()
-	return THEME_PRESETS[key] ? key : DEFAULT_THEME_CODE
+	if (THEME_PRESETS[key]) return key
+	return parseHexColor(key) || DEFAULT_THEME_CODE
 }
 
 export function getThemeByCode(code) {
-	return THEME_PRESETS[normalizeThemeCode(code)]
+	const key = normalizeThemeCode(code)
+	if (THEME_PRESETS[key]) return THEME_PRESETS[key]
+	return buildThemeFromPrimary(key, key)
 }
 
 export function getTheme() {
@@ -105,24 +195,18 @@ function notify() {
 	})
 }
 
-function applyTabBar(theme) {
-	uni.setTabBarStyle({
-		selectedColor: theme.primary,
-		fail() {}
-	})
-	TAB_ACTIVE_ICONS.forEach((item) => {
-		uni.setTabBarItem({
-			index: item.index,
-			selectedIconPath: `/static/tarbar/themes/${theme.code}/${item.file}`,
-			fail() {}
-		})
-	})
+function themeKey(theme) {
+	return `${theme.code}|${theme.primary}`
 }
 
-function applyNavBar(theme) {
+/**
+ * 状态栏 / 胶囊前景色。顶栏底栏已改为自绘，不再 setTabBarItem。
+ */
+export function applyNativeChrome(theme = current) {
+	const next = theme || current
 	uni.setNavigationBarColor({
-		frontColor: '#ffffff',
-		backgroundColor: theme.primary,
+		frontColor: next.onPrimary === '#ffffff' ? '#ffffff' : '#000000',
+		backgroundColor: next.primary,
 		animation: {
 			duration: 0,
 			timingFunc: 'linear'
@@ -131,23 +215,13 @@ function applyNavBar(theme) {
 	})
 }
 
-/**
- * 顶栏、Tab 文字色和图标。
- * 微信每次切 Tab 都会把底栏/顶栏打回 pages.json 的青绿，所以每次 onShow 都要重刷，不能因为主题没变就跳过。
- */
-export function applyNativeChrome(theme = current) {
-	const next = theme || current
-	appliedCode = next.code
-	applyNavBar(next)
-	applyTabBar(next)
-}
-
 export function applyTheme(code, options = {}) {
 	const next = getThemeByCode(code)
-	const changed = current.code !== next.code
+	const changed = themeKey(current) !== themeKey(next)
 	current = next
+	persist(next)
 	applyNativeChrome(next)
-	if (changed) {
+	if (changed || options.force) {
 		notify()
 	}
 	return current

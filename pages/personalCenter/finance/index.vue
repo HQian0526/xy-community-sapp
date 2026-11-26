@@ -1,5 +1,6 @@
 <template>
 	<view class="finance-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="date-bar" @click="openDatePicker">
 			<text class="date-text">{{ dateLabel }}</text>
 			<u-icon name="arrow-down" size="14" color="#666"></u-icon>

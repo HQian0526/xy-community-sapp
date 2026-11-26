@@ -24,6 +24,7 @@
 	export default {
 		onLaunch: async function(options) {
 			hideHomeTabBarUntilReady()
+			applyNativeChrome()
 			applyLaunchQuery(options)
 			// #ifdef MP-WEIXIN
 			uni.showShareMenu({

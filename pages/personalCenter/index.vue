@@ -1,5 +1,6 @@
 <template>
 	<view class="personal-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="header-bg"></view>
 
 		<view v-if="pageLoading" class="page-loading">
@@ -252,6 +253,7 @@
 			</view>
 		</u-popup>
 		<bind-phone-popup ref="bindPhonePopup" />
+		<xy-tabbar />
 	</view>
 </template>
 

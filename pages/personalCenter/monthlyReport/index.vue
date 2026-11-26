@@ -1,5 +1,6 @@
 <template>
 	<view class="report-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="summary-card">
 			<view class="summary-item">
 				<text class="summary-label">{{ year }}年累计收入</text>

@@ -1,5 +1,6 @@
 <template>
 	<view class="cart-page" :style="themeCssVars">
+		<xy-navbar />
 		<view v-if="!cartItems.length" class="empty-wrap">
 			<u-empty text="购物车是空的" mode="car"></u-empty>
 			<view class="empty-btn" @click="goMall">去逛店</view>

@@ -15,6 +15,7 @@ SKIP_DIRS = {"uni_modules", "platforms", "unpackage", "node_modules", "scripts"}
 THEMES = {
     "teal": (0, 168, 150),
     "orange": (230, 126, 34),
+    "apricot": (224, 122, 61),
     "red": (201, 76, 76),
     "blue": (47, 125, 209),
     "coffee": (122, 92, 74),

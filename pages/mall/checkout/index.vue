@@ -1,5 +1,6 @@
 <template>
 	<view class="checkout-page" :style="themeCssVars">
+		<xy-navbar />
 		<view v-if="pageLoading" class="empty-wrap">
 			<u-loading-icon mode="circle" size="36"></u-loading-icon>
 			<text class="loading-text">加载中...</text>

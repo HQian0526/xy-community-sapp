@@ -1,5 +1,6 @@
 <template>
 	<view class="intro-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="header-bg"></view>
 
 		<view v-if="pageLoading" class="page-loading">
@@ -127,6 +128,7 @@
 				</view>
 			</view>
 		</template>
+		<xy-tabbar />
 	</view>
 </template>
 
@@ -590,7 +592,7 @@
 	.intro-page {
 		min-height: 100vh;
 		background-color: #f5f5f5;
-		padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+		padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
 		box-sizing: border-box;
 	}
 

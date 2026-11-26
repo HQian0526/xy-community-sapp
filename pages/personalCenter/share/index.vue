@@ -1,5 +1,6 @@
 <template>
 	<view class="share-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="preview-wrap">
 			<image
 				v-if="posterPath"

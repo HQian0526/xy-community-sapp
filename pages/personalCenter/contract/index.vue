@@ -1,5 +1,6 @@
 <template>
 	<view class="contract-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="notice-bar">
 			<text class="notice-badge">公告</text>
 			<view class="notice-track">

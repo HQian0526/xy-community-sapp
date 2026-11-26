@@ -1,5 +1,6 @@
 <template>
 	<view class="status-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="status-card">
 			<text class="status-label">当前状态</text>
 			<view class="status-value-wrap">

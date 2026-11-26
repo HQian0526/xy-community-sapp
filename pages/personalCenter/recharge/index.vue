@@ -1,5 +1,6 @@
 <template>
 	<view class="recharge-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="balance-card">
 			<text class="balance-label">{{ memberInfo.member ? '会员余额' : '储值后成为本店会员' }}</text>
 			<view class="balance-value">

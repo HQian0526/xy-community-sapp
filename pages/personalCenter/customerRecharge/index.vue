@@ -1,5 +1,6 @@
 <template>
 	<view class="recharge-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="info-card">
 			<view class="info-row">
 				<text class="info-label">昵称</text>

@@ -1,5 +1,6 @@
 <template>
 	<view class="join-page" :style="themeCssVars">
+		<xy-navbar />
 		<!-- iOS 小程序不要用 flex+height:0 的 scroll-view，内容高度会被裁成 0 -->
 		<view class="preview-wrap">
 			<image

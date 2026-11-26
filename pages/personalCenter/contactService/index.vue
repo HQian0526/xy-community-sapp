@@ -1,5 +1,6 @@
 <template>
 	<view class="contact-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="preview-wrap">
 			<view class="contact-card" :class="{ 'contact-card--show': contentVisible }">
 				<text class="slogan">{{ contactInfo.slogan }}</text>

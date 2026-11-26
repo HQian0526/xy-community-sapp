@@ -1,5 +1,6 @@
 <template>
 	<view class="customer-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="search-wrap">
 			<up-search
 				v-model="keyword"

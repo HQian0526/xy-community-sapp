@@ -1,5 +1,6 @@
 <template>
 	<view class="business-page" :style="themeCssVars">
+		<xy-navbar />
 		<view v-if="businessList.length" class="business-list">
 			<view v-for="item in businessList" :key="item.id" class="business-card">
 				<view class="card-main">

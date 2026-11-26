@@ -1,5 +1,6 @@
 <template>
 	<view class="store-order-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="filter-wrap">
 			<up-subsection
 				mode="button"
@@ -80,6 +81,7 @@
 		<view v-else class="empty-wrap">
 			<u-empty text="暂无订单" mode="order"></u-empty>
 		</view>
+		<xy-tabbar />
 	</view>
 </template>
 
@@ -173,6 +175,7 @@
 		min-height: 100vh;
 		background-color: #f5f5f5;
 		padding: 24rpx;
+		padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
 		box-sizing: border-box;
 	}
 

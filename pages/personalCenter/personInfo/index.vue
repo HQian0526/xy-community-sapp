@@ -1,5 +1,6 @@
 <template>
 	<view class="person-info-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="200rpx">
 				<uni-forms-item label="昵称" name="realName" required>

@@ -1,5 +1,6 @@
 <template>
 	<view class="mall-root" :style="themeCssVars">
+		<xy-navbar />
 		<view class="mall-page">
 			<!-- 储值引导：店铺接入支付时展示，置于最顶部 -->
 			<view v-if="showRechargeBar" class="recharge-bar" @click="goRechargePage">
@@ -259,7 +260,8 @@
 				</view>
 			</u-popup>
 		</view>
-		<u-popup v-if="couponShow" :show="couponShow" mode="bottom" round="16" closeOnClickOverlay @close="closeCouponPopup">
+		<view v-if="couponShow" class="cart-popup-host">
+		<u-popup :show="couponShow" mode="bottom" round="16" closeOnClickOverlay @close="closeCouponPopup">
 			<view class="coupon-popup">
 				<view class="coupon-popup-header">
 					<text class="coupon-popup-title">店铺优惠券</text>
@@ -286,7 +288,9 @@
 				</scroll-view>
 			</view>
 		</u-popup>
+		</view>
 		<bind-phone-popup ref="bindPhonePopup" />
+		<xy-tabbar />
 	</view>
 </template>
 
@@ -850,7 +854,8 @@
 			/** 按搜索栏下方实际剩余高度计算分类列表，避免模拟器里 windowHeight 偏小只占上半屏 */
 			updateCateTabHeight() {
 				const sys = getWindowLayout()
-				const windowBottom = typeof sys.windowBottom === 'number' ? sys.windowBottom : 50
+				const safeBottom = typeof sys.safeAreaInsetsBottom === 'number' ? sys.safeAreaInsetsBottom : 0
+				const windowBottom = sys.windowBottom > 0 ? sys.windowBottom : (50 + safeBottom)
 				const gap = uni.upx2px(16)
 				this.cartBarBottom = `${windowBottom + gap}px`
 			},
@@ -1047,10 +1052,13 @@
 		bottom: 0;
 		left: 0;
 		overflow: hidden;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.mall-page {
-		height: 100%;
+		flex: 1;
+		min-height: 0;
 		display: flex;
 		flex-direction: column;
 		background-color: #f5f5f5;
@@ -1666,7 +1674,7 @@
 		position: fixed;
 		left: 24rpx;
 		right: 24rpx;
-		/* bottom 由 JS 按 windowBottom 动态设置，贴齐原生 tabBar 上方 */
+		/* bottom 由 JS 按 windowBottom 动态设置，贴齐自定义 tabBar 上方 */
 		height: 96rpx;
 		background-color: #2b2b2b;
 		border-radius: 48rpx;

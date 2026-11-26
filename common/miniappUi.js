@@ -1,5 +1,6 @@
 import { getStoreListApi } from '@/common/api/personalCenter/store.js'
 import { getOwnMerchantStoreId } from '@/common/storeVisit.js'
+import { setHomeTabText } from '@/common/appChrome.js'
 import { applyTheme, DEFAULT_THEME_CODE, normalizeThemeCode } from '@/common/theme.js'
 
 /** 小程序展示权限：不落本地缓存，每次进店以接口为准。 */
@@ -140,11 +141,7 @@ export function syncHomeTabBar(text) {
 	const title = clipText(text, '逛店', 4)
 	if (title === lastHomeTabText) return
 	lastHomeTabText = title
-	uni.setTabBarItem({
-		index: 0,
-		text: title,
-		fail() {}
-	})
+	setHomeTabText(title)
 }
 
 export function applyStoreMiniappUi(store) {

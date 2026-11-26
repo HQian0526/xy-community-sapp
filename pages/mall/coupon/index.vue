@@ -1,5 +1,6 @@
 <template>
 	<view class="coupon-page" :style="themeCssVars">
+		<xy-navbar />
 		<view class="filter-wrap">
 			<up-subsection
 				mode="button"

@@ -1,5 +1,6 @@
 <template>
 	<view class="blacklist-page" :style="themeCssVars">
+		<xy-navbar />
 		<view v-if="loading && !blacklist.length" class="empty-wrap">
 			<up-loading-icon :color="themePrimary"></up-loading-icon>
 			<text class="loading-text">加载中...</text>

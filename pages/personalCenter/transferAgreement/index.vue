@@ -1,5 +1,6 @@
 <template>
 	<view class="agreement-page" :style="themeCssVars">
+		<xy-navbar />
 		<scroll-view class="agreement-scroll" scroll-y>
 			<view class="agreement-card">
 				<view

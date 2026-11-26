@@ -1,5 +1,6 @@
 <template>
 	<view class="form-page" :style="themeCssVars">
+		<xy-navbar :title="navTitle" />
 		<view class="form-card">
 			<uni-forms ref="formRef" :model="formData" :rules="rules" label-width="160rpx">
 				<uni-forms-item label="业务名称" name="name" required>
@@ -63,6 +64,7 @@
 		data() {
 			return {
 				isEdit: false,
+				navTitle: '新增业务',
 				submitting: false,
 				formData: defaultFormData(),
 				rules: {
@@ -91,9 +93,7 @@
 				this.isEdit = true
 				await this.loadDetail(options.id)
 			}
-			uni.setNavigationBarTitle({
-				title: this.isEdit ? '编辑业务' : '新增业务'
-			})
+			this.navTitle = this.isEdit ? '编辑业务' : '新增业务'
 		},
 		methods: {
 			async loadDetail(id) {

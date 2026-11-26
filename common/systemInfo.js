@@ -11,6 +11,7 @@ export function getWindowLayout() {
 			screenWidth: win.screenWidth,
 			screenHeight: win.screenHeight,
 			statusBarHeight: win.statusBarHeight,
+			safeAreaInsetsBottom: typeof bottomInset === 'number' ? bottomInset : 0,
 			windowBottom: typeof win.windowBottom === 'number'
 				? win.windowBottom
 				: (typeof bottomInset === 'number' ? bottomInset : 0)
@@ -23,6 +24,9 @@ export function getWindowLayout() {
 		screenWidth: sys.screenWidth,
 		screenHeight: sys.screenHeight,
 		statusBarHeight: sys.statusBarHeight,
+		safeAreaInsetsBottom: sys.safeAreaInsets && typeof sys.safeAreaInsets.bottom === 'number'
+			? sys.safeAreaInsets.bottom
+			: 0,
 		windowBottom: typeof sys.windowBottom === 'number' ? sys.windowBottom : 50
 	}
 }
